@@ -4,10 +4,12 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 
 import { AccessibleButton } from "@/components/common/AccessibleButton";
+import { AccountApiError } from "@/components/domain/accounts/AccountApiError";
 import {
   getConnectedAccounts,
   updateDefaultAccount,
 } from "@/services/accountService";
+import { toApiError, type ApiError } from "@/services/api";
 import { useBankStore } from "@/store/useBankStore";
 
 type AccountListStatus = "loading" | "ready" | "error";
@@ -24,6 +26,7 @@ export default function ConnectedAccountListPage() {
   const setAccounts = useBankStore((state) => state.setAccounts);
   const setDefaultAccount = useBankStore((state) => state.setDefaultAccount);
   const [status, setStatus] = useState<AccountListStatus>("loading");
+  const [loadError, setLoadError] = useState<ApiError | null>(null);
   const [updatingAccountId, setUpdatingAccountId] = useState<string | null>(
     null,
   );
@@ -36,10 +39,13 @@ export default function ConnectedAccountListPage() {
       .then((connectedAccounts) => {
         if (!isActive) return;
         setAccounts(connectedAccounts);
+        setLoadError(null);
         setStatus("ready");
       })
-      .catch(() => {
-        if (isActive) setStatus("error");
+      .catch((error: unknown) => {
+        if (!isActive) return;
+        setLoadError(toApiError(error));
+        setStatus("error");
       });
 
     return () => {
@@ -49,12 +55,14 @@ export default function ConnectedAccountListPage() {
 
   const retryLoadAccounts = async () => {
     setStatus("loading");
+    setLoadError(null);
 
     try {
       const connectedAccounts = await getConnectedAccounts();
       setAccounts(connectedAccounts);
       setStatus("ready");
-    } catch {
+    } catch (error: unknown) {
+      setLoadError(toApiError(error));
       setStatus("error");
     }
   };
@@ -107,25 +115,11 @@ export default function ConnectedAccountListPage() {
           </p>
         ) : null}
 
-        {status === "error" ? (
-          <section
-            className="rounded-xl border-2 border-[var(--color-danger)] bg-[var(--color-surface)] p-6"
-            aria-labelledby="account-load-error-title"
-            role="alert"
-          >
-            <h2 id="account-load-error-title" className="text-xl font-bold">
-              계좌를 불러오지 못했습니다.
-            </h2>
-            <p className="mt-2 leading-7 text-[var(--color-text-muted)]">
-              인터넷 연결을 확인하고 다시 시도해 주세요.
-            </p>
-            <AccessibleButton
-              className="mt-5"
-              onClick={() => void retryLoadAccounts()}
-            >
-              다시 불러오기
-            </AccessibleButton>
-          </section>
+        {status === "error" && loadError ? (
+          <AccountApiError
+            error={loadError}
+            onRetry={() => void retryLoadAccounts()}
+          />
         ) : null}
 
         {status === "ready" && accounts.length === 0 ? (
