@@ -113,9 +113,17 @@ export default function LoginPage() {
 
       <div className="mt-6 min-h-16" aria-live="polite" aria-atomic="true">
         {completedMethod ? (
-          <p className="rounded-lg border-2 border-[var(--color-success)] bg-[var(--color-surface)] p-4 font-semibold">
-            {completedMethod} Mock 인증을 완료했습니다.
-          </p>
+          <div className="rounded-lg border-2 border-[var(--color-success)] bg-[var(--color-surface)] p-4">
+            <p className="font-semibold">
+              {completedMethod} Mock 인증을 완료했습니다.
+            </p>
+            <Link
+              href="/accounts/connect"
+              className="mt-4 inline-flex min-h-11 items-center rounded-lg border-2 border-transparent bg-[var(--color-primary)] px-5 py-2 font-semibold text-[var(--color-on-primary)] hover:bg-[var(--color-primary-hover)] focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[var(--color-focus)] focus-visible:ring-offset-2"
+            >
+              계좌 연결하기
+            </Link>
+          </div>
         ) : null}
       </div>
     </main>
