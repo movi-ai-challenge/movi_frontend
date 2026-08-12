@@ -220,6 +220,12 @@ export default function ConnectedAccountListPage() {
             >
               새 계좌 연결하기
             </Link>
+            <Link
+              href="/transactions"
+              className="mt-3 inline-flex min-h-11 items-center rounded-lg border-2 border-[var(--color-border)] bg-[var(--color-surface)] px-5 py-2 font-semibold text-[var(--color-text)] hover:border-[var(--color-primary)] focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[var(--color-focus)] focus-visible:ring-offset-2 sm:ml-3 sm:mt-6"
+            >
+              최근 거래내역 보기
+            </Link>
           </section>
         ) : null}
       </div>
