@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import type { ReactNode } from "react";
 
 import { AccessibilityProvider } from "@/components/common/AccessibilityProvider";
+import { HighContrastToggle } from "@/components/common/HighContrastToggle";
 
 import "./globals.css";
 
@@ -14,7 +15,12 @@ export default function RootLayout({ children }: Readonly<{ children: ReactNode 
   return (
     <html lang="ko">
       <body>
-        <AccessibilityProvider>{children}</AccessibilityProvider>
+        <AccessibilityProvider>
+          <div className="accessibility-controls" aria-label="접근성 설정">
+            <HighContrastToggle />
+          </div>
+          {children}
+        </AccessibilityProvider>
       </body>
     </html>
   );

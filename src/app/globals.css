@@ -8,10 +8,26 @@
   --color-border: #cbd4e1;
   --color-primary: #174ea6;
   --color-primary-hover: #123d83;
+  --color-on-primary: #ffffff;
   --color-danger: #b42318;
   --color-warning: #8a4b08;
   --color-success: #167245;
   --color-focus: #2563eb;
+}
+
+:root[data-high-contrast="true"] {
+  --color-background: #000000;
+  --color-surface: #000000;
+  --color-text: #ffffff;
+  --color-text-muted: #ffffff;
+  --color-border: #ffffff;
+  --color-primary: #ffdf00;
+  --color-primary-hover: #ffe94d;
+  --color-on-primary: #000000;
+  --color-danger: #ff6b6b;
+  --color-warning: #ffdf00;
+  --color-success: #62f5a8;
+  --color-focus: #00e5ff;
 }
 
 * { box-sizing: border-box; }
@@ -23,3 +39,17 @@ body {
   font-family: Arial, Helvetica, sans-serif;
 }
 button, input, select, textarea { font: inherit; }
+
+.accessibility-controls {
+  position: fixed;
+  z-index: 50;
+  top: 1rem;
+  right: 1rem;
+}
+
+:root[data-high-contrast="true"] button,
+:root[data-high-contrast="true"] input,
+:root[data-high-contrast="true"] select,
+:root[data-high-contrast="true"] textarea {
+  forced-color-adjust: none;
+}
