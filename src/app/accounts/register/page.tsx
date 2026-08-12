@@ -119,9 +119,15 @@ export default function AccountRegistrationPage() {
 
       <div className="mt-6 min-h-20" aria-live="polite" aria-atomic="true">
         {status === "registered" ? (
-          <p className="rounded-lg border-2 border-[var(--color-success)] bg-[var(--color-surface)] p-4 font-bold">
-            계좌를 등록했습니다.
-          </p>
+          <div className="rounded-lg border-2 border-[var(--color-success)] bg-[var(--color-surface)] p-4">
+            <p className="font-bold">계좌를 등록했습니다.</p>
+            <Link
+              href="/accounts"
+              className="mt-4 inline-flex min-h-11 items-center rounded-lg border-2 border-transparent bg-[var(--color-primary)] px-5 py-2 font-semibold text-[var(--color-on-primary)] hover:bg-[var(--color-primary-hover)] focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[var(--color-focus)] focus-visible:ring-offset-2"
+            >
+              연결된 계좌 보기
+            </Link>
+          </div>
         ) : null}
         {status === "error" ? (
           <div className="rounded-lg border-2 border-[var(--color-danger)] bg-[var(--color-surface)] p-4" role="alert">
