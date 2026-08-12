@@ -37,6 +37,10 @@ html { color-scheme: light; }
   font-size: 125%;
 }
 
+:root[data-simple-mode="true"] [data-secondary-content="true"] {
+  display: none;
+}
+
 body {
   margin: 0;
   background: var(--color-background);
