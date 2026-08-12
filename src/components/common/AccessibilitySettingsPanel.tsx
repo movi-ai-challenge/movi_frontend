@@ -5,10 +5,12 @@ import { useAccessibilityStore } from "@/store/useAccessibilityStore";
 export function AccessibilitySettingsPanel() {
   const highContrast = useAccessibilityStore((state) => state.highContrast);
   const largeText = useAccessibilityStore((state) => state.largeText);
+  const simpleMode = useAccessibilityStore((state) => state.simpleMode);
   const setHighContrast = useAccessibilityStore(
     (state) => state.setHighContrast,
   );
   const setLargeText = useAccessibilityStore((state) => state.setLargeText);
+  const setSimpleMode = useAccessibilityStore((state) => state.setSimpleMode);
 
   return (
     <section
@@ -30,7 +32,7 @@ export function AccessibilitySettingsPanel() {
         </p>
 
         <div
-          className="mt-4 grid gap-3 sm:grid-cols-2"
+          className="mt-4 grid gap-3 lg:grid-cols-3"
           aria-describedby="display-settings-description"
         >
           <label className="accessibility-setting-option">
@@ -59,6 +61,21 @@ export function AccessibilitySettingsPanel() {
               type="checkbox"
               checked={largeText}
               onChange={(event) => setLargeText(event.target.checked)}
+              className="h-7 w-7 shrink-0 accent-[var(--color-primary)] focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[var(--color-focus)] focus-visible:ring-offset-2"
+            />
+          </label>
+
+          <label className="accessibility-setting-option">
+            <span>
+              <span className="block font-bold">단순 화면 사용</span>
+              <span className="mt-1 block text-sm text-[var(--color-text-muted)]">
+                설명을 줄이고 가장 중요한 행동에 집중합니다.
+              </span>
+            </span>
+            <input
+              type="checkbox"
+              checked={simpleMode}
+              onChange={(event) => setSimpleMode(event.target.checked)}
               className="h-7 w-7 shrink-0 accent-[var(--color-primary)] focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[var(--color-focus)] focus-visible:ring-offset-2"
             />
           </label>
