@@ -51,9 +51,18 @@ export default function LoginPage() {
         안전한 금융 서비스를 위해 본인 확인이 필요해요.
       </p>
 
-      <div className="mt-8">
+      <section className="mt-8" aria-labelledby="new-user-login-title">
+        <h2 id="new-user-login-title" className="text-xl font-bold">
+          처음 이용하시나요?
+        </h2>
+        <p
+          className="mt-2 leading-7 text-[var(--color-text-muted)]"
+          data-secondary-content="true"
+        >
+          편한 방법으로 본인 확인을 시작하세요.
+        </p>
         <AccessibleButton
-          className="w-full"
+          className="mt-4 w-full"
           isLoading={pendingMethod === "PASS"}
           loadingLabel="PASS 인증을 준비하고 있어요"
           disabled={isPending}
@@ -61,22 +70,26 @@ export default function LoginPage() {
         >
           PASS로 시작하기
         </AccessibleButton>
-      </div>
+        <AccessibleButton
+          className="mt-3 w-full"
+          variant="secondary"
+          isLoading={pendingMethod === "카카오"}
+          loadingLabel="카카오 인증을 준비하고 있어요"
+          disabled={isPending}
+          onClick={() => authenticate("카카오")}
+        >
+          카카오로 시작하기
+        </AccessibleButton>
+      </section>
 
-      <details className="mt-4 rounded-xl border-2 border-[var(--color-border)] bg-[var(--color-surface)] p-4">
-        <summary className="min-h-11 cursor-pointer rounded-md py-2 font-bold focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[var(--color-focus)] focus-visible:ring-offset-2">
-          다른 로그인 방법 보기
-        </summary>
-        <div className="mt-4 grid gap-3">
-          <AccessibleButton
-            variant="secondary"
-            isLoading={pendingMethod === "카카오"}
-            loadingLabel="카카오 인증을 준비하고 있어요"
-            disabled={isPending}
-            onClick={() => authenticate("카카오")}
-          >
-            카카오로 시작하기
-          </AccessibleButton>
+      <section
+        className="mt-8 border-t-2 border-[var(--color-border)] pt-8"
+        aria-labelledby="returning-user-login-title"
+      >
+        <h2 id="returning-user-login-title" className="text-xl font-bold">
+          이미 이용한 적이 있나요?
+        </h2>
+        <div className="mt-4 grid gap-3 sm:grid-cols-2">
           <AccessibleButton
             variant="secondary"
             isLoading={pendingMethod === "PIN"}
@@ -96,7 +109,7 @@ export default function LoginPage() {
             생체인증으로 로그인
           </AccessibleButton>
         </div>
-      </details>
+      </section>
 
       <div className="mt-6 min-h-16" aria-live="polite" aria-atomic="true">
         {completedMethod ? (
