@@ -32,6 +32,11 @@
 
 * { box-sizing: border-box; }
 html { color-scheme: light; }
+
+:root[data-large-text="true"] {
+  font-size: 125%;
+}
+
 body {
   margin: 0;
   background: var(--color-background);
@@ -41,6 +46,9 @@ body {
 button, input, select, textarea { font: inherit; }
 
 .accessibility-controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
   position: fixed;
   z-index: 50;
   top: 1rem;

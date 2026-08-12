@@ -3,6 +3,7 @@ import type { ReactNode } from "react";
 
 import { AccessibilityProvider } from "@/components/common/AccessibilityProvider";
 import { HighContrastToggle } from "@/components/common/HighContrastToggle";
+import { LargeTextToggle } from "@/components/common/LargeTextToggle";
 
 import "./globals.css";
 
@@ -18,6 +19,7 @@ export default function RootLayout({ children }: Readonly<{ children: ReactNode 
         <AccessibilityProvider>
           <div className="accessibility-controls" aria-label="접근성 설정">
             <HighContrastToggle />
+            <LargeTextToggle />
           </div>
           {children}
         </AccessibilityProvider>
