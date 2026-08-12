@@ -57,6 +57,10 @@ When accessibility conflicts with visual decoration, task completion, clarity, a
 - Reuse tokens from `src/app/globals.css`, keep one primary color family, avoid unapproved decorative gradients, and target WCAG AA contrast.
 - Inspect relevant files before editing and never erase or revert user changes.
 - Ask before deleting user-authored files, changing major dependencies/auth/API contracts, deploying, committing, pushing, or opening a PR.
+- Never implement a feature or screen directly on `main`. Create a dedicated branch from the latest `main` before editing feature code.
+- Use `feature/<spec-or-screen-name>` for product work and `chore/<description>` for documentation, configuration, or maintenance work.
+- Keep one feature or screen per branch. Do not begin the next feature on a branch that already contains another feature.
+- Push the feature branch for review, and do not merge it into `main` without explicit user approval.
 - Keep commits atomic and organize them by one feature or one screen. Do not combine unrelated screens or features in a single commit.
 - A commit must include the types, state, UI, and tests that belong to that same feature when they form one reviewable unit.
 - Commit shared foundations, project configuration, documentation, and mechanical cleanup separately from feature implementation.
