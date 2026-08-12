@@ -39,3 +39,9 @@ export interface VoiceState {
   transcript: string;
   errorMessage: string | null;
 }
+
+export interface AccessibilityPreferences {
+  highContrast: boolean;
+  largeText: boolean;
+  simpleMode: boolean;
+}

@@ -1,5 +1,8 @@
 import type { Metadata } from "next";
 import type { ReactNode } from "react";
+
+import { AccessibilityProvider } from "@/components/common/AccessibilityProvider";
+
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -8,5 +11,11 @@ export const metadata: Metadata = {
 };
 
 export default function RootLayout({ children }: Readonly<{ children: ReactNode }>) {
-  return <html lang="ko"><body>{children}</body></html>;
+  return (
+    <html lang="ko">
+      <body>
+        <AccessibilityProvider>{children}</AccessibilityProvider>
+      </body>
+    </html>
+  );
 }
