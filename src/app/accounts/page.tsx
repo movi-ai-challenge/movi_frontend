@@ -4,7 +4,10 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 
 import { AccessibleButton } from "@/components/common/AccessibleButton";
-import { getConnectedAccounts } from "@/services/accountService";
+import {
+  getConnectedAccounts,
+  updateDefaultAccount,
+} from "@/services/accountService";
 import { useBankStore } from "@/store/useBankStore";
 
 type AccountListStatus = "loading" | "ready" | "error";
@@ -17,8 +20,14 @@ const currencyFormatter = new Intl.NumberFormat("ko-KR", {
 
 export default function ConnectedAccountListPage() {
   const accounts = useBankStore((state) => state.accounts);
+  const defaultAccountId = useBankStore((state) => state.defaultAccountId);
   const setAccounts = useBankStore((state) => state.setAccounts);
+  const setDefaultAccount = useBankStore((state) => state.setDefaultAccount);
   const [status, setStatus] = useState<AccountListStatus>("loading");
+  const [updatingAccountId, setUpdatingAccountId] = useState<string | null>(
+    null,
+  );
+  const [updateMessage, setUpdateMessage] = useState("");
 
   useEffect(() => {
     let isActive = true;
@@ -47,6 +56,24 @@ export default function ConnectedAccountListPage() {
       setStatus("ready");
     } catch {
       setStatus("error");
+    }
+  };
+
+  const changeDefaultAccount = async (accountId: string) => {
+    if (updatingAccountId) return;
+
+    setUpdatingAccountId(accountId);
+    setUpdateMessage("");
+
+    try {
+      const updatedAccountId = await updateDefaultAccount(accountId);
+      setDefaultAccount(updatedAccountId);
+      const account = accounts.find((item) => item.id === updatedAccountId);
+      setUpdateMessage(`${account?.accountName ?? "선택한 계좌"}를 기본 계좌로 설정했습니다.`);
+    } catch {
+      setUpdateMessage("기본 계좌를 바꾸지 못했습니다. 다시 시도해 주세요.");
+    } finally {
+      setUpdatingAccountId(null);
     }
   };
 
@@ -133,9 +160,16 @@ export default function ConnectedAccountListPage() {
                   className="rounded-xl border-2 border-[var(--color-border)] bg-[var(--color-surface)] p-6"
                 >
                   <article aria-labelledby={`${account.id}-name`}>
-                    <p className="font-semibold text-[var(--color-text-muted)]">
-                      {account.bankName}
-                    </p>
+                    <div className="flex flex-wrap items-center justify-between gap-3">
+                      <p className="font-semibold text-[var(--color-text-muted)]">
+                        {account.bankName}
+                      </p>
+                      {account.id === defaultAccountId ? (
+                        <span className="rounded-full border-2 border-[var(--color-success)] px-3 py-1 text-sm font-bold">
+                          기본 계좌
+                        </span>
+                      ) : null}
+                    </div>
                     <h3 id={`${account.id}-name`} className="mt-1 text-2xl font-bold">
                       {account.accountName}
                     </h3>
@@ -150,10 +184,36 @@ export default function ConnectedAccountListPage() {
                         </dd>
                       </div>
                     </dl>
+                    {account.id !== defaultAccountId ? (
+                      <AccessibleButton
+                        className="mt-5 w-full sm:w-auto"
+                        variant="secondary"
+                        isLoading={updatingAccountId === account.id}
+                        loadingLabel="기본 계좌로 바꾸고 있어요"
+                        disabled={updatingAccountId !== null}
+                        onClick={() => void changeDefaultAccount(account.id)}
+                      >
+                        이 계좌를 기본으로 설정
+                      </AccessibleButton>
+                    ) : (
+                      <p
+                        className="mt-5 font-semibold text-[var(--color-success)]"
+                        data-secondary-content="true"
+                      >
+                        잔액조회와 이체에 먼저 사용됩니다.
+                      </p>
+                    )}
                   </article>
                 </li>
               ))}
             </ul>
+            <p
+              className="mt-4 min-h-7 font-semibold"
+              aria-live="polite"
+              aria-atomic="true"
+            >
+              {updateMessage}
+            </p>
             <Link
               href="/accounts/connect"
               className="mt-6 inline-flex min-h-11 items-center rounded-lg border-2 border-[var(--color-border)] bg-[var(--color-surface)] px-5 py-2 font-semibold text-[var(--color-text)] hover:border-[var(--color-primary)] focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[var(--color-focus)] focus-visible:ring-offset-2"
