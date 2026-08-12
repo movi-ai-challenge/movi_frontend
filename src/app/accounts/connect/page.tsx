@@ -91,6 +91,12 @@ export default function AccountConnectionPage() {
             <p className="mt-2 leading-7 text-[var(--color-text-muted)]">
               실제 연동에서는 오픈뱅킹 인증 절차가 이어집니다.
             </p>
+            <Link
+              href="/accounts/register"
+              className="mt-4 inline-flex min-h-11 items-center rounded-lg border-2 border-transparent bg-[var(--color-primary)] px-5 py-2 font-semibold text-[var(--color-on-primary)] hover:bg-[var(--color-primary-hover)] focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[var(--color-focus)] focus-visible:ring-offset-2"
+            >
+              연결된 계좌 확인하기
+            </Link>
           </div>
         ) : null}
       </div>
