@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { FormEvent, useEffect, useRef, useState } from "react";
 
 import { AccessibleButton } from "@/components/common/AccessibleButton";
@@ -12,8 +13,11 @@ type VoiceStep = "idle" | "listening" | "processing" | "missing-amount";
 type RecipientStatus = "loading" | "ready" | "error";
 
 export default function TransferInputPage() {
+  const router = useRouter();
+  const defaultAccountId = useBankStore((state) => state.defaultAccountId);
   const setVoiceState = useBankStore((state) => state.setVoiceState);
   const resetVoiceState = useBankStore((state) => state.resetVoiceState);
+  const setTransferDraft = useBankStore((state) => state.setTransferDraft);
   const [recipient, setRecipient] = useState("");
   const [selectedRecipientId, setSelectedRecipientId] = useState<string | null>(
     null,
@@ -21,7 +25,6 @@ export default function TransferInputPage() {
   const [amount, setAmount] = useState("");
   const [voiceStep, setVoiceStep] = useState<VoiceStep>("idle");
   const [errorMessage, setErrorMessage] = useState("");
-  const [resultMessage, setResultMessage] = useState("");
   const [registeredRecipients, setRegisteredRecipients] = useState<
     RegisteredRecipient[]
   >([]);
@@ -81,7 +84,6 @@ export default function TransferInputPage() {
 
   const submitTransferInput = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    setResultMessage("");
 
     if (!recipient.trim() || !amount || Number(amount) <= 0) {
       setErrorMessage("받는 사람과 1원 이상의 금액을 모두 입력해 주세요.");
@@ -90,9 +92,19 @@ export default function TransferInputPage() {
     }
 
     setErrorMessage("");
-    setResultMessage(
-      `${recipient.trim()}님에게 ${Number(amount).toLocaleString("ko-KR")}원을 보내는 내용으로 확인했습니다. 아직 이체는 실행되지 않았습니다.`,
+    const savedRecipient = registeredRecipients.find(
+      (item) => item.id === selectedRecipientId,
     );
+    setTransferDraft({
+      sourceAccountId: defaultAccountId,
+      recipientId: savedRecipient?.id ?? null,
+      recipientName: recipient.trim(),
+      recipientBankName: savedRecipient?.bankName ?? null,
+      recipientMaskedAccountNumber:
+        savedRecipient?.maskedAccountNumber ?? null,
+      amount: Number(amount),
+    });
+    router.push("/transfer/review");
   };
 
   return (
@@ -219,7 +231,6 @@ export default function TransferInputPage() {
                   onClick={() => {
                     setRecipient(savedRecipient.name);
                     setSelectedRecipientId(savedRecipient.id);
-                    setResultMessage("");
                   }}
                   className="flex min-h-16 w-full items-center justify-between gap-4 rounded-xl border-2 border-[var(--color-border)] bg-[var(--color-surface)] p-4 text-left hover:border-[var(--color-primary)] focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[var(--color-focus)] focus-visible:ring-offset-2 aria-pressed:border-[var(--color-primary)]"
                 >
@@ -267,10 +278,11 @@ export default function TransferInputPage() {
               id="transfer-amount"
               type="number"
               min="1"
+              step="10000"
               inputMode="numeric"
               value={amount}
               onChange={(event) => setAmount(event.target.value)}
-              aria-describedby="transfer-amount-unit"
+              aria-describedby="transfer-amount-help transfer-amount-unit"
               className="min-h-14 w-full rounded-lg border-2 border-[var(--color-border)] bg-[var(--color-surface)] px-4 py-3 pr-12 text-lg focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[var(--color-focus)] focus-visible:ring-offset-2"
             />
             <span
@@ -279,6 +291,31 @@ export default function TransferInputPage() {
             >
               원
             </span>
+          </div>
+          <p
+            id="transfer-amount-help"
+            className="mt-2 text-sm leading-6 text-[var(--color-text-muted)]"
+          >
+            위아래 화살표는 1만 원씩 조절됩니다. 금액을 직접 입력할 수도
+            있습니다.
+          </p>
+          <div
+            className="mt-3 grid grid-cols-3 gap-2"
+            role="group"
+            aria-label="금액 빠르게 추가"
+          >
+            {[10_000, 50_000, 100_000].map((increment) => (
+              <AccessibleButton
+                key={increment}
+                className="px-3"
+                variant="secondary"
+                onClick={() =>
+                  setAmount(String((Number(amount) || 0) + increment))
+                }
+              >
+                +{(increment / 10_000).toLocaleString("ko-KR")}만
+              </AccessibleButton>
+            ))}
           </div>
         </div>
 
@@ -298,18 +335,6 @@ export default function TransferInputPage() {
         </AccessibleButton>
       </form>
 
-      {resultMessage ? (
-        <section
-          className="mt-8 rounded-xl border-2 border-[var(--color-success)] bg-[var(--color-surface)] p-6"
-          aria-labelledby="transfer-input-result-title"
-          aria-live="polite"
-        >
-          <h2 id="transfer-input-result-title" className="text-xl font-bold">
-            입력 내용 확인
-          </h2>
-          <p className="mt-3 leading-7">{resultMessage}</p>
-        </section>
-      ) : null}
     </main>
   );
 }
