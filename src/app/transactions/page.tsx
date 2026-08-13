@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import { AccessibleButton } from "@/components/common/AccessibleButton";
 import { getConnectedAccounts } from "@/services/accountService";
@@ -31,12 +31,38 @@ const dateFormatter = new Intl.DateTimeFormat("ko-KR", {
   minute: "2-digit",
 });
 
+function toDateInputValue(date: Date) {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
+function getInitialDateRange() {
+  const end = new Date();
+  const start = new Date(end);
+  start.setDate(start.getDate() - 30);
+
+  return {
+    startDate: toDateInputValue(start),
+    endDate: toDateInputValue(end),
+  };
+}
+
 export default function TransactionListPage() {
   const defaultAccountId = useBankStore((state) => state.defaultAccountId);
   const setAccounts = useBankStore((state) => state.setAccounts);
   const [account, setAccount] = useState<Account | null>(null);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [status, setStatus] = useState<TransactionListStatus>("loading");
+  const [startDate, setStartDate] = useState(
+    () => getInitialDateRange().startDate,
+  );
+  const [endDate, setEndDate] = useState(
+    () => getInitialDateRange().endDate,
+  );
+  const [dateError, setDateError] = useState("");
+  const dateErrorRef = useRef<HTMLDivElement>(null);
 
   const loadTransactions = async () => {
     setStatus("loading");
@@ -59,6 +85,36 @@ export default function TransactionListPage() {
 
       const recentTransactions = await getRecentTransactions(targetAccount.id);
       setTransactions(recentTransactions);
+      setStatus("ready");
+    } catch {
+      setStatus("error");
+    }
+  };
+
+  const filterTransactionsByDate = async () => {
+    if (!account) return;
+
+    if (!startDate || !endDate) {
+      setDateError("시작일과 종료일을 모두 입력해 주세요.");
+      window.setTimeout(() => dateErrorRef.current?.focus(), 0);
+      return;
+    }
+
+    if (startDate > endDate) {
+      setDateError("시작일은 종료일보다 늦을 수 없습니다.");
+      window.setTimeout(() => dateErrorRef.current?.focus(), 0);
+      return;
+    }
+
+    setDateError("");
+    setStatus("loading");
+
+    try {
+      const filteredTransactions = await getRecentTransactions(account.id, {
+        startDate,
+        endDate,
+      });
+      setTransactions(filteredTransactions);
       setStatus("ready");
     } catch {
       setStatus("error");
@@ -163,11 +219,71 @@ export default function TransactionListPage() {
           </section>
         ) : null}
 
+        {status === "ready" && account ? (
+          <section
+            className="mb-8 rounded-xl border-2 border-[var(--color-border)] bg-[var(--color-surface)] p-5"
+            aria-labelledby="date-range-title"
+          >
+            <h2 id="date-range-title" className="text-xl font-bold">
+              조회 기간
+            </h2>
+            <div className="mt-4 grid gap-4 sm:grid-cols-2">
+              <div>
+                <label htmlFor="transaction-start-date" className="font-semibold">
+                  시작일
+                </label>
+                <input
+                  id="transaction-start-date"
+                  type="date"
+                  value={startDate}
+                  max={endDate || undefined}
+                  aria-invalid={dateError ? "true" : undefined}
+                  aria-describedby={dateError ? "date-range-error" : undefined}
+                  onChange={(event) => setStartDate(event.target.value)}
+                  className="mt-2 min-h-14 w-full rounded-lg border-2 border-[var(--color-border)] bg-[var(--color-background)] px-4 py-3 text-lg text-[var(--color-text)] focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[var(--color-focus)] focus-visible:ring-offset-2"
+                />
+              </div>
+              <div>
+                <label htmlFor="transaction-end-date" className="font-semibold">
+                  종료일
+                </label>
+                <input
+                  id="transaction-end-date"
+                  type="date"
+                  value={endDate}
+                  min={startDate || undefined}
+                  aria-invalid={dateError ? "true" : undefined}
+                  aria-describedby={dateError ? "date-range-error" : undefined}
+                  onChange={(event) => setEndDate(event.target.value)}
+                  className="mt-2 min-h-14 w-full rounded-lg border-2 border-[var(--color-border)] bg-[var(--color-background)] px-4 py-3 text-lg text-[var(--color-text)] focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[var(--color-focus)] focus-visible:ring-offset-2"
+                />
+              </div>
+            </div>
+            {dateError ? (
+              <div
+                id="date-range-error"
+                ref={dateErrorRef}
+                tabIndex={-1}
+                role="alert"
+                className="mt-4 rounded-lg border-2 border-[var(--color-danger)] p-4 font-semibold focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[var(--color-focus)]"
+              >
+                {dateError}
+              </div>
+            ) : null}
+            <AccessibleButton
+              className="mt-5 w-full sm:w-auto"
+              onClick={() => void filterTransactionsByDate()}
+            >
+              선택한 기간 조회하기
+            </AccessibleButton>
+          </section>
+        ) : null}
+
         {status === "ready" && account && transactions.length === 0 ? (
           <section className="rounded-xl border-2 border-[var(--color-border)] bg-[var(--color-surface)] p-6">
-            <h2 className="text-xl font-bold">최근 거래내역이 없습니다.</h2>
+            <h2 className="text-xl font-bold">선택한 기간의 거래가 없습니다.</h2>
             <p className="mt-2 leading-7 text-[var(--color-text-muted)]">
-              새로운 거래가 생기면 이 화면에서 확인할 수 있어요.
+              다른 기간을 선택해 다시 조회해 주세요.
             </p>
           </section>
         ) : null}
@@ -175,7 +291,7 @@ export default function TransactionListPage() {
         {status === "ready" && transactions.length > 0 ? (
           <section aria-labelledby="recent-transaction-count">
             <h2 id="recent-transaction-count" className="text-xl font-bold">
-              최근 거래 {transactions.length}건
+              조회 결과 {transactions.length}건
             </h2>
             <ol className="mt-4 grid list-none gap-3 p-0">
               {transactions.map((transaction) => {
