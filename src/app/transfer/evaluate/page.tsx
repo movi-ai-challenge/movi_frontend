@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 
 import { AccessibleButton } from "@/components/common/AccessibleButton";
@@ -14,12 +15,12 @@ type EvaluationStatus =
   | "checking"
   | "complete"
   | "executing"
-  | "success"
-  | "error"
-  | "transfer-error";
+  | "error";
 
 export default function TransferEvaluationPage() {
+  const router = useRouter();
   const transferDraft = useBankStore((state) => state.transferDraft);
+  const setTransferResult = useBankStore((state) => state.setTransferResult);
   const [status, setStatus] = useState<EvaluationStatus>("checking");
   const [evaluation, setEvaluation] = useState<FdsEvaluationResult | null>(null);
   const requestInProgressRef = useRef(false);
@@ -66,15 +67,27 @@ export default function TransferEvaluationPage() {
   }, [transferDraft]);
 
   const executeTransfer = async () => {
-    if (transferInProgressRef.current) return;
+    if (transferInProgressRef.current || !transferDraft) return;
 
     transferInProgressRef.current = true;
     setStatus("executing");
     try {
       await executeLowRiskTransfer();
-      setStatus("success");
+      setTransferResult({
+        status: "success",
+        recipientName: transferDraft.recipientName,
+        amount: transferDraft.amount,
+        message: "요청한 이체가 정상적으로 완료됐습니다.",
+      });
+      router.push("/transfer/result");
     } catch {
-      setStatus("transfer-error");
+      setTransferResult({
+        status: "failed",
+        recipientName: transferDraft.recipientName,
+        amount: transferDraft.amount,
+        message: "이체를 완료하지 못했습니다. 계좌에서 돈이 빠져나가지 않았습니다.",
+      });
+      router.push("/transfer/result");
     } finally {
       transferInProgressRef.current = false;
     }
@@ -99,7 +112,7 @@ export default function TransferEvaluationPage() {
 
   return (
     <main className="mx-auto min-h-[70vh] w-full max-w-xl px-6 py-12">
-      {status !== "executing" && status !== "success" ? (
+      {status !== "executing" ? (
         <PageBackLink href="/transfer/review">송금 확인으로</PageBackLink>
       ) : null}
       <p className="font-bold text-[var(--color-primary)]">거래 안전 확인</p>
@@ -165,24 +178,6 @@ export default function TransferEvaluationPage() {
           </section>
         ) : null}
 
-        {status === "success" ? (
-          <section className="rounded-xl border-2 border-[var(--color-success)] bg-[var(--color-surface)] p-6">
-            <h2 className="text-xl font-bold">이체가 완료됐습니다.</h2>
-            <p className="mt-2 leading-7">
-              {transferDraft.recipientName}님에게 {transferDraft.amount.toLocaleString("ko-KR")}원을 보냈습니다.
-            </p>
-            <p className="mt-2 text-sm text-[var(--color-text-muted)]">
-              현재는 프론트엔드 시연용 Mock 결과입니다.
-            </p>
-            <Link
-              href="/accounts"
-              className="mt-5 inline-flex min-h-11 items-center rounded-lg bg-[var(--color-primary)] px-6 py-3 font-semibold text-[var(--color-on-primary)] focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[var(--color-focus)] focus-visible:ring-offset-2"
-            >
-              연결된 계좌로 이동
-            </Link>
-          </section>
-        ) : null}
-
         {status === "error" ? (
           <section
             className="rounded-xl border-2 border-[var(--color-danger)] bg-[var(--color-surface)] p-6"
@@ -202,24 +197,6 @@ export default function TransferEvaluationPage() {
           </section>
         ) : null}
 
-        {status === "transfer-error" ? (
-          <section
-            className="rounded-xl border-2 border-[var(--color-danger)] bg-[var(--color-surface)] p-6"
-            role="alert"
-          >
-            <h2 className="text-xl font-bold">이체를 완료하지 못했습니다.</h2>
-            <p className="mt-2 leading-7 text-[var(--color-text-muted)]">
-              계좌에서 돈이 빠져나가지 않았습니다. 거래내역을 확인한 후 다시
-              시도해 주세요.
-            </p>
-            <AccessibleButton
-              className="mt-5"
-              onClick={() => void executeTransfer()}
-            >
-              이체 다시 시도
-            </AccessibleButton>
-          </section>
-        ) : null}
       </div>
     </main>
   );

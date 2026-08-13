@@ -25,6 +25,13 @@ export interface TransferDraft {
   amount: number;
 }
 
+export interface TransferResult {
+  status: "success" | "failed";
+  recipientName: string;
+  amount: number;
+  message: string;
+}
+
 export type FdsRiskLevel = "low" | "medium" | "high";
 export interface FdsEvaluationResult {
   riskLevel: FdsRiskLevel;
