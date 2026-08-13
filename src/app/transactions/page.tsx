@@ -5,6 +5,7 @@ import { useEffect, useRef, useState } from "react";
 
 import { AccessibleButton } from "@/components/common/AccessibleButton";
 import { VoiceTransactionQuery } from "@/components/domain/transactions/VoiceTransactionQuery";
+import { TransactionVoiceGuide } from "@/components/domain/transactions/TransactionVoiceGuide";
 import { getConnectedAccounts } from "@/services/accountService";
 import { getRecentTransactions } from "@/services/transactionService";
 import { useBankStore } from "@/store/useBankStore";
@@ -370,6 +371,7 @@ export default function TransactionListPage() {
             <h2 id="recent-transaction-count" className="text-xl font-bold">
               조회 결과 {transactions.length}건
             </h2>
+            <TransactionVoiceGuide transactions={transactions} />
             <ol className="mt-4 grid list-none gap-3 p-0">
               {transactions.map((transaction) => {
                 const isDeposit = transaction.type === "deposit";
