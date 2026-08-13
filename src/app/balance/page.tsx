@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 
 import { AccessibleButton } from "@/components/common/AccessibleButton";
+import { PageBackLink } from "@/components/common/PageBackLink";
 import { AccountApiError } from "@/components/domain/accounts/AccountApiError";
 import { getConnectedAccounts } from "@/services/accountService";
 import { toApiError, type ApiError } from "@/services/api";
@@ -83,12 +84,7 @@ export default function BalanceInquiryPage() {
 
   return (
     <main className="mx-auto min-h-[70vh] w-full max-w-xl px-6 py-12">
-      <Link
-        href="/accounts"
-        className="mb-8 inline-flex min-h-11 items-center rounded-md font-semibold text-[var(--color-primary)] underline decoration-2 underline-offset-4 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[var(--color-focus)] focus-visible:ring-offset-2"
-      >
-        연결된 계좌로
-      </Link>
+      <PageBackLink href="/accounts">연결된 계좌로</PageBackLink>
 
       <p
         className="text-base font-bold text-[var(--color-primary)]"

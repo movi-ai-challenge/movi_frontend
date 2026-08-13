@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 
 import { AccessibleButton } from "@/components/common/AccessibleButton";
+import { PageBackLink } from "@/components/common/PageBackLink";
 import { VoiceTransferDecision } from "@/components/domain/transfer/VoiceTransferDecision";
 import { getConnectedAccounts } from "@/services/accountService";
 import { useBankStore } from "@/store/useBankStore";
@@ -65,12 +66,7 @@ export default function TransferReviewPage() {
 
   return (
     <main className="mx-auto min-h-[70vh] w-full max-w-xl px-6 py-12">
-      <Link
-        href="/transfer"
-        className="mb-8 inline-flex min-h-11 items-center rounded-md font-semibold text-[var(--color-primary)] underline decoration-2 underline-offset-4 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[var(--color-focus)] focus-visible:ring-offset-2"
-      >
-        송금 정보 수정하기
-      </Link>
+      <PageBackLink href="/transfer">송금 정보 수정하기</PageBackLink>
 
       <p className="font-bold text-[var(--color-primary)]">최종 확인</p>
       <h1 className="mt-2 text-4xl font-bold tracking-tight">
