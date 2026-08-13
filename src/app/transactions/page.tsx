@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 
 import { AccessibleButton } from "@/components/common/AccessibleButton";
+import { VoiceTransactionQuery } from "@/components/domain/transactions/VoiceTransactionQuery";
 import { getConnectedAccounts } from "@/services/accountService";
 import { getRecentTransactions } from "@/services/transactionService";
 import { useBankStore } from "@/store/useBankStore";
@@ -119,10 +120,38 @@ export default function TransactionListPage() {
     setStatus("loading");
 
     try {
-      const filteredTransactions = await getRecentTransactions(account.id, {
-        startDate,
-        endDate,
-      }, selectedTypes);
+      const filteredTransactions = await getRecentTransactions(
+        account.id,
+        { startDate, endDate },
+        selectedTypes,
+      );
+      setTransactions(filteredTransactions);
+      setStatus("ready");
+    } catch {
+      setStatus("error");
+    }
+  };
+
+  const applyVoiceDateRange = async (
+    recognizedStartDate: string,
+    recognizedEndDate: string,
+  ) => {
+    if (!account) return;
+
+    setStartDate(recognizedStartDate);
+    setEndDate(recognizedEndDate);
+    setDateError("");
+    setStatus("loading");
+
+    try {
+      const filteredTransactions = await getRecentTransactions(
+        account.id,
+        {
+          startDate: recognizedStartDate,
+          endDate: recognizedEndDate,
+        },
+        selectedTypes,
+      );
       setTransactions(filteredTransactions);
       setStatus("ready");
     } catch {
@@ -237,10 +266,12 @@ export default function TransactionListPage() {
         ) : null}
 
         {status === "ready" && account ? (
-          <section
-            className="mb-8 rounded-xl border-2 border-[var(--color-border)] bg-[var(--color-surface)] p-5"
-            aria-labelledby="date-range-title"
-          >
+          <>
+            <VoiceTransactionQuery onApplyRange={applyVoiceDateRange} />
+            <section
+              className="mb-8 rounded-xl border-2 border-[var(--color-border)] bg-[var(--color-surface)] p-5"
+              aria-labelledby="date-range-title"
+            >
             <h2 id="date-range-title" className="text-xl font-bold">
               조회 기간
             </h2>
@@ -321,7 +352,8 @@ export default function TransactionListPage() {
             >
               선택한 기간 조회하기
             </AccessibleButton>
-          </section>
+            </section>
+          </>
         ) : null}
 
         {status === "ready" && account && transactions.length === 0 ? (
