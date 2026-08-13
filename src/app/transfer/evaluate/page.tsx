@@ -21,6 +21,15 @@ export default function TransferEvaluationPage() {
   const router = useRouter();
   const transferDraft = useBankStore((state) => state.transferDraft);
   const setTransferResult = useBankStore((state) => state.setTransferResult);
+  const isTransferRequestLocked = useBankStore(
+    (state) => state.isTransferRequestLocked,
+  );
+  const lockTransferRequest = useBankStore(
+    (state) => state.lockTransferRequest,
+  );
+  const unlockTransferRequest = useBankStore(
+    (state) => state.unlockTransferRequest,
+  );
   const [status, setStatus] = useState<EvaluationStatus>("checking");
   const [evaluation, setEvaluation] = useState<FdsEvaluationResult | null>(null);
   const requestInProgressRef = useRef(false);
@@ -67,7 +76,13 @@ export default function TransferEvaluationPage() {
   }, [transferDraft]);
 
   const executeTransfer = async () => {
-    if (transferInProgressRef.current || !transferDraft) return;
+    if (
+      transferInProgressRef.current ||
+      !transferDraft ||
+      !lockTransferRequest()
+    ) {
+      return;
+    }
 
     transferInProgressRef.current = true;
     setStatus("executing");
@@ -148,6 +163,9 @@ export default function TransferEvaluationPage() {
             </p>
             <AccessibleButton
               className="mt-5 w-full"
+              disabled={isTransferRequestLocked}
+              isLoading={isTransferRequestLocked}
+              loadingLabel="이체 요청을 처리하고 있어요"
               onClick={() => void executeTransfer()}
             >
               확인한 내용으로 이체 실행
@@ -193,6 +211,26 @@ export default function TransferEvaluationPage() {
               onClick={() => void evaluateTransfer()}
             >
               다시 요청하기
+            </AccessibleButton>
+          </section>
+        ) : null}
+
+        {isTransferRequestLocked && status !== "executing" ? (
+          <section
+            className="rounded-xl border-2 border-[var(--color-warning)] bg-[var(--color-surface)] p-6"
+            role="alert"
+          >
+            <h2 className="text-xl font-bold">이미 이체 요청을 처리 중입니다.</h2>
+            <p className="mt-2 leading-7">
+              중복 이체를 막기 위해 새 요청을 받지 않았습니다. 잠시 후 결과
+              화면을 확인해 주세요.
+            </p>
+            <AccessibleButton
+              className="mt-5"
+              variant="secondary"
+              onClick={unlockTransferRequest}
+            >
+              Mock 요청 잠금 초기화
             </AccessibleButton>
           </section>
         ) : null}
