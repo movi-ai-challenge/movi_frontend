@@ -16,6 +16,15 @@ export interface RegisteredRecipient {
   maskedAccountNumber: string;
 }
 
+export interface TransferDraft {
+  sourceAccountId: string | null;
+  recipientId: string | null;
+  recipientName: string;
+  recipientBankName: string | null;
+  recipientMaskedAccountNumber: string | null;
+  amount: number;
+}
+
 export type TransactionType = "deposit" | "withdrawal" | "transfer" | "blocked";
 export interface Transaction {
   id: string;
