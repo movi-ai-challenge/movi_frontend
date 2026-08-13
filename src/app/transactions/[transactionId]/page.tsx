@@ -1,10 +1,10 @@
 "use client";
 
-import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useEffect, useState } from "react";
 
 import { AccessibleButton } from "@/components/common/AccessibleButton";
+import { PageBackLink } from "@/components/common/PageBackLink";
 import { getConnectedAccounts } from "@/services/accountService";
 import { getTransactionDetail } from "@/services/transactionService";
 import type { Account, Transaction, TransactionType } from "@/types";
@@ -98,12 +98,7 @@ export default function TransactionDetailPage() {
 
   return (
     <main className="mx-auto min-h-[70vh] w-full max-w-xl px-6 py-12">
-      <Link
-        href="/transactions"
-        className="mb-8 inline-flex min-h-11 items-center rounded-md font-semibold text-[var(--color-primary)] underline decoration-2 underline-offset-4 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[var(--color-focus)] focus-visible:ring-offset-2"
-      >
-        거래내역으로
-      </Link>
+      <PageBackLink href="/transactions">거래내역으로</PageBackLink>
 
       <p
         className="text-base font-bold text-[var(--color-primary)]"

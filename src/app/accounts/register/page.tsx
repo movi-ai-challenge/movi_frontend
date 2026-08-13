@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useState } from "react";
 
 import { AccessibleButton } from "@/components/common/AccessibleButton";
+import { PageBackLink } from "@/components/common/PageBackLink";
 import {
   getPendingConnectedAccount,
   registerConnectedAccount,
@@ -37,12 +38,7 @@ export default function AccountRegistrationPage() {
 
   return (
     <main className="mx-auto flex min-h-[70vh] w-full max-w-xl flex-col justify-center px-6 py-12">
-      <Link
-        href="/accounts/connect"
-        className="mb-8 w-fit rounded-md font-semibold text-[var(--color-primary)] underline decoration-2 underline-offset-4 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[var(--color-focus)] focus-visible:ring-offset-2"
-      >
-        계좌 연결 화면으로
-      </Link>
+      <PageBackLink href="/accounts/connect">계좌 연결 화면으로</PageBackLink>
 
       <p
         className="text-base font-bold text-[var(--color-primary)]"

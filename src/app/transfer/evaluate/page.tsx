@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 
 import { AccessibleButton } from "@/components/common/AccessibleButton";
+import { PageBackLink } from "@/components/common/PageBackLink";
 import { requestFdsEvaluation } from "@/services/fdsService";
 import { executeLowRiskTransfer } from "@/services/transferService";
 import { useBankStore } from "@/store/useBankStore";
@@ -98,6 +99,9 @@ export default function TransferEvaluationPage() {
 
   return (
     <main className="mx-auto min-h-[70vh] w-full max-w-xl px-6 py-12">
+      {status !== "executing" && status !== "success" ? (
+        <PageBackLink href="/transfer/review">송금 확인으로</PageBackLink>
+      ) : null}
       <p className="font-bold text-[var(--color-primary)]">거래 안전 확인</p>
       <h1 className="mt-2 text-4xl font-bold tracking-tight">
         거래 위험을 확인하고 있습니다
