@@ -1,0 +1,199 @@
+"use client";
+
+import Link from "next/link";
+import { FormEvent, useRef, useState } from "react";
+
+import { AccessibleButton } from "@/components/common/AccessibleButton";
+import { useBankStore } from "@/store/useBankStore";
+
+type VoiceStep = "idle" | "listening" | "processing" | "missing-amount";
+
+export default function TransferInputPage() {
+  const setVoiceState = useBankStore((state) => state.setVoiceState);
+  const resetVoiceState = useBankStore((state) => state.resetVoiceState);
+  const [recipient, setRecipient] = useState("");
+  const [amount, setAmount] = useState("");
+  const [voiceStep, setVoiceStep] = useState<VoiceStep>("idle");
+  const [errorMessage, setErrorMessage] = useState("");
+  const [resultMessage, setResultMessage] = useState("");
+  const amountInputRef = useRef<HTMLInputElement>(null);
+  const errorRef = useRef<HTMLDivElement>(null);
+
+  const finishVoiceInput = () => {
+    setVoiceStep("processing");
+    setVoiceState({
+      status: "processing",
+      transcript: "김모비에게 보내줘",
+      errorMessage: null,
+    });
+
+    window.setTimeout(() => {
+      setRecipient("김모비");
+      setVoiceStep("missing-amount");
+      setVoiceState({
+        status: "idle",
+        transcript: "김모비에게 보내줘",
+        errorMessage: null,
+      });
+      window.setTimeout(() => amountInputRef.current?.focus(), 0);
+    }, 700);
+  };
+
+  const submitTransferInput = (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    setResultMessage("");
+
+    if (!recipient.trim() || !amount || Number(amount) <= 0) {
+      setErrorMessage("받는 사람과 1원 이상의 금액을 모두 입력해 주세요.");
+      window.setTimeout(() => errorRef.current?.focus(), 0);
+      return;
+    }
+
+    setErrorMessage("");
+    setResultMessage(
+      `${recipient.trim()}님에게 ${Number(amount).toLocaleString("ko-KR")}원을 보내는 내용으로 확인했습니다. 아직 이체는 실행되지 않았습니다.`,
+    );
+  };
+
+  return (
+    <main className="mx-auto min-h-[70vh] w-full max-w-xl px-6 py-12">
+      <Link
+        href="/accounts"
+        className="mb-8 inline-flex min-h-11 items-center rounded-md font-semibold text-[var(--color-primary)] underline decoration-2 underline-offset-4 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[var(--color-focus)] focus-visible:ring-offset-2"
+      >
+        연결된 계좌로
+      </Link>
+
+      <p className="font-bold text-[var(--color-primary)]">송금</p>
+      <h1 className="mt-2 text-4xl font-bold tracking-tight">
+        누구에게 얼마를 보낼까요?
+      </h1>
+      <p className="mt-4 text-lg leading-8 text-[var(--color-text-muted)]">
+        말하거나 직접 입력할 수 있습니다. 이 화면에서는 송금 정보를 확인만
+        하며, 바로 이체되지 않습니다.
+      </p>
+
+      <section
+        className="mt-8 rounded-xl border-2 border-[var(--color-primary)] bg-[var(--color-surface)] p-5"
+        aria-labelledby="transfer-voice-title"
+      >
+        <h2 id="transfer-voice-title" className="text-xl font-bold">
+          음성으로 입력
+        </h2>
+        <p className="mt-2 leading-7 text-[var(--color-text-muted)]">
+          예: “김모비에게 5만원 보내줘”라고 말해 보세요.
+        </p>
+        <div className="mt-4" aria-live="polite" aria-atomic="true">
+          {voiceStep === "idle" ? (
+            <AccessibleButton
+              onClick={() => {
+                setVoiceStep("listening");
+                setVoiceState({
+                  status: "listening",
+                  transcript: "",
+                  errorMessage: null,
+                });
+              }}
+            >
+              음성 입력 시작
+            </AccessibleButton>
+          ) : null}
+          {voiceStep === "listening" ? (
+            <div>
+              <p className="text-lg font-bold">듣고 있어요.</p>
+              <AccessibleButton className="mt-4" onClick={finishVoiceInput}>
+                말하기 완료
+              </AccessibleButton>
+            </div>
+          ) : null}
+          {voiceStep === "processing" ? (
+            <p className="text-lg font-bold">말씀하신 내용을 확인하고 있어요.</p>
+          ) : null}
+          {voiceStep === "missing-amount" ? (
+            <div>
+              <p className="text-lg font-bold">김모비님을 받는 사람으로 확인했어요.</p>
+              <p className="mt-2">얼마를 보낼까요? 아래 금액을 입력해 주세요.</p>
+              <AccessibleButton
+                className="mt-4"
+                variant="secondary"
+                onClick={() => {
+                  setVoiceStep("idle");
+                  resetVoiceState();
+                }}
+              >
+                처음부터 다시 말하기
+              </AccessibleButton>
+            </div>
+          ) : null}
+        </div>
+      </section>
+
+      <form className="mt-8" onSubmit={submitTransferInput} noValidate>
+        <div>
+          <label htmlFor="transfer-recipient" className="text-lg font-bold">
+            받는 사람
+          </label>
+          <input
+            id="transfer-recipient"
+            value={recipient}
+            onChange={(event) => setRecipient(event.target.value)}
+            autoComplete="off"
+            className="mt-2 min-h-14 w-full rounded-lg border-2 border-[var(--color-border)] bg-[var(--color-surface)] px-4 py-3 text-lg focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[var(--color-focus)] focus-visible:ring-offset-2"
+          />
+        </div>
+        <div className="mt-5">
+          <label htmlFor="transfer-amount" className="text-lg font-bold">
+            보낼 금액
+          </label>
+          <div className="relative mt-2">
+            <input
+              ref={amountInputRef}
+              id="transfer-amount"
+              type="number"
+              min="1"
+              inputMode="numeric"
+              value={amount}
+              onChange={(event) => setAmount(event.target.value)}
+              aria-describedby="transfer-amount-unit"
+              className="min-h-14 w-full rounded-lg border-2 border-[var(--color-border)] bg-[var(--color-surface)] px-4 py-3 pr-12 text-lg focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[var(--color-focus)] focus-visible:ring-offset-2"
+            />
+            <span
+              id="transfer-amount-unit"
+              className="pointer-events-none absolute right-4 top-4 font-bold"
+            >
+              원
+            </span>
+          </div>
+        </div>
+
+        {errorMessage ? (
+          <div
+            ref={errorRef}
+            tabIndex={-1}
+            role="alert"
+            className="mt-5 rounded-lg border-2 border-[var(--color-danger)] p-4 font-semibold focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[var(--color-focus)]"
+          >
+            {errorMessage}
+          </div>
+        ) : null}
+
+        <AccessibleButton className="mt-6 w-full" type="submit">
+          입력한 송금 정보 확인하기
+        </AccessibleButton>
+      </form>
+
+      {resultMessage ? (
+        <section
+          className="mt-8 rounded-xl border-2 border-[var(--color-success)] bg-[var(--color-surface)] p-6"
+          aria-labelledby="transfer-input-result-title"
+          aria-live="polite"
+        >
+          <h2 id="transfer-input-result-title" className="text-xl font-bold">
+            입력 내용 확인
+          </h2>
+          <p className="mt-3 leading-7">{resultMessage}</p>
+        </section>
+      ) : null}
+    </main>
+  );
+}
