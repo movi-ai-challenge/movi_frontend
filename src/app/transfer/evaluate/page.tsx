@@ -5,14 +5,24 @@ import { useEffect, useRef, useState } from "react";
 
 import { AccessibleButton } from "@/components/common/AccessibleButton";
 import { requestFdsEvaluation } from "@/services/fdsService";
+import { executeLowRiskTransfer } from "@/services/transferService";
 import { useBankStore } from "@/store/useBankStore";
+import type { FdsEvaluationResult } from "@/types";
 
-type EvaluationStatus = "checking" | "complete" | "error";
+type EvaluationStatus =
+  | "checking"
+  | "complete"
+  | "executing"
+  | "success"
+  | "error"
+  | "transfer-error";
 
 export default function TransferEvaluationPage() {
   const transferDraft = useBankStore((state) => state.transferDraft);
   const [status, setStatus] = useState<EvaluationStatus>("checking");
+  const [evaluation, setEvaluation] = useState<FdsEvaluationResult | null>(null);
   const requestInProgressRef = useRef(false);
+  const transferInProgressRef = useRef(false);
 
   const evaluateTransfer = async () => {
     if (requestInProgressRef.current) return;
@@ -20,7 +30,8 @@ export default function TransferEvaluationPage() {
     requestInProgressRef.current = true;
     setStatus("checking");
     try {
-      await requestFdsEvaluation();
+      const result = await requestFdsEvaluation();
+      setEvaluation(result);
       setStatus("complete");
     } catch {
       setStatus("error");
@@ -35,8 +46,11 @@ export default function TransferEvaluationPage() {
     let isActive = true;
     requestInProgressRef.current = true;
     void requestFdsEvaluation()
-      .then(() => {
-        if (isActive) setStatus("complete");
+      .then((result) => {
+        if (isActive) {
+          setEvaluation(result);
+          setStatus("complete");
+        }
       })
       .catch(() => {
         if (isActive) setStatus("error");
@@ -49,6 +63,21 @@ export default function TransferEvaluationPage() {
       isActive = false;
     };
   }, [transferDraft]);
+
+  const executeTransfer = async () => {
+    if (transferInProgressRef.current) return;
+
+    transferInProgressRef.current = true;
+    setStatus("executing");
+    try {
+      await executeLowRiskTransfer();
+      setStatus("success");
+    } catch {
+      setStatus("transfer-error");
+    } finally {
+      transferInProgressRef.current = false;
+    }
+  };
 
   if (!transferDraft) {
     return (
@@ -82,7 +111,7 @@ export default function TransferEvaluationPage() {
         className="mt-8"
         aria-live="polite"
         aria-atomic="true"
-        aria-busy={status === "checking"}
+        aria-busy={status === "checking" || status === "executing"}
       >
         {status === "checking" ? (
           <section className="rounded-xl border-2 border-[var(--color-primary)] bg-[var(--color-surface)] p-6">
@@ -93,13 +122,46 @@ export default function TransferEvaluationPage() {
           </section>
         ) : null}
 
-        {status === "complete" ? (
+        {status === "complete" && evaluation?.riskLevel === "low" ? (
           <section className="rounded-xl border-2 border-[var(--color-success)] bg-[var(--color-surface)] p-6">
-            <h2 className="text-xl font-bold">안전 확인 요청이 완료됐습니다.</h2>
+            <p className="font-bold text-[var(--color-success)]">낮은 위험</p>
+            <h2 className="mt-2 text-xl font-bold">바로 이체할 수 있습니다.</h2>
             <p className="mt-2 leading-7">
-              아직 이체되지 않았습니다. 다음 단계에서 위험도에 따른 결과를
-              확인합니다.
+              {evaluation.summary} 아직 이체되지 않았습니다.
             </p>
+            <AccessibleButton
+              className="mt-5 w-full"
+              onClick={() => void executeTransfer()}
+            >
+              확인한 내용으로 이체 실행
+            </AccessibleButton>
+          </section>
+        ) : null}
+
+        {status === "executing" ? (
+          <section className="rounded-xl border-2 border-[var(--color-primary)] bg-[var(--color-surface)] p-6">
+            <h2 className="text-xl font-bold">이체를 처리하고 있습니다.</h2>
+            <p className="mt-2 leading-7 text-[var(--color-text-muted)]">
+              버튼을 다시 누르지 않아도 됩니다. 중복 이체를 막고 있습니다.
+            </p>
+          </section>
+        ) : null}
+
+        {status === "success" ? (
+          <section className="rounded-xl border-2 border-[var(--color-success)] bg-[var(--color-surface)] p-6">
+            <h2 className="text-xl font-bold">이체가 완료됐습니다.</h2>
+            <p className="mt-2 leading-7">
+              {transferDraft.recipientName}님에게 {transferDraft.amount.toLocaleString("ko-KR")}원을 보냈습니다.
+            </p>
+            <p className="mt-2 text-sm text-[var(--color-text-muted)]">
+              현재는 프론트엔드 시연용 Mock 결과입니다.
+            </p>
+            <Link
+              href="/accounts"
+              className="mt-5 inline-flex min-h-11 items-center rounded-lg bg-[var(--color-primary)] px-6 py-3 font-semibold text-[var(--color-on-primary)] focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[var(--color-focus)] focus-visible:ring-offset-2"
+            >
+              연결된 계좌로 이동
+            </Link>
           </section>
         ) : null}
 
@@ -118,6 +180,25 @@ export default function TransferEvaluationPage() {
               onClick={() => void evaluateTransfer()}
             >
               다시 요청하기
+            </AccessibleButton>
+          </section>
+        ) : null}
+
+        {status === "transfer-error" ? (
+          <section
+            className="rounded-xl border-2 border-[var(--color-danger)] bg-[var(--color-surface)] p-6"
+            role="alert"
+          >
+            <h2 className="text-xl font-bold">이체를 완료하지 못했습니다.</h2>
+            <p className="mt-2 leading-7 text-[var(--color-text-muted)]">
+              계좌에서 돈이 빠져나가지 않았습니다. 거래내역을 확인한 후 다시
+              시도해 주세요.
+            </p>
+            <AccessibleButton
+              className="mt-5"
+              onClick={() => void executeTransfer()}
+            >
+              이체 다시 시도
             </AccessibleButton>
           </section>
         ) : null}

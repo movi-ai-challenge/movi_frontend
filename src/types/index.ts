@@ -25,6 +25,12 @@ export interface TransferDraft {
   amount: number;
 }
 
+export type FdsRiskLevel = "low" | "medium" | "high";
+export interface FdsEvaluationResult {
+  riskLevel: FdsRiskLevel;
+  summary: string;
+}
+
 export type TransactionType = "deposit" | "withdrawal" | "transfer" | "blocked";
 export interface Transaction {
   id: string;
