@@ -15,7 +15,15 @@ const typeLabels: Record<TransactionType, string> = {
   deposit: "입금",
   withdrawal: "출금",
   transfer: "이체",
+  blocked: "차단",
 };
+
+const filterTypes: TransactionType[] = [
+  "deposit",
+  "withdrawal",
+  "transfer",
+  "blocked",
+];
 
 const currencyFormatter = new Intl.NumberFormat("ko-KR", {
   style: "currency",
@@ -62,6 +70,7 @@ export default function TransactionListPage() {
     () => getInitialDateRange().endDate,
   );
   const [dateError, setDateError] = useState("");
+  const [selectedTypes, setSelectedTypes] = useState<TransactionType[]>([]);
   const dateErrorRef = useRef<HTMLDivElement>(null);
 
   const loadTransactions = async () => {
@@ -113,12 +122,20 @@ export default function TransactionListPage() {
       const filteredTransactions = await getRecentTransactions(account.id, {
         startDate,
         endDate,
-      });
+      }, selectedTypes);
       setTransactions(filteredTransactions);
       setStatus("ready");
     } catch {
       setStatus("error");
     }
+  };
+
+  const toggleTransactionType = (type: TransactionType) => {
+    setSelectedTypes((currentTypes) =>
+      currentTypes.includes(type)
+        ? currentTypes.filter((currentType) => currentType !== type)
+        : [...currentTypes, type],
+    );
   };
 
   useEffect(() => {
@@ -259,6 +276,34 @@ export default function TransactionListPage() {
                 />
               </div>
             </div>
+            <fieldset className="mt-5 border-t-2 border-[var(--color-border)] pt-5">
+              <legend className="font-bold">거래 유형</legend>
+              <p
+                id="transaction-type-help"
+                className="mt-2 text-sm leading-6 text-[var(--color-text-muted)]"
+              >
+                선택하지 않으면 모든 거래를 보여드려요.
+              </p>
+              <div
+                className="mt-3 grid gap-3 sm:grid-cols-2"
+                aria-describedby="transaction-type-help"
+              >
+                {filterTypes.map((type) => (
+                  <label
+                    key={type}
+                    className="flex min-h-14 cursor-pointer items-center gap-3 rounded-lg border-2 border-[var(--color-border)] bg-[var(--color-background)] p-3 font-semibold"
+                  >
+                    <input
+                      type="checkbox"
+                      checked={selectedTypes.includes(type)}
+                      onChange={() => toggleTransactionType(type)}
+                      className="h-7 w-7 shrink-0 accent-[var(--color-primary)] focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[var(--color-focus)] focus-visible:ring-offset-2"
+                    />
+                    {typeLabels[type]}
+                  </label>
+                ))}
+              </div>
+            </fieldset>
             {dateError ? (
               <div
                 id="date-range-error"
@@ -296,7 +341,8 @@ export default function TransactionListPage() {
             <ol className="mt-4 grid list-none gap-3 p-0">
               {transactions.map((transaction) => {
                 const isDeposit = transaction.type === "deposit";
-                const amountPrefix = isDeposit ? "+" : "-";
+                const isBlocked = transaction.type === "blocked";
+                const amountPrefix = isDeposit ? "+" : isBlocked ? "" : "-";
 
                 return (
                   <li
@@ -318,7 +364,11 @@ export default function TransactionListPage() {
                         </div>
                         <p className="text-2xl font-bold">
                           <span className="sr-only">
-                            {isDeposit ? "들어온 금액" : "나간 금액"}
+                            {isDeposit
+                              ? "들어온 금액"
+                              : isBlocked
+                                ? "차단되어 출금되지 않은 금액"
+                                : "나간 금액"}
                           </span>
                           {amountPrefix}
                           {currencyFormatter.format(transaction.amount)}

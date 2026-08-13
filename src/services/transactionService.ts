@@ -1,11 +1,12 @@
 import { mockTransactions } from "@/services/mockData";
-import type { Transaction } from "@/types";
+import type { Transaction, TransactionType } from "@/types";
 
 const MOCK_TRANSACTION_DELAY_MS = 600;
 
 export async function getRecentTransactions(
   accountId: string,
   dateRange?: { startDate: string; endDate: string },
+  types?: TransactionType[],
 ): Promise<Transaction[]> {
   await new Promise<void>((resolve) => {
     window.setTimeout(resolve, MOCK_TRANSACTION_DELAY_MS);
@@ -14,6 +15,9 @@ export async function getRecentTransactions(
   return mockTransactions
     .filter((transaction) => {
       if (transaction.accountId !== accountId) return false;
+      if (types && types.length > 0 && !types.includes(transaction.type)) {
+        return false;
+      }
       if (!dateRange) return true;
 
       const transactionDate = transaction.occurredAt.slice(0, 10);
