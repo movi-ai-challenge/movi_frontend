@@ -1,5 +1,11 @@
 import { create } from "zustand";
-import type { Account, TransferDraft, User, VoiceState } from "@/types";
+import type {
+  Account,
+  TransferDraft,
+  TransferResult,
+  User,
+  VoiceState,
+} from "@/types";
 
 const initialVoiceState: VoiceState = { status: "idle", transcript: "", errorMessage: null };
 
@@ -10,6 +16,7 @@ interface BankStore {
   defaultAccountId: string | null;
   voice: VoiceState;
   transferDraft: TransferDraft | null;
+  transferResult: TransferResult | null;
   setUser: (user: User | null) => void;
   setAccounts: (accounts: Account[]) => void;
   selectAccount: (accountId: string | null) => void;
@@ -18,6 +25,8 @@ interface BankStore {
   resetVoiceState: () => void;
   setTransferDraft: (transferDraft: TransferDraft) => void;
   clearTransferDraft: () => void;
+  setTransferResult: (transferResult: TransferResult) => void;
+  clearTransferResult: () => void;
 }
 
 export const useBankStore = create<BankStore>((set) => ({
@@ -27,6 +36,7 @@ export const useBankStore = create<BankStore>((set) => ({
   defaultAccountId: null,
   voice: initialVoiceState,
   transferDraft: null,
+  transferResult: null,
   setUser: (user) => set({ user }),
   setAccounts: (accounts) =>
     set((state) => ({
@@ -48,4 +58,6 @@ export const useBankStore = create<BankStore>((set) => ({
   resetVoiceState: () => set({ voice: initialVoiceState }),
   setTransferDraft: (transferDraft) => set({ transferDraft }),
   clearTransferDraft: () => set({ transferDraft: null }),
+  setTransferResult: (transferResult) => set({ transferResult }),
+  clearTransferResult: () => set({ transferResult: null }),
 }));
