@@ -9,7 +9,7 @@ export interface Account {
   currency: "KRW";
 }
 
-export type TransactionType = "deposit" | "withdrawal" | "transfer";
+export type TransactionType = "deposit" | "withdrawal" | "transfer" | "blocked";
 export interface Transaction {
   id: string;
   accountId: string;

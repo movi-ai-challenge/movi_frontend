@@ -56,5 +56,14 @@ export const mockTransactions: Transaction[] = [
     balanceAfter: 8_100_000,
     occurredAt: "2026-08-11T10:10:00+09:00",
   },
+  {
+    id: "transaction-demo-5",
+    accountId: "account-demo-1",
+    type: "blocked",
+    description: "위험 거래 차단",
+    amount: 1_500_000,
+    balanceAfter: 2_450_000,
+    occurredAt: "2026-08-10T22:40:00+09:00",
+  },
 ];
 export const mockFdsAlerts: FdsAlert[] = [];
