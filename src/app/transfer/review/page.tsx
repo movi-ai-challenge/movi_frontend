@@ -153,6 +153,12 @@ export default function TransferReviewPage() {
           <p className="mt-2 leading-7">
             아직 이체는 실행되지 않았습니다. 다음 단계에서 다시 확인합니다.
           </p>
+          <Link
+            href="/transfer/evaluate"
+            className="mt-5 inline-flex min-h-11 w-full items-center justify-center rounded-lg border-2 border-transparent bg-[var(--color-primary)] px-6 py-3 font-semibold text-[var(--color-on-primary)] hover:bg-[var(--color-primary-hover)] focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[var(--color-focus)] focus-visible:ring-offset-2"
+          >
+            거래 안전 확인 시작
+          </Link>
         </section>
       )}
     </main>
