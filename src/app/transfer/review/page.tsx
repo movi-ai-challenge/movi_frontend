@@ -1,9 +1,11 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 
 import { AccessibleButton } from "@/components/common/AccessibleButton";
+import { VoiceTransferDecision } from "@/components/domain/transfer/VoiceTransferDecision";
 import { getConnectedAccounts } from "@/services/accountService";
 import { useBankStore } from "@/store/useBankStore";
 import type { Account } from "@/types";
@@ -15,7 +17,9 @@ const currencyFormatter = new Intl.NumberFormat("ko-KR", {
 });
 
 export default function TransferReviewPage() {
+  const router = useRouter();
   const transferDraft = useBankStore((state) => state.transferDraft);
+  const clearTransferDraft = useBankStore((state) => state.clearTransferDraft);
   const [sourceAccount, setSourceAccount] = useState<Account | null>(null);
   const [isConfirmed, setIsConfirmed] = useState(false);
 
@@ -125,12 +129,21 @@ export default function TransferReviewPage() {
       </section>
 
       {!isConfirmed ? (
-        <AccessibleButton
-          className="mt-6 w-full"
-          onClick={() => setIsConfirmed(true)}
-        >
-          이체 내용 확인 완료
-        </AccessibleButton>
+        <>
+          <VoiceTransferDecision
+            onConfirm={() => setIsConfirmed(true)}
+            onCancel={() => {
+              clearTransferDraft();
+              router.push("/transfer");
+            }}
+          />
+          <AccessibleButton
+            className="mt-6 w-full"
+            onClick={() => setIsConfirmed(true)}
+          >
+            화면에서 이체 내용 확인 완료
+          </AccessibleButton>
+        </>
       ) : (
         <section
           className="mt-6 rounded-xl border-2 border-[var(--color-success)] bg-[var(--color-surface)] p-5"
