@@ -6,6 +6,9 @@ import { useBankStore } from "@/store/useBankStore";
 
 export default function TransferResultPage() {
   const transferResult = useBankStore((state) => state.transferResult);
+  const unlockTransferRequest = useBankStore(
+    (state) => state.unlockTransferRequest,
+  );
 
   if (!transferResult) {
     return (
@@ -78,6 +81,7 @@ export default function TransferResultPage() {
 
       <Link
         href={isSuccess ? "/accounts" : "/transfer/review"}
+        onClick={unlockTransferRequest}
         className="mt-6 inline-flex min-h-11 w-full items-center justify-center rounded-lg bg-[var(--color-primary)] px-6 py-3 font-semibold text-[var(--color-on-primary)] focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[var(--color-focus)] focus-visible:ring-offset-2"
       >
         {isSuccess ? "연결된 계좌로 이동" : "송금 정보 다시 확인"}
