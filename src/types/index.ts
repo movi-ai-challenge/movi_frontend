@@ -9,6 +9,13 @@ export interface Account {
   currency: "KRW";
 }
 
+export interface RegisteredRecipient {
+  id: string;
+  name: string;
+  bankName: string;
+  maskedAccountNumber: string;
+}
+
 export type TransactionType = "deposit" | "withdrawal" | "transfer" | "blocked";
 export interface Transaction {
   id: string;
