@@ -377,6 +377,12 @@ export default function TransactionListPage() {
                       <p className="mt-4 text-[var(--color-text-muted)]">
                         {dateFormatter.format(new Date(transaction.occurredAt))}
                       </p>
+                      <Link
+                        href={`/transactions/${transaction.id}`}
+                        className="mt-4 inline-flex min-h-11 items-center rounded-lg border-2 border-[var(--color-border)] bg-[var(--color-surface)] px-4 py-2 font-semibold text-[var(--color-text)] hover:border-[var(--color-primary)] focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[var(--color-focus)] focus-visible:ring-offset-2"
+                      >
+                        이 거래 자세히 보기
+                      </Link>
                     </article>
                   </li>
                 );

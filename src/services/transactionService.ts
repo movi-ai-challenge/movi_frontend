@@ -32,3 +32,17 @@ export async function getRecentTransactions(
         new Date(first.occurredAt).getTime(),
     );
 }
+
+export async function getTransactionDetail(
+  transactionId: string,
+): Promise<Transaction | null> {
+  await new Promise<void>((resolve) => {
+    window.setTimeout(resolve, MOCK_TRANSACTION_DELAY_MS);
+  });
+
+  return (
+    mockTransactions.find(
+      (transaction) => transaction.id === transactionId,
+    ) ?? null
+  );
+}
