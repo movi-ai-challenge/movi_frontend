@@ -1,15 +1,15 @@
 @import "tailwindcss";
 
 :root {
-  --color-background: #f7f9fc;
-  --color-surface: #ffffff;
-  --color-text: #172033;
-  --color-text-muted: #526078;
-  --color-border: #cbd4e1;
-  --color-primary: #174ea6;
-  --color-primary-hover: #123d83;
+  --color-background: #ffffff;
+  --color-surface: #f2f4f6;
+  --color-text: #191f28;
+  --color-text-muted: #4e5968;
+  --color-border: #e5e8eb;
+  --color-primary: #3182f6;
+  --color-primary-hover: #2272eb;
   --color-on-primary: #ffffff;
-  --color-danger: #b42318;
+  --color-danger: #e42939;
   --color-warning: #8a4b08;
   --color-success: #167245;
   --color-focus: #2563eb;
@@ -45,7 +45,8 @@ body {
   margin: 0;
   background: var(--color-background);
   color: var(--color-text);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: "Toss Product Sans", "Apple SD Gothic Neo", "Malgun Gothic", -apple-system,
+    BlinkMacSystemFont, system-ui, sans-serif;
 }
 button, input, select, textarea { font: inherit; }
 
