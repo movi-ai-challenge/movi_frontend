@@ -5,11 +5,23 @@ import { FormEvent, useEffect, useRef, useState } from "react";
 
 import { AccessibleButton } from "@/components/common/AccessibleButton";
 import { PageBackLink } from "@/components/common/PageBackLink";
+import { VoiceRecorderControl } from "@/components/domain/voice/VoiceRecorderControl";
 import { getRegisteredRecipients } from "@/services/recipientService";
+import {
+  transcribeTransferAmountRecording,
+  transcribeTransferRecording,
+} from "@/services/voiceService";
 import { useBankStore } from "@/store/useBankStore";
 import type { RegisteredRecipient } from "@/types";
 
-type VoiceStep = "idle" | "listening" | "processing" | "missing-amount";
+type VoiceStep =
+  | "idle"
+  | "processing"
+  | "missing-amount"
+  | "processing-amount"
+  | "ready"
+  | "error"
+  | "amount-error";
 type RecipientStatus = "loading" | "ready" | "error";
 
 export default function TransferInputPage() {
@@ -24,6 +36,7 @@ export default function TransferInputPage() {
   );
   const [amount, setAmount] = useState("");
   const [voiceStep, setVoiceStep] = useState<VoiceStep>("idle");
+  const [voiceErrorMessage, setVoiceErrorMessage] = useState("");
   const [errorMessage, setErrorMessage] = useState("");
   const [registeredRecipients, setRegisteredRecipients] = useState<
     RegisteredRecipient[]
@@ -61,25 +74,60 @@ export default function TransferInputPage() {
     };
   }, []);
 
-  const finishVoiceInput = () => {
+  useEffect(
+    () => () => {
+      resetVoiceState();
+    },
+    [resetVoiceState],
+  );
+
+  const finishVoiceInput = async (recording: Blob) => {
     setVoiceStep("processing");
+    setVoiceErrorMessage("");
     setVoiceState({
       status: "processing",
-      transcript: "김모비에게 보내줘",
+      transcript: "",
       errorMessage: null,
     });
 
-    window.setTimeout(() => {
+    try {
+      const transcript = await transcribeTransferRecording(recording);
       setRecipient("김모비");
       setSelectedRecipientId("recipient-demo-1");
       setVoiceStep("missing-amount");
       setVoiceState({
         status: "idle",
-        transcript: "김모비에게 보내줘",
+        transcript,
         errorMessage: null,
       });
       window.setTimeout(() => amountInputRef.current?.focus(), 0);
-    }, 700);
+    } catch {
+      const message =
+        "녹음 내용을 확인하지 못했습니다. 다시 말하거나 아래 입력란을 이용해 주세요.";
+      setVoiceErrorMessage(message);
+      setVoiceStep("error");
+      setVoiceState({ status: "error", transcript: "", errorMessage: message });
+    }
+  };
+
+  const finishAmountVoiceInput = async (recording: Blob) => {
+    setVoiceStep("processing-amount");
+    setVoiceErrorMessage("");
+    setVoiceState({ status: "processing", transcript: "", errorMessage: null });
+
+    try {
+      const transcript = await transcribeTransferAmountRecording(recording);
+      setAmount("50000");
+      setVoiceStep("ready");
+      setVoiceState({ status: "idle", transcript, errorMessage: null });
+      window.setTimeout(() => amountInputRef.current?.focus(), 0);
+    } catch {
+      const message =
+        "금액을 확인하지 못했습니다. 다시 말하거나 아래 금액 입력란을 이용해 주세요.";
+      setVoiceErrorMessage(message);
+      setVoiceStep("amount-error");
+      setVoiceState({ status: "error", transcript: "", errorMessage: message });
+    }
   };
 
   const submitTransferInput = (event: FormEvent<HTMLFormElement>) => {
@@ -130,36 +178,55 @@ export default function TransferInputPage() {
         <p className="mt-2 leading-7 text-[var(--color-text-muted)]">
           예: “김모비에게 5만원 보내줘”라고 말해 보세요.
         </p>
+        <p className="mt-2 text-sm leading-6 text-[var(--color-text-muted)]">
+          현재 음성 변환은 시연용 Mock이며 실제 음성 내용은 서버로 전송하지 않습니다.
+        </p>
         <div className="mt-4" aria-live="polite" aria-atomic="true">
           {voiceStep === "idle" ? (
-            <AccessibleButton
-              onClick={() => {
-                setVoiceStep("listening");
+            <VoiceRecorderControl
+              onRecordingComplete={finishVoiceInput}
+              onStatusChange={(status, message) => {
+                if (status === "error") {
+                  setVoiceState({
+                    status: "error",
+                    transcript: "",
+                    errorMessage: message ?? "음성 입력 오류가 발생했습니다.",
+                  });
+                  return;
+                }
                 setVoiceState({
-                  status: "listening",
+                  status,
                   transcript: "",
                   errorMessage: null,
                 });
               }}
-            >
-              음성 입력 시작
-            </AccessibleButton>
-          ) : null}
-          {voiceStep === "listening" ? (
-            <div>
-              <p className="text-lg font-bold">듣고 있어요.</p>
-              <AccessibleButton className="mt-4" onClick={finishVoiceInput}>
-                말하기 완료
-              </AccessibleButton>
-            </div>
+            />
           ) : null}
           {voiceStep === "processing" ? (
-            <p className="text-lg font-bold">말씀하신 내용을 확인하고 있어요.</p>
+            <div aria-busy="true">
+              <p className="text-lg font-bold">녹음 내용을 확인하고 있어요.</p>
+              <p className="mt-2">Mock 음성 변환 결과를 준비하고 있습니다.</p>
+            </div>
           ) : null}
           {voiceStep === "missing-amount" ? (
             <div>
               <p className="text-lg font-bold">김모비님을 받는 사람으로 확인했어요.</p>
-              <p className="mt-2">얼마를 보낼까요? 아래 금액을 입력해 주세요.</p>
+              <p className="mt-2">
+                얼마를 보낼까요? 다시 말하거나 아래 금액을 직접 입력해 주세요.
+              </p>
+              <div className="mt-4">
+                <VoiceRecorderControl
+                  startLabel="금액 음성 입력"
+                  onRecordingComplete={finishAmountVoiceInput}
+                  onStatusChange={(status, message) => {
+                    setVoiceState({
+                      status,
+                      transcript: "",
+                      errorMessage: message ?? null,
+                    });
+                  }}
+                />
+              </div>
               <AccessibleButton
                 className="mt-4"
                 variant="secondary"
@@ -169,6 +236,67 @@ export default function TransferInputPage() {
                 }}
               >
                 처음부터 다시 말하기
+              </AccessibleButton>
+            </div>
+          ) : null}
+          {voiceStep === "processing-amount" ? (
+            <div aria-busy="true">
+              <p className="text-lg font-bold">말씀하신 금액을 확인하고 있어요.</p>
+              <p className="mt-2">기존 받는 사람 정보는 그대로 유지됩니다.</p>
+            </div>
+          ) : null}
+          {voiceStep === "ready" ? (
+            <div>
+              <p className="text-lg font-bold">
+                김모비님에게 보낼 금액을 5만원으로 확인했어요.
+              </p>
+              <p className="mt-2 leading-7">
+                아래 입력란에 반영했습니다. 내용을 확인하거나 수정한 뒤 송금 정보
+                확인 버튼을 눌러 주세요.
+              </p>
+              <AccessibleButton
+                className="mt-4"
+                variant="secondary"
+                onClick={() => {
+                  setVoiceStep("idle");
+                  resetVoiceState();
+                }}
+              >
+                처음부터 다시 말하기
+              </AccessibleButton>
+            </div>
+          ) : null}
+          {voiceStep === "error" ? (
+            <div role="alert">
+              <p className="text-lg font-bold">음성 내용을 확인하지 못했습니다.</p>
+              <p className="mt-2 leading-7">{voiceErrorMessage}</p>
+              <AccessibleButton
+                className="mt-4"
+                variant="secondary"
+                onClick={() => {
+                  setVoiceStep("idle");
+                  setVoiceErrorMessage("");
+                  resetVoiceState();
+                }}
+              >
+                다시 말하기
+              </AccessibleButton>
+            </div>
+          ) : null}
+          {voiceStep === "amount-error" ? (
+            <div role="alert">
+              <p className="text-lg font-bold">금액을 확인하지 못했습니다.</p>
+              <p className="mt-2 leading-7">{voiceErrorMessage}</p>
+              <AccessibleButton
+                className="mt-4"
+                variant="secondary"
+                onClick={() => {
+                  setVoiceStep("missing-amount");
+                  setVoiceErrorMessage("");
+                  resetVoiceState();
+                }}
+              >
+                금액 다시 말하기
               </AccessibleButton>
             </div>
           ) : null}

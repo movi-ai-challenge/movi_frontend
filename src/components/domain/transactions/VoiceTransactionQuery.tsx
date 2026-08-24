@@ -1,15 +1,17 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 
 import { AccessibleButton } from "@/components/common/AccessibleButton";
+import { VoiceRecorderControl } from "@/components/domain/voice/VoiceRecorderControl";
+import { transcribeTransactionQueryRecording } from "@/services/voiceService";
 import { useBankStore } from "@/store/useBankStore";
 
 interface VoiceTransactionQueryProps {
   onApplyRange: (startDate: string, endDate: string) => Promise<void>;
 }
 
-type QueryStatus = "idle" | "listening" | "processing" | "recognized";
+type QueryStatus = "idle" | "processing" | "recognized" | "error";
 
 function toDateInputValue(date: Date) {
   const year = date.getFullYear();
@@ -24,40 +26,35 @@ export function VoiceTransactionQuery({
   const setVoiceState = useBankStore((state) => state.setVoiceState);
   const resetVoiceState = useBankStore((state) => state.resetVoiceState);
   const [status, setStatus] = useState<QueryStatus>("idle");
-  const processingTimerRef = useRef<number | null>(null);
+  const [errorMessage, setErrorMessage] = useState("");
 
   useEffect(
     () => () => {
-      if (processingTimerRef.current) {
-        window.clearTimeout(processingTimerRef.current);
-      }
       resetVoiceState();
     },
     [resetVoiceState],
   );
 
-  const startListening = () => {
-    setStatus("listening");
-    setVoiceState({
-      status: "listening",
-      transcript: "",
-      errorMessage: null,
-    });
-  };
-
-  const finishListening = () => {
+  const processRecording = async (recording: Blob) => {
     setStatus("processing");
+    setErrorMessage("");
     setVoiceState({
       status: "processing",
       transcript: "",
       errorMessage: null,
     });
 
-    processingTimerRef.current = window.setTimeout(() => {
-      const transcript = "최근 일주일 거래 보여줘";
+    try {
+      const transcript = await transcribeTransactionQueryRecording(recording);
       setStatus("recognized");
       setVoiceState({ status: "idle", transcript, errorMessage: null });
-    }, 800);
+    } catch {
+      const message =
+        "녹음 내용을 확인하지 못했습니다. 다시 말하거나 아래 날짜를 직접 입력해 주세요.";
+      setErrorMessage(message);
+      setStatus("error");
+      setVoiceState({ status: "error", transcript: "", errorMessage: message });
+    }
   };
 
   const applyRecognizedRange = async () => {
@@ -81,25 +78,30 @@ export function VoiceTransactionQuery({
         예: “최근 일주일 거래 보여줘”라고 말해 보세요. 음성을 사용하지
         않아도 아래 날짜 입력으로 같은 작업을 할 수 있습니다.
       </p>
+      <p className="mt-2 text-sm leading-6 text-[var(--color-text-muted)]">
+        현재 음성 변환은 시연용 Mock이며 실제 음성 내용은 서버로 전송하지 않습니다.
+      </p>
 
       <div className="mt-5" aria-live="polite" aria-atomic="true">
         {status === "idle" ? (
-          <AccessibleButton onClick={startListening}>
-            음성 조회 시작
-          </AccessibleButton>
-        ) : null}
-
-        {status === "listening" ? (
-          <div>
-            <p className="text-lg font-bold">듣고 있어요. 기간을 말해 주세요.</p>
-            <AccessibleButton className="mt-4" onClick={finishListening}>
-              말하기 완료
-            </AccessibleButton>
-          </div>
+          <VoiceRecorderControl
+            startLabel="음성 조회 시작"
+            onRecordingComplete={processRecording}
+            onStatusChange={(voiceStatus, message) => {
+              setVoiceState({
+                status: voiceStatus,
+                transcript: "",
+                errorMessage: message ?? null,
+              });
+            }}
+          />
         ) : null}
 
         {status === "processing" ? (
-          <p className="text-lg font-bold">말씀하신 내용을 확인하고 있어요.</p>
+          <div aria-busy="true">
+            <p className="text-lg font-bold">녹음 내용을 확인하고 있어요.</p>
+            <p className="mt-2">Mock 음성 변환 결과를 준비하고 있습니다.</p>
+          </div>
         ) : null}
 
         {status === "recognized" ? (
@@ -125,6 +127,24 @@ export function VoiceTransactionQuery({
                 다시 말하기
               </AccessibleButton>
             </div>
+          </div>
+        ) : null}
+
+        {status === "error" ? (
+          <div role="alert">
+            <p className="text-lg font-bold">음성 내용을 확인하지 못했습니다.</p>
+            <p className="mt-2 leading-7">{errorMessage}</p>
+            <AccessibleButton
+              className="mt-4"
+              variant="secondary"
+              onClick={() => {
+                setStatus("idle");
+                setErrorMessage("");
+                resetVoiceState();
+              }}
+            >
+              다시 말하기
+            </AccessibleButton>
           </div>
         ) : null}
       </div>
