@@ -24,6 +24,7 @@ export default function TransferReviewPage() {
   const clearTransferDraft = useBankStore((state) => state.clearTransferDraft);
   const [sourceAccount, setSourceAccount] = useState<Account | null>(null);
   const [isConfirmed, setIsConfirmed] = useState(false);
+  const [isVoiceDecisionActive, setIsVoiceDecisionActive] = useState(false);
 
   useEffect(() => {
     let isActive = true;
@@ -127,6 +128,8 @@ export default function TransferReviewPage() {
 
       {sourceAccount ? (
         <TransferReviewVoiceGuide
+          key={isVoiceDecisionActive ? "decision-active" : "decision-idle"}
+          isVoiceDecisionActive={isVoiceDecisionActive}
           sourceAccount={sourceAccount}
           transferDraft={transferDraft}
         />
@@ -135,15 +138,23 @@ export default function TransferReviewPage() {
       {!isConfirmed ? (
         <>
           <VoiceTransferDecision
-            onConfirm={() => setIsConfirmed(true)}
+            onActiveChange={setIsVoiceDecisionActive}
+            onConfirm={() => {
+              setIsVoiceDecisionActive(false);
+              setIsConfirmed(true);
+            }}
             onCancel={() => {
+              setIsVoiceDecisionActive(false);
               clearTransferDraft();
               router.push("/transfer");
             }}
           />
           <AccessibleButton
             className="mt-6 w-full"
-            onClick={() => setIsConfirmed(true)}
+            onClick={() => {
+              setIsVoiceDecisionActive(false);
+              setIsConfirmed(true);
+            }}
           >
             화면에서 이체 내용 확인 완료
           </AccessibleButton>

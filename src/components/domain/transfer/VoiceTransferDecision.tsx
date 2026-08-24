@@ -6,6 +6,7 @@ import { AccessibleButton } from "@/components/common/AccessibleButton";
 import { useBankStore } from "@/store/useBankStore";
 
 interface VoiceTransferDecisionProps {
+  onActiveChange: (isActive: boolean) => void;
   onConfirm: () => void;
   onCancel: () => void;
 }
@@ -18,6 +19,7 @@ type DecisionState =
   | "cancel-recognized";
 
 export function VoiceTransferDecision({
+  onActiveChange,
   onConfirm,
   onCancel,
 }: VoiceTransferDecisionProps) {
@@ -29,9 +31,10 @@ export function VoiceTransferDecision({
   useEffect(
     () => () => {
       if (timerRef.current) window.clearTimeout(timerRef.current);
+      onActiveChange(false);
       resetVoiceState();
     },
-    [resetVoiceState],
+    [onActiveChange, resetVoiceState],
   );
 
   const recognizeDecision = (decision: "confirm" | "cancel") => {
@@ -53,7 +56,21 @@ export function VoiceTransferDecision({
 
   const resetDecision = () => {
     setState("idle");
+    onActiveChange(false);
     resetVoiceState();
+  };
+
+  const startVoiceDecision = () => {
+    if ("speechSynthesis" in window) {
+      window.speechSynthesis.cancel();
+    }
+    onActiveChange(true);
+    setState("listening");
+    setVoiceState({
+      status: "listening",
+      transcript: "",
+      errorMessage: null,
+    });
   };
 
   return (
@@ -72,14 +89,7 @@ export function VoiceTransferDecision({
       <div className="mt-4" aria-live="polite" aria-atomic="true">
         {state === "idle" ? (
           <AccessibleButton
-            onClick={() => {
-              setState("listening");
-              setVoiceState({
-                status: "listening",
-                transcript: "",
-                errorMessage: null,
-              });
-            }}
+            onClick={startVoiceDecision}
           >
             음성으로 답하기
           </AccessibleButton>
