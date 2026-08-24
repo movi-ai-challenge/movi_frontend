@@ -171,11 +171,11 @@ export default function TransferEvaluationPage() {
               확인한 내용으로 이체 실행
             </AccessibleButton>
             <Link
-              href="/transfer/evaluate/guardian"
+              href="/transfer/evaluate/medium"
               className="mt-4 inline-flex min-h-11 w-full items-center justify-center rounded-lg border-2 border-[var(--color-border)] bg-[var(--color-surface)] px-6 py-3 font-semibold text-[var(--color-text)] focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[var(--color-focus)] focus-visible:ring-offset-2"
               data-secondary-content="true"
             >
-              목업: 중위험 승인 대기 보기
+              목업: 중위험 추가 확인 보기
             </Link>
             <Link
               href="/transfer/evaluate/blocked"

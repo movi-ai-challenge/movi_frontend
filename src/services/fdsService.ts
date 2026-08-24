@@ -1,7 +1,6 @@
 import type { FdsEvaluationResult } from "@/types";
 
 const MOCK_FDS_DELAY_MS = 1_000;
-const MOCK_GUARDIAN_REQUEST_DELAY_MS = 800;
 
 export async function requestFdsEvaluation(): Promise<FdsEvaluationResult> {
   await new Promise<void>((resolve) => {
@@ -12,10 +11,4 @@ export async function requestFdsEvaluation(): Promise<FdsEvaluationResult> {
     riskLevel: "low",
     summary: "평소 거래와 비슷해 낮은 위험으로 확인했습니다.",
   };
-}
-
-export async function requestGuardianApproval(): Promise<void> {
-  await new Promise<void>((resolve) => {
-    window.setTimeout(resolve, MOCK_GUARDIAN_REQUEST_DELAY_MS);
-  });
 }
