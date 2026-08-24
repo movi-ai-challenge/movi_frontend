@@ -16,6 +16,19 @@ export interface RegisteredRecipient {
   maskedAccountNumber: string;
 }
 
+export type GuardianConnectionApprovalStatus =
+  | "awaiting-approval"
+  | "approved"
+  | "expired";
+export interface GuardianConnectionApprovalRequest {
+  id: string;
+  requesterDisplayName: string;
+  status: GuardianConnectionApprovalStatus;
+  identityVerified: boolean;
+  reviewedAt: string;
+  expiresAt: string;
+}
+
 export interface TransferDraft {
   sourceAccountId: string | null;
   recipientId: string | null;
