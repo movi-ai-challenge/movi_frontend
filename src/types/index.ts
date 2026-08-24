@@ -16,6 +16,18 @@ export interface RegisteredRecipient {
   maskedAccountNumber: string;
 }
 
+export type GuardianConnectionInvitationStatus =
+  | "pending"
+  | "reviewed"
+  | "expired";
+export interface GuardianConnectionInvitation {
+  id: string;
+  requesterDisplayName: string;
+  status: GuardianConnectionInvitationStatus;
+  requestedAt: string;
+  expiresAt: string;
+}
+
 export interface TransferDraft {
   sourceAccountId: string | null;
   recipientId: string | null;
