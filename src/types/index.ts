@@ -16,6 +16,19 @@ export interface RegisteredRecipient {
   maskedAccountNumber: string;
 }
 
+export interface GuardianRiskAlertTarget {
+  id: string;
+  summary: string;
+  detectedAt: string;
+}
+
+export interface GuardianRiskAlertDelivery {
+  id: string;
+  riskEventId: string;
+  status: "sent";
+  sentAt: string;
+}
+
 export interface TransferDraft {
   sourceAccountId: string | null;
   recipientId: string | null;
