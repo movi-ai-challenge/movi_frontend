@@ -1,5 +1,14 @@
 export interface User { id: string; name: string; }
 
+export type MockAuthenticationMethod = "PASS" | "카카오" | "PIN" | "생체인증";
+
+export interface AuthSession {
+  userId: string;
+  displayName: string;
+  method: MockAuthenticationMethod;
+  authenticatedAt: string;
+}
+
 export interface Account {
   id: string;
   bankName: string;

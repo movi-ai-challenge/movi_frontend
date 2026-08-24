@@ -3,6 +3,7 @@ import type { ReactNode } from "react";
 
 import { AccessibilityProvider } from "@/components/common/AccessibilityProvider";
 import { AccessibilitySettingsPanel } from "@/components/common/AccessibilitySettingsPanel";
+import { MockAuthBoundary } from "@/components/common/MockAuthBoundary";
 
 import "./globals.css";
 
@@ -17,7 +18,7 @@ export default function RootLayout({ children }: Readonly<{ children: ReactNode 
       <body>
         <AccessibilityProvider>
           <AccessibilitySettingsPanel />
-          {children}
+          <MockAuthBoundary>{children}</MockAuthBoundary>
         </AccessibilityProvider>
       </body>
     </html>
