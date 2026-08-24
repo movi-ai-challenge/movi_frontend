@@ -3,6 +3,7 @@ import type { ReactNode } from "react";
 
 import { AccessibilityProvider } from "@/components/common/AccessibilityProvider";
 import { AccessibilitySettingsPanel } from "@/components/common/AccessibilitySettingsPanel";
+import { GlobalVoiceAssistant } from "@/components/common/GlobalVoiceAssistant";
 
 import "./globals.css";
 
@@ -17,6 +18,7 @@ export default function RootLayout({ children }: Readonly<{ children: ReactNode 
       <body>
         <AccessibilityProvider>
           <AccessibilitySettingsPanel />
+          <GlobalVoiceAssistant />
           {children}
         </AccessibilityProvider>
       </body>
