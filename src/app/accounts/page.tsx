@@ -411,16 +411,16 @@ export default function ConnectedAccountListPage() {
 
                 <div className="mt-5 flex flex-col gap-3 sm:flex-row">
                   {reauthenticationStatus === "verified" ? (
-                  <AccessibleButton
-                    className="border-[var(--color-danger)]"
-                    isLoading={
-                      disconnectingAccountId === pendingDisconnectAccount.id
-                    }
-                    loadingLabel="계좌 연결을 해제하고 있어요"
-                    onClick={() => void confirmDisconnect()}
-                  >
-                    본인 확인 후 연결 해제
-                  </AccessibleButton>
+                    <AccessibleButton
+                      className="border-[var(--color-danger)]"
+                      isLoading={
+                        disconnectingAccountId === pendingDisconnectAccount.id
+                      }
+                      loadingLabel="계좌 연결을 해제하고 있어요"
+                      onClick={() => void confirmDisconnect()}
+                    >
+                      본인 확인 후 연결 해제
+                    </AccessibleButton>
                   ) : null}
                   <AccessibleButton
                     variant="secondary"
@@ -435,15 +435,6 @@ export default function ConnectedAccountListPage() {
                 </div>
               </section>
             ) : null}
-            <p
-              ref={disconnectResultRef}
-              tabIndex={updateMessage ? -1 : undefined}
-              className="mt-4 min-h-7 font-semibold"
-              aria-live="polite"
-              aria-atomic="true"
-            >
-              {updateMessage}
-            </p>
             <Link
               href="/balance"
               className="mt-6 mr-3 inline-flex min-h-11 items-center rounded-lg border-2 border-transparent bg-[var(--color-primary)] px-5 py-2 font-semibold text-[var(--color-on-primary)] hover:bg-[var(--color-primary-hover)] focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[var(--color-focus)] focus-visible:ring-offset-2"
@@ -469,6 +460,18 @@ export default function ConnectedAccountListPage() {
               송금하기
             </Link>
           </section>
+        ) : null}
+
+        {status === "ready" ? (
+          <p
+            ref={disconnectResultRef}
+            tabIndex={updateMessage ? -1 : undefined}
+            className="mt-4 min-h-7 font-semibold"
+            aria-live="polite"
+            aria-atomic="true"
+          >
+            {updateMessage}
+          </p>
         ) : null}
       </div>
     </main>
