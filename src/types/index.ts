@@ -9,6 +9,11 @@ export interface Account {
   currency: "KRW";
 }
 
+export interface AccountDisconnectionVerification {
+  accountId: string;
+  verifiedAt: string;
+}
+
 export interface RegisteredRecipient {
   id: string;
   name: string;
