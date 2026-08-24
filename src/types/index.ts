@@ -16,6 +16,14 @@ export interface RegisteredRecipient {
   maskedAccountNumber: string;
 }
 
+export type GuardianConnectionRequestStatus = "pending";
+export interface GuardianConnectionRequest {
+  id: string;
+  maskedPhoneNumber: string;
+  status: GuardianConnectionRequestStatus;
+  requestedAt: string;
+}
+
 export interface TransferDraft {
   sourceAccountId: string | null;
   recipientId: string | null;
