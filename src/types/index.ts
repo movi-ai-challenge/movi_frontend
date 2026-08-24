@@ -16,6 +16,18 @@ export interface RegisteredRecipient {
   maskedAccountNumber: string;
 }
 
+export type GuardianRelationshipSetupStatus =
+  | "awaiting-approval"
+  | "awaiting-relationship"
+  | "relationship-saved"
+  | "expired";
+export interface GuardianRelationshipSetup {
+  id: string;
+  requesterDisplayName: string;
+  status: GuardianRelationshipSetupStatus;
+  relationship: string | null;
+}
+
 export interface TransferDraft {
   sourceAccountId: string | null;
   recipientId: string | null;
