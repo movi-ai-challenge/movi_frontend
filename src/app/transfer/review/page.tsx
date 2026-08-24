@@ -6,6 +6,7 @@ import { useEffect, useState } from "react";
 
 import { AccessibleButton } from "@/components/common/AccessibleButton";
 import { PageBackLink } from "@/components/common/PageBackLink";
+import { TransferReviewVoiceGuide } from "@/components/domain/transfer/TransferReviewVoiceGuide";
 import { VoiceTransferDecision } from "@/components/domain/transfer/VoiceTransferDecision";
 import { getConnectedAccounts } from "@/services/accountService";
 import { useBankStore } from "@/store/useBankStore";
@@ -123,6 +124,13 @@ export default function TransferReviewPage() {
           </div>
         </dl>
       </section>
+
+      {sourceAccount ? (
+        <TransferReviewVoiceGuide
+          sourceAccount={sourceAccount}
+          transferDraft={transferDraft}
+        />
+      ) : null}
 
       {!isConfirmed ? (
         <>
