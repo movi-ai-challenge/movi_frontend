@@ -16,17 +16,18 @@ export interface RegisteredRecipient {
   maskedAccountNumber: string;
 }
 
-export interface GuardianRiskAlertTarget {
-  id: string;
+export type GuardianRiskAlertDeliveryStatus =
+  | "pending"
+  | "sent"
+  | "failed"
+  | "retrying";
+
+export interface GuardianRiskAlertRecord {
+  riskEventId: string;
   summary: string;
   detectedAt: string;
-}
-
-export interface GuardianRiskAlertDelivery {
-  id: string;
-  riskEventId: string;
-  status: "sent";
-  sentAt: string;
+  status: GuardianRiskAlertDeliveryStatus;
+  lastAttemptedAt: string | null;
 }
 
 export interface TransferDraft {

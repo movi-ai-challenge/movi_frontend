@@ -1,75 +1,53 @@
 import type {
-  GuardianRiskAlertDelivery,
-  GuardianRiskAlertTarget,
+  GuardianRiskAlertDeliveryStatus,
+  GuardianRiskAlertRecord,
 } from "@/types";
 
-const MOCK_ALERT_DELAY_MS = 800;
-const DEMO_RISK_EVENT_ID = "risk-event-demo-1";
-const RETRY_RISK_EVENT_ID = "risk-event-retry-demo";
+const MOCK_STATUS_DELAY_MS = 700;
+const LOAD_ERROR_EVENT_ID = "risk-event-load-error-demo";
 
-const deliveryRequests = new Map<
-  string,
-  Promise<GuardianRiskAlertDelivery>
->();
-const failedOnceRiskEvents = new Set<string>();
+const mockEventStatuses: Readonly<
+  Record<string, GuardianRiskAlertDeliveryStatus>
+> = {
+  "risk-event-demo-1": "sent",
+  "risk-event-sent-demo": "sent",
+  "risk-event-pending-demo": "pending",
+  "risk-event-failed-demo": "failed",
+  "risk-event-retry-demo": "retrying",
+  "risk-event-retrying-demo": "retrying",
+};
 
 function waitForMockResponse(): Promise<void> {
   return new Promise((resolve) => {
-    window.setTimeout(resolve, MOCK_ALERT_DELAY_MS);
+    window.setTimeout(resolve, MOCK_STATUS_DELAY_MS);
   });
 }
 
-function createMockTarget(id: string): GuardianRiskAlertTarget {
+function createMockRecord(
+  riskEventId: string,
+  status: GuardianRiskAlertDeliveryStatus,
+): GuardianRiskAlertRecord {
+  const now = Date.now();
+
   return {
-    id,
+    riskEventId,
     summary: "평소와 다른 거래 패턴이 감지되었습니다.",
-    detectedAt: new Date().toISOString(),
+    detectedAt: new Date(now - 5 * 60 * 1_000).toISOString(),
+    status,
+    lastAttemptedAt:
+      status === "pending" ? null : new Date(now - 2 * 60 * 1_000).toISOString(),
   };
 }
 
-export async function getGuardianRiskAlertTarget(
+export async function getGuardianRiskAlertRecord(
   riskEventId: string,
-): Promise<GuardianRiskAlertTarget | null> {
+): Promise<GuardianRiskAlertRecord | null> {
   await waitForMockResponse();
 
-  if (
-    riskEventId === DEMO_RISK_EVENT_ID ||
-    riskEventId === RETRY_RISK_EVENT_ID
-  ) {
-    return createMockTarget(riskEventId);
+  if (riskEventId === LOAD_ERROR_EVENT_ID) {
+    throw new Error("Mock guardian alert status load failure");
   }
 
-  return null;
-}
-
-export function sendGuardianRiskAlert(
-  target: GuardianRiskAlertTarget,
-): Promise<GuardianRiskAlertDelivery> {
-  const existingRequest = deliveryRequests.get(target.id);
-  if (existingRequest) return existingRequest;
-
-  const request = (async () => {
-    await waitForMockResponse();
-
-    if (
-      target.id === RETRY_RISK_EVENT_ID &&
-      !failedOnceRiskEvents.has(target.id)
-    ) {
-      failedOnceRiskEvents.add(target.id);
-      throw new Error("Mock guardian alert delivery failure");
-    }
-
-    return {
-      id: `guardian-alert-${target.id}`,
-      riskEventId: target.id,
-      status: "sent" as const,
-      sentAt: new Date().toISOString(),
-    };
-  })();
-
-  deliveryRequests.set(target.id, request);
-  void request.catch(() => {
-    deliveryRequests.delete(target.id);
-  });
-  return request;
+  const status = mockEventStatuses[riskEventId];
+  return status ? createMockRecord(riskEventId, status) : null;
 }
