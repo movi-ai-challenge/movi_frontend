@@ -1,4 +1,12 @@
-# Getting Started with Create React App
+# MOVI Frontend
+
+## 반드시 확인할 프로젝트 문서
+
+- [인증·권한·금융 안전 체크리스트](docs/AUTH_SECURITY_CHECKLIST.md): 기능 구현, 코드 리뷰, 백엔드 API 협의 전에 확인합니다.
+
+---
+
+## 기존 프로젝트 안내
 
 This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
 
