@@ -7,7 +7,10 @@ import { useEffect, useRef, useState } from "react";
 import { AccessibleButton } from "@/components/common/AccessibleButton";
 import { PageBackLink } from "@/components/common/PageBackLink";
 import { requestFdsEvaluation } from "@/services/fdsService";
-import { executeLowRiskTransfer } from "@/services/transferService";
+import {
+  executeLowRiskTransfer,
+  executeMediumRiskTransfer,
+} from "@/services/transferService";
 import { useBankStore } from "@/store/useBankStore";
 import type { FdsEvaluationResult } from "@/types";
 
@@ -93,6 +96,7 @@ export default function TransferEvaluationPage() {
         recipientName: transferDraft.recipientName,
         amount: transferDraft.amount,
         message: "요청한 이체가 정상적으로 완료됐습니다.",
+        riskLevel: "low",
       });
       router.push("/transfer/result");
     } catch {
@@ -101,6 +105,42 @@ export default function TransferEvaluationPage() {
         recipientName: transferDraft.recipientName,
         amount: transferDraft.amount,
         message: "이체를 완료하지 못했습니다. 계좌에서 돈이 빠져나가지 않았습니다.",
+      });
+      router.push("/transfer/result");
+    } finally {
+      transferInProgressRef.current = false;
+    }
+  };
+
+  const executeMediumRiskMock = async () => {
+    if (
+      transferInProgressRef.current ||
+      !transferDraft ||
+      !lockTransferRequest()
+    ) {
+      return;
+    }
+
+    transferInProgressRef.current = true;
+    setStatus("executing");
+    try {
+      await executeMediumRiskTransfer();
+      setTransferResult({
+        status: "success",
+        recipientName: transferDraft.recipientName,
+        amount: transferDraft.amount,
+        message: "중간 위험 거래의 이체가 완료됐습니다.",
+        riskLevel: "medium",
+      });
+      router.push("/transfer/evaluate/medium");
+    } catch {
+      setTransferResult({
+        status: "failed",
+        recipientName: transferDraft.recipientName,
+        amount: transferDraft.amount,
+        message:
+          "이체를 완료하지 못했습니다. 계좌에서 돈이 빠져나가지 않았습니다.",
+        riskLevel: "medium",
       });
       router.push("/transfer/result");
     } finally {
@@ -170,13 +210,15 @@ export default function TransferEvaluationPage() {
             >
               확인한 내용으로 이체 실행
             </AccessibleButton>
-            <Link
-              href="/transfer/evaluate/medium"
-              className="mt-4 inline-flex min-h-11 w-full items-center justify-center rounded-lg border-2 border-[var(--color-border)] bg-[var(--color-surface)] px-6 py-3 font-semibold text-[var(--color-text)] focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[var(--color-focus)] focus-visible:ring-offset-2"
+            <AccessibleButton
+              className="mt-4 w-full"
+              variant="secondary"
+              disabled={isTransferRequestLocked}
+              onClick={() => void executeMediumRiskMock()}
               data-secondary-content="true"
             >
-              목업: 중위험 추가 확인 보기
-            </Link>
+              목업: 중위험 이체 완료 보기
+            </AccessibleButton>
             <Link
               href="/transfer/evaluate/blocked"
               className="mt-3 inline-flex min-h-11 w-full items-center justify-center rounded-lg border-2 border-[var(--color-border)] bg-[var(--color-surface)] px-6 py-3 font-semibold text-[var(--color-text)] focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[var(--color-focus)] focus-visible:ring-offset-2"

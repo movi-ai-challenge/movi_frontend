@@ -5,3 +5,9 @@ export async function executeLowRiskTransfer(): Promise<void> {
     window.setTimeout(resolve, MOCK_TRANSFER_DELAY_MS);
   });
 }
+
+export async function executeMediumRiskTransfer(): Promise<void> {
+  await new Promise<void>((resolve) => {
+    window.setTimeout(resolve, MOCK_TRANSFER_DELAY_MS);
+  });
+}
