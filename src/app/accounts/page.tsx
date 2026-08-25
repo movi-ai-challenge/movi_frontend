@@ -2,6 +2,8 @@
 
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
 
 import { AccessibleButton } from "@/components/common/AccessibleButton";
 import { PageBackLink } from "@/components/common/PageBackLink";
@@ -13,6 +15,8 @@ import {
   updateDefaultAccount,
 } from "@/services/accountService";
 import { toApiError, type ApiError } from "@/services/api";
+import { logout } from "@/services/authService";
+import { useAuthStore } from "@/store/useAuthStore";
 import { useBankStore } from "@/store/useBankStore";
 import type { AccountDisconnectionVerification } from "@/types";
 
@@ -26,10 +30,13 @@ const currencyFormatter = new Intl.NumberFormat("ko-KR", {
 });
 
 export default function ConnectedAccountListPage() {
+  const router = useRouter();
   const accounts = useBankStore((state) => state.accounts);
   const defaultAccountId = useBankStore((state) => state.defaultAccountId);
   const setAccounts = useBankStore((state) => state.setAccounts);
   const setDefaultAccount = useBankStore((state) => state.setDefaultAccount);
+  const session = useAuthStore((state) => state.session);
+  const clearSession = useAuthStore((state) => state.clearSession);
   const [status, setStatus] = useState<AccountListStatus>("loading");
   const [loadError, setLoadError] = useState<ApiError | null>(null);
   const [updatingAccountId, setUpdatingAccountId] = useState<string | null>(
@@ -52,6 +59,20 @@ export default function ConnectedAccountListPage() {
 
   const pendingDisconnectAccount =
     accounts.find((account) => account.id === pendingDisconnectAccountId) ?? null;
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
+
+  const handleLogout = async () => {
+    setIsLoggingOut(true);
+    try {
+      if (session) await logout(session.accessToken);
+    } catch {
+      // 서버 로그아웃이 실패해도 클라이언트 세션은 정리한다.
+    } finally {
+      clearSession();
+      setIsLoggingOut(false);
+      router.push("/login");
+    }
+  };
 
   useEffect(() => {
     let isActive = true;
@@ -191,7 +212,18 @@ export default function ConnectedAccountListPage() {
 
   return (
     <main className="mx-auto min-h-[70vh] w-full max-w-3xl px-6 py-12">
-      <PageBackLink href="/">처음 화면으로</PageBackLink>
+      <div className="flex items-center justify-between gap-4">
+        <PageBackLink href="/">처음 화면으로</PageBackLink>
+        <AccessibleButton
+          variant="secondary"
+          className="mb-8 h-11 px-4 text-base"
+          isLoading={isLoggingOut}
+          loadingLabel="로그아웃하고 있어요"
+          onClick={() => void handleLogout()}
+        >
+          로그아웃
+        </AccessibleButton>
+      </div>
 
       <p
         className="text-base font-bold text-[var(--color-primary)]"

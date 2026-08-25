@@ -40,7 +40,7 @@ export function AccessibleButton({
       disabled={disabled || isLoading}
       aria-busy={isLoading || undefined}
       onClick={handleClick}
-      className={`min-h-11 min-w-11 rounded-lg border-2 px-6 py-3 font-semibold transition-colors focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[var(--color-focus)] focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-60 motion-reduce:transition-none ${variantClassNames[variant]} ${className}`}
+      className={`inline-flex h-14 min-w-11 items-center justify-center rounded-2xl border-2 px-5 text-[17px] font-semibold transition-colors focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[var(--color-focus)] focus-visible:ring-offset-2 active:brightness-95 disabled:cursor-not-allowed disabled:opacity-60 motion-reduce:transition-none ${variantClassNames[variant]} ${className}`}
     >
       {isLoading ? loadingLabel : children}
     </button>
