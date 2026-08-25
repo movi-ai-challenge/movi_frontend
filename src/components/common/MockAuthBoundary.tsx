@@ -4,7 +4,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 
 import { AccessibleButton } from "@/components/common/AccessibleButton";
-import { logoutMockSession } from "@/services/authService";
+import { logout } from "@/services/authService";
 import { useAuthStore } from "@/store/useAuthStore";
 import { useBankStore } from "@/store/useBankStore";
 
@@ -55,12 +55,12 @@ export function MockAuthBoundary({ children }: Readonly<{ children: React.ReactN
     redirectStartedRef.current = false;
   }, [pathname]);
 
-  const logout = async () => {
+  const handleLogout = async () => {
     if (isLoggingOut) return;
 
     setIsLoggingOut(true);
     try {
-      await logoutMockSession();
+      await logout(session);
     } finally {
       redirectStartedRef.current = true;
       clearSession();
@@ -103,7 +103,7 @@ export function MockAuthBoundary({ children }: Readonly<{ children: React.ReactN
             variant="secondary"
             isLoading={isLoggingOut}
             loadingLabel="로그아웃하고 있어요"
-            onClick={() => void logout()}
+            onClick={() => void handleLogout()}
           >
             로그아웃
           </AccessibleButton>
