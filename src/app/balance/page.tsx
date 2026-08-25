@@ -6,6 +6,7 @@ import { useEffect, useState } from "react";
 import { AccessibleButton } from "@/components/common/AccessibleButton";
 import { PageBackLink } from "@/components/common/PageBackLink";
 import { AccountApiError } from "@/components/domain/accounts/AccountApiError";
+import { BalanceVoiceGuide } from "@/components/domain/accounts/BalanceVoiceGuide";
 import { getConnectedAccounts } from "@/services/accountService";
 import { toApiError, type ApiError } from "@/services/api";
 import { getAccountBalance } from "@/services/balanceService";
@@ -182,6 +183,7 @@ export default function BalanceInquiryPage() {
             <p className="mt-1 text-[var(--color-text-muted)]">
               {balanceAccount.maskedAccountNumber}
             </p>
+            <BalanceVoiceGuide account={balanceAccount} />
           </section>
         ) : null}
       </div>
