@@ -44,6 +44,7 @@ export interface TransferResult {
   recipientName: string;
   amount: number;
   message: string;
+  riskLevel?: FdsRiskLevel;
 }
 
 export type FdsRiskLevel = "low" | "medium" | "high";
