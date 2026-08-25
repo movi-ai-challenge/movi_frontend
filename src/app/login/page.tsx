@@ -5,6 +5,8 @@ import { useState } from "react";
 
 import { AccessibleButton } from "@/components/common/AccessibleButton";
 import { PageBackLink } from "@/components/common/PageBackLink";
+import { isMockMode } from "@/services/api";
+import { startKakaoLogin } from "@/services/authService";
 
 type AuthenticationMethod = "PASS" | "카카오" | "PIN" | "생체인증";
 
@@ -25,6 +27,15 @@ export default function LoginPage() {
   };
 
   const isPending = pendingMethod !== null;
+
+  const handleKakaoLogin = () => {
+    if (isMockMode) {
+      authenticate("카카오");
+      return;
+    }
+    setPendingMethod("카카오");
+    startKakaoLogin();
+  };
 
   return (
     <main
@@ -72,7 +83,7 @@ export default function LoginPage() {
           isLoading={pendingMethod === "카카오"}
           loadingLabel="카카오 인증을 준비하고 있어요"
           disabled={isPending}
-          onClick={() => authenticate("카카오")}
+          onClick={handleKakaoLogin}
         >
           카카오로 시작하기
         </AccessibleButton>
