@@ -8,18 +8,6 @@ interface AuthStore {
   session: AuthSession | null;
   hasHydrated: boolean;
   hydrateSession: () => void;
-export interface AuthSession {
-  userId: number;
-  isNewUser: boolean;
-  accessToken: string;
-  refreshToken: string;
-  tokenType: string;
-  accessTokenExpiresIn: number;
-}
-
-interface AuthStore {
-  session: AuthSession | null;
-  isAuthenticated: boolean;
   setSession: (session: AuthSession) => void;
   clearSession: () => void;
 }
@@ -29,7 +17,7 @@ function isAuthSession(value: unknown): value is AuthSession {
 
   const candidate = value as Record<string, unknown>;
   return (
-    candidate.userId === "user-demo" &&
+    typeof candidate.userId === "string" &&
     typeof candidate.displayName === "string" &&
     (candidate.method === "PASS" ||
       candidate.method === "카카오" ||
@@ -65,7 +53,7 @@ export const useAuthStore = create<AuthStore>((set) => ({
         JSON.stringify(session),
       );
     } catch {
-      // Mock 세션은 메모리에서 계속 사용할 수 있다.
+      // 세션 저장소를 사용할 수 없어도 메모리의 세션은 유지한다.
     }
     set({ session, hasHydrated: true });
   },
@@ -77,9 +65,4 @@ export const useAuthStore = create<AuthStore>((set) => ({
     }
     set({ session: null, hasHydrated: true });
   },
-export const useAuthStore = create<AuthStore>((set) => ({
-  session: null,
-  isAuthenticated: false,
-  setSession: (session) => set({ session, isAuthenticated: true }),
-  clearSession: () => set({ session: null, isAuthenticated: false }),
 }));

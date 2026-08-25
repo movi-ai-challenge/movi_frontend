@@ -2,11 +2,21 @@ export interface User { id: string; name: string; }
 
 export type MockAuthenticationMethod = "PASS" | "카카오" | "PIN" | "생체인증";
 
+export interface KakaoBackendSession {
+  accessToken: string;
+  refreshToken: string;
+  tokenType: string;
+  accessTokenExpiresIn: number;
+  isNewUser: boolean;
+}
+
 export interface AuthSession {
   userId: string;
   displayName: string;
   method: MockAuthenticationMethod;
   authenticatedAt: string;
+  /** 실제 백엔드로 로그인한 경우에만 채워진다. 로그아웃 API 호출에 필요하다. */
+  backend?: KakaoBackendSession;
 }
 
 export interface Account {

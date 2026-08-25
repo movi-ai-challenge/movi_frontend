@@ -5,12 +5,11 @@ import { useRef, useState } from "react";
 
 import { AccessibleButton } from "@/components/common/AccessibleButton";
 import { PageBackLink } from "@/components/common/PageBackLink";
-import { authenticateWithMock } from "@/services/authService";
+import { isMockMode } from "@/services/api";
+import { authenticateWithMock, startKakaoLogin } from "@/services/authService";
 import { useAuthStore } from "@/store/useAuthStore";
 import { useBankStore } from "@/store/useBankStore";
 import type { MockAuthenticationMethod } from "@/types";
-import { isMockMode } from "@/services/api";
-import { startKakaoLogin } from "@/services/authService";
 
 const NEW_USER_RETURN_PATH = "/accounts/connect";
 const RETURNING_USER_RETURN_PATH = "/accounts";
@@ -70,7 +69,7 @@ export default function LoginPage() {
 
   const handleKakaoLogin = () => {
     if (isMockMode) {
-      authenticate("카카오");
+      void authenticate("카카오");
       return;
     }
     setPendingMethod("카카오");
@@ -166,7 +165,6 @@ export default function LoginPage() {
           isLoading={pendingMethod === "카카오"}
           loadingLabel="카카오 인증을 준비하고 있어요"
           disabled={isPending}
-          onClick={() => void authenticate("카카오")}
           onClick={handleKakaoLogin}
         >
           카카오로 처음 시작하기
