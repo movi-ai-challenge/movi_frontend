@@ -5,7 +5,6 @@ import { useRef, useState } from "react";
 
 import { AccessibleButton } from "@/components/common/AccessibleButton";
 import { PageBackLink } from "@/components/common/PageBackLink";
-import { isMockMode } from "@/services/api";
 import { authenticateWithMock, startKakaoLogin } from "@/services/authService";
 import { useAuthStore } from "@/store/useAuthStore";
 import { useBankStore } from "@/store/useBankStore";
@@ -67,13 +66,21 @@ export default function LoginPage() {
 
   const isPending = pendingMethod !== null;
 
+  // 카카오는 Mock이 아니라 실제 백엔드 로그인을 사용한다.
   const handleKakaoLogin = () => {
-    if (isMockMode) {
-      void authenticate("카카오");
-      return;
-    }
+    setCompletedMethod(null);
+    setAuthenticationError("");
     setPendingMethod("카카오");
-    startKakaoLogin();
+
+    try {
+      startKakaoLogin();
+    } catch {
+      setPendingMethod(null);
+      setAuthenticationError(
+        "카카오 로그인을 시작하지 못했습니다. 잠시 후 다시 시도해 주세요.",
+      );
+      window.setTimeout(() => errorRef.current?.focus(), 0);
+    }
   };
 
   return (
