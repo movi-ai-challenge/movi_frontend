@@ -1,13 +1,16 @@
 "use client";
 
 import Link from "next/link";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 
 import { AccessibleButton } from "@/components/common/AccessibleButton";
 import { PageBackLink } from "@/components/common/PageBackLink";
 import { AccountApiError } from "@/components/domain/accounts/AccountApiError";
+import { verifyAccountDisconnection } from "@/services/accountReauthenticationService";
 import {
+  disconnectAccount,
   getConnectedAccounts,
   updateDefaultAccount,
 } from "@/services/accountService";
@@ -15,8 +18,10 @@ import { toApiError, type ApiError } from "@/services/api";
 import { logout } from "@/services/authService";
 import { useAuthStore } from "@/store/useAuthStore";
 import { useBankStore } from "@/store/useBankStore";
+import type { AccountDisconnectionVerification } from "@/types";
 
 type AccountListStatus = "loading" | "ready" | "error";
+type ReauthenticationStatus = "idle" | "verifying" | "verified" | "error";
 
 const currencyFormatter = new Intl.NumberFormat("ko-KR", {
   style: "currency",
@@ -38,6 +43,22 @@ export default function ConnectedAccountListPage() {
     null,
   );
   const [updateMessage, setUpdateMessage] = useState("");
+  const [pendingDisconnectAccountId, setPendingDisconnectAccountId] = useState<
+    string | null
+  >(null);
+  const [disconnectingAccountId, setDisconnectingAccountId] = useState<
+    string | null
+  >(null);
+  const [reauthenticationStatus, setReauthenticationStatus] =
+    useState<ReauthenticationStatus>("idle");
+  const [disconnectionVerification, setDisconnectionVerification] =
+    useState<AccountDisconnectionVerification | null>(null);
+  const disconnectHeadingRef = useRef<HTMLHeadingElement>(null);
+  const disconnectResultRef = useRef<HTMLParagraphElement>(null);
+  const verificationResultRef = useRef<HTMLHeadingElement>(null);
+
+  const pendingDisconnectAccount =
+    accounts.find((account) => account.id === pendingDisconnectAccountId) ?? null;
   const [isLoggingOut, setIsLoggingOut] = useState(false);
 
   const handleLogout = async () => {
@@ -74,6 +95,15 @@ export default function ConnectedAccountListPage() {
     };
   }, [setAccounts]);
 
+  useEffect(() => {
+    if (
+      reauthenticationStatus === "verified" ||
+      reauthenticationStatus === "error"
+    ) {
+      verificationResultRef.current?.focus();
+    }
+  }, [reauthenticationStatus]);
+
   const retryLoadAccounts = async () => {
     setStatus("loading");
     setLoadError(null);
@@ -89,7 +119,7 @@ export default function ConnectedAccountListPage() {
   };
 
   const changeDefaultAccount = async (accountId: string) => {
-    if (updatingAccountId) return;
+    if (updatingAccountId || disconnectingAccountId) return;
 
     setUpdatingAccountId(accountId);
     setUpdateMessage("");
@@ -103,6 +133,80 @@ export default function ConnectedAccountListPage() {
       setUpdateMessage("기본 계좌를 바꾸지 못했습니다. 다시 시도해 주세요.");
     } finally {
       setUpdatingAccountId(null);
+    }
+  };
+
+  const openDisconnectConfirmation = (accountId: string) => {
+    setPendingDisconnectAccountId(accountId);
+    setReauthenticationStatus("idle");
+    setDisconnectionVerification(null);
+    setUpdateMessage("");
+    window.setTimeout(() => disconnectHeadingRef.current?.focus(), 0);
+  };
+
+  const cancelDisconnect = () => {
+    const accountId = pendingDisconnectAccountId;
+    setPendingDisconnectAccountId(null);
+    setReauthenticationStatus("idle");
+    setDisconnectionVerification(null);
+    if (accountId) {
+      window.setTimeout(
+        () => document.getElementById(`disconnect-${accountId}`)?.focus(),
+        0,
+      );
+    }
+  };
+
+  const reauthenticateForDisconnect = async () => {
+    if (!pendingDisconnectAccount || reauthenticationStatus === "verifying") {
+      return;
+    }
+
+    setReauthenticationStatus("verifying");
+    setDisconnectionVerification(null);
+
+    try {
+      const verification = await verifyAccountDisconnection(
+        pendingDisconnectAccount.id,
+      );
+      setDisconnectionVerification(verification);
+      setReauthenticationStatus("verified");
+    } catch {
+      setReauthenticationStatus("error");
+    }
+  };
+
+  const confirmDisconnect = async () => {
+    if (
+      !pendingDisconnectAccount ||
+      disconnectingAccountId ||
+      reauthenticationStatus !== "verified" ||
+      disconnectionVerification?.accountId !== pendingDisconnectAccount.id
+    ) {
+      return;
+    }
+
+    const targetAccount = pendingDisconnectAccount;
+    setDisconnectingAccountId(targetAccount.id);
+    setUpdateMessage("");
+
+    try {
+      const disconnectedAccountId = await disconnectAccount(targetAccount.id);
+      setAccounts(
+        accounts.filter((account) => account.id !== disconnectedAccountId),
+      );
+      setPendingDisconnectAccountId(null);
+      setReauthenticationStatus("idle");
+      setDisconnectionVerification(null);
+      setUpdateMessage(`${targetAccount.accountName} 연결을 해제했습니다.`);
+      window.setTimeout(() => disconnectResultRef.current?.focus(), 0);
+    } catch {
+      setUpdateMessage(
+        "계좌 연결을 해제하지 못했습니다. 잠시 후 다시 시도해 주세요.",
+      );
+      window.setTimeout(() => disconnectHeadingRef.current?.focus(), 0);
+    } finally {
+      setDisconnectingAccountId(null);
     }
   };
 
@@ -211,7 +315,11 @@ export default function ConnectedAccountListPage() {
                         variant="secondary"
                         isLoading={updatingAccountId === account.id}
                         loadingLabel="기본 계좌로 바꾸고 있어요"
-                        disabled={updatingAccountId !== null}
+                        disabled={
+                          updatingAccountId !== null ||
+                          disconnectingAccountId !== null ||
+                          pendingDisconnectAccountId !== null
+                        }
                         onClick={() => void changeDefaultAccount(account.id)}
                       >
                         이 계좌를 기본으로 설정
@@ -224,17 +332,141 @@ export default function ConnectedAccountListPage() {
                         잔액조회와 이체에 먼저 사용됩니다.
                       </p>
                     )}
+                    <AccessibleButton
+                      id={`disconnect-${account.id}`}
+                      className="mt-3 w-full border-[var(--color-danger)] sm:ml-3 sm:w-auto"
+                      variant="secondary"
+                      disabled={
+                        updatingAccountId !== null ||
+                        disconnectingAccountId !== null ||
+                        pendingDisconnectAccountId !== null
+                      }
+                      onClick={() => openDisconnectConfirmation(account.id)}
+                    >
+                      {account.accountName} 연결 해제
+                    </AccessibleButton>
                   </article>
                 </li>
               ))}
             </ul>
-            <p
-              className="mt-4 min-h-7 font-semibold"
-              aria-live="polite"
-              aria-atomic="true"
-            >
-              {updateMessage}
-            </p>
+            {pendingDisconnectAccount ? (
+              <section
+                className="mt-6 rounded-xl border-2 border-[var(--color-danger)] bg-[var(--color-surface)] p-6"
+                aria-labelledby="disconnect-account-title"
+              >
+                <h2
+                  id="disconnect-account-title"
+                  ref={disconnectHeadingRef}
+                  tabIndex={-1}
+                  className="text-xl font-bold focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[var(--color-focus)]"
+                >
+                  이 계좌의 연결을 해제할까요?
+                </h2>
+                <p className="mt-3 text-lg font-semibold">
+                  {pendingDisconnectAccount.bankName} · {pendingDisconnectAccount.accountName}
+                </p>
+                <p className="mt-1 text-lg">
+                  {pendingDisconnectAccount.maskedAccountNumber}
+                </p>
+                <p className="mt-3 leading-7 text-[var(--color-text-muted)]">
+                  연결을 해제하면 MOVI에서 이 계좌의 잔액과 거래내역을 조회하거나
+                  이체에 사용할 수 없습니다.
+                </p>
+
+                {reauthenticationStatus === "idle" ? (
+                  <section className="mt-5 rounded-lg border-2 border-[var(--color-warning)] p-4">
+                    <h3 className="text-lg font-bold">본인 확인이 필요합니다.</h3>
+                    <p className="mt-2 leading-7 text-[var(--color-text-muted)]">
+                      계좌 연결 해제 전에 PIN 또는 생체인증으로 본인 확인을
+                      진행합니다. 현재는 실제 인증 API를 연결하기 전 Mock
+                      단계입니다.
+                    </p>
+                    <AccessibleButton
+                      className="mt-4"
+                      onClick={() => void reauthenticateForDisconnect()}
+                    >
+                      본인 확인 시작 · Mock
+                    </AccessibleButton>
+                  </section>
+                ) : null}
+
+                {reauthenticationStatus === "verifying" ? (
+                  <section
+                    className="mt-5 rounded-lg border-2 border-[var(--color-primary)] p-4"
+                    aria-live="polite"
+                    aria-busy="true"
+                  >
+                    <h3 className="text-lg font-bold">본인 확인 중입니다.</h3>
+                    <p className="mt-2">잠시만 기다려 주세요.</p>
+                  </section>
+                ) : null}
+
+                {reauthenticationStatus === "verified" ? (
+                  <section className="mt-5 rounded-lg border-2 border-[var(--color-success)] p-4">
+                    <h3
+                      ref={verificationResultRef}
+                      tabIndex={-1}
+                      className="text-lg font-bold focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[var(--color-focus)]"
+                    >
+                      Mock 본인 확인을 완료했습니다.
+                    </h3>
+                    <p className="mt-2 leading-7">
+                      아래 최종 버튼을 눌러야 계좌 연결이 해제됩니다.
+                    </p>
+                  </section>
+                ) : null}
+
+                {reauthenticationStatus === "error" ? (
+                  <section
+                    className="mt-5 rounded-lg border-2 border-[var(--color-danger)] p-4"
+                    role="alert"
+                  >
+                    <h3
+                      ref={verificationResultRef}
+                      tabIndex={-1}
+                      className="text-lg font-bold focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[var(--color-focus)]"
+                    >
+                      본인 확인을 완료하지 못했습니다.
+                    </h3>
+                    <p className="mt-2 leading-7 text-[var(--color-text-muted)]">
+                      계좌는 그대로 유지됩니다. 다시 시도해 주세요.
+                    </p>
+                    <AccessibleButton
+                      className="mt-4"
+                      variant="secondary"
+                      onClick={() => void reauthenticateForDisconnect()}
+                    >
+                      본인 확인 다시 시도
+                    </AccessibleButton>
+                  </section>
+                ) : null}
+
+                <div className="mt-5 flex flex-col gap-3 sm:flex-row">
+                  {reauthenticationStatus === "verified" ? (
+                    <AccessibleButton
+                      className="border-[var(--color-danger)]"
+                      isLoading={
+                        disconnectingAccountId === pendingDisconnectAccount.id
+                      }
+                      loadingLabel="계좌 연결을 해제하고 있어요"
+                      onClick={() => void confirmDisconnect()}
+                    >
+                      본인 확인 후 연결 해제
+                    </AccessibleButton>
+                  ) : null}
+                  <AccessibleButton
+                    variant="secondary"
+                    disabled={
+                      disconnectingAccountId !== null ||
+                      reauthenticationStatus === "verifying"
+                    }
+                    onClick={cancelDisconnect}
+                  >
+                    취소하고 계좌 유지
+                  </AccessibleButton>
+                </div>
+              </section>
+            ) : null}
             <Link
               href="/balance"
               className="mt-6 mr-3 inline-flex min-h-11 items-center rounded-lg border-2 border-transparent bg-[var(--color-primary)] px-5 py-2 font-semibold text-[var(--color-on-primary)] hover:bg-[var(--color-primary-hover)] focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[var(--color-focus)] focus-visible:ring-offset-2"
@@ -260,6 +492,18 @@ export default function ConnectedAccountListPage() {
               송금하기
             </Link>
           </section>
+        ) : null}
+
+        {status === "ready" ? (
+          <p
+            ref={disconnectResultRef}
+            tabIndex={updateMessage ? -1 : undefined}
+            className="mt-4 min-h-7 font-semibold"
+            aria-live="polite"
+            aria-atomic="true"
+          >
+            {updateMessage}
+          </p>
         ) : null}
       </div>
     </main>
