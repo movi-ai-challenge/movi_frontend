@@ -30,6 +30,20 @@ export interface RegisteredRecipient {
   maskedAccountNumber: string;
 }
 
+export type GuardianRiskAlertDeliveryStatus =
+  | "pending"
+  | "sent"
+  | "failed"
+  | "retrying";
+
+export interface GuardianRiskAlertRecord {
+  riskEventId: string;
+  summary: string;
+  detectedAt: string;
+  status: GuardianRiskAlertDeliveryStatus;
+  lastAttemptedAt: string | null;
+}
+
 export interface TransferDraft {
   sourceAccountId: string | null;
   recipientId: string | null;
