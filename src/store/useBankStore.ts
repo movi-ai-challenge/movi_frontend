@@ -30,6 +30,7 @@ interface BankStore {
   clearTransferResult: () => void;
   lockTransferRequest: () => boolean;
   unlockTransferRequest: () => void;
+  resetBankState: () => void;
 }
 
 export const useBankStore = create<BankStore>((set) => ({
@@ -80,4 +81,15 @@ export const useBankStore = create<BankStore>((set) => ({
     return didLock;
   },
   unlockTransferRequest: () => set({ isTransferRequestLocked: false }),
+  resetBankState: () =>
+    set({
+      user: null,
+      accounts: [],
+      selectedAccountId: null,
+      defaultAccountId: null,
+      voice: initialVoiceState,
+      transferDraft: null,
+      transferResult: null,
+      isTransferRequestLocked: false,
+    }),
 }));
