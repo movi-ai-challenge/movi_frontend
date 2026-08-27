@@ -9,7 +9,9 @@
     "dev": "next dev",
     "build": "next build --webpack",
     "start": "next start",
-    "test": "node --test --experimental-strip-types tests/accountContract.test.ts tests/apiResponse.test.ts tests/authStore.test.ts tests/balanceContract.test.ts tests/bankStore.test.ts tests/openBankingContract.test.ts tests/pinValidation.test.ts tests/transactionContract.test.ts tests/transferContract.test.ts tests/voiceContract.test.ts tests/voiceErrorRecovery.test.ts",
+    "test": "npm run test:unit && npm run test:component",
+    "test:unit": "node --test --experimental-strip-types tests/accountContract.test.ts tests/apiResponse.test.ts tests/authStore.test.ts tests/balanceContract.test.ts tests/bankStore.test.ts tests/openBankingContract.test.ts tests/pinValidation.test.ts tests/transactionContract.test.ts tests/transferContract.test.ts tests/voiceContract.test.ts tests/voiceErrorRecovery.test.ts",
+    "test:component": "vitest run",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit"
   },
@@ -22,12 +24,16 @@
   },
   "devDependencies": {
     "@tailwindcss/postcss": "latest",
+    "@testing-library/react": "^16.3.2",
+    "@testing-library/user-event": "^14.6.6",
     "@types/node": "latest",
     "@types/react": "latest",
     "@types/react-dom": "latest",
     "eslint": "latest",
     "eslint-config-next": "latest",
+    "jsdom": "^26.1.0",
     "tailwindcss": "latest",
-    "typescript": "latest"
+    "typescript": "latest",
+    "vitest": "^4.1.11"
   }
 }
