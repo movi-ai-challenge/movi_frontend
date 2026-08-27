@@ -3,7 +3,11 @@ import axios, {
   type InternalAxiosRequestConfig,
 } from "axios";
 
-import { isRecord, parseApiData } from "@/services/apiResponse";
+import {
+  ApiResponseContractError,
+  isRecord,
+  parseApiData,
+} from "@/services/apiResponse";
 import { useAuthStore } from "@/store/useAuthStore";
 import { useBankStore } from "@/store/useBankStore";
 import type { AuthTokenPair } from "@/types";
@@ -170,6 +174,14 @@ function readApiErrorMessage(error: AxiosError): string | null {
 }
 
 export function toApiError(error: unknown): ApiError {
+  if (error instanceof ApiResponseContractError) {
+    return {
+      kind: "unknown",
+      message: error.voiceMessage ?? error.message,
+      status: null,
+    };
+  }
+
   if (axios.isAxiosError(error)) {
     const status = error.response?.status ?? null;
 
