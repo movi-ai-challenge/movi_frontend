@@ -8,7 +8,7 @@
 
 > 갱신일: 2026-08-27
 > 최상위 구현 기준: [IMPLEMENTATION_SOURCE_OF_TRUTH.md](IMPLEMENTATION_SOURCE_OF_TRUTH.md)
-> 현재 브랜치: `feature/account-balance-api`
+> 현재 브랜치: `feature/transaction-history-api`
 
 ## 현재 목표
 
@@ -16,20 +16,20 @@
 
 ## 현재 작업
 
-### `feature/account-balance-api`
+### `feature/transaction-history-api`
 
 작업 트리에 반영:
 
-- `GET /api/accounts/balance` 실제 잔액 조회
-- 기본 계좌는 파라미터 없이, 비기본 계좌는 검증된 별칭으로 요청
-- 잔액·출금 가능 금액·조회 시각·선택 계좌 일치 여부 런타임 검증
-- 목록의 마스킹 계좌 정보와 잔액 응답을 안전하게 결합
-- 백엔드 `voiceMessage`를 화면의 잔액 TTS 문구로 사용
-- 별칭 없는 비기본 계좌의 조회 제한과 설정 경로 안내
+- `GET /api/transactions` 실제 목록·기간·`IN/OUT` 단일 필터 연동
+- 기본 20건 페이징과 이전·다음 페이지 키보드 조작
+- 거래 목록 DTO와 페이지 메타데이터 런타임 검증
+- `GET /api/transactions/{transactionId}` 실제 상세 연동
+- 목록·상세의 백엔드 `voiceMessage`를 TTS 문구로 사용
+- `blocked` 거래 유형과 실제 경로의 고정 음성 인식 Mock 제거
 
 검증:
 
-- `npm test`: 25개 통과
+- `npm test`: 28개 통과
 - `npm run typecheck`: 통과
 - `npm run lint`: 통과
 - `npm run build`: 통과, 20개 route
@@ -40,8 +40,9 @@
 - 백엔드 `/api/openbanking/callback` 공개 경로 허용
 - 백엔드 callback JSON을 프런트 결과 URL 302로 변경
 - 성공·취소·state 만료·재사용 staging E2E
-- 계좌 소유권·기본 계좌·중복 별칭·잔액 staging E2E
-- 실제 거래내역 API 전환
+- 계좌·거래 소유권과 목록·상세 staging E2E
+- 확인 필요: HISTORY 최근 3건 안내 계약과 목록 API의 총 건수 안내 불일치
+- 거래내역 변경 commit과 PR 생성
 - 변경 commit과 PR 생성
 
 ## 영역별 상태
@@ -51,12 +52,12 @@
 | 인증 | 카카오·PIN·refresh·logout 실제 API 구현 | 신규·기존 로그인과 잠금 staging E2E |
 | OpenBanking | 시작·callback·계좌 수 재조회 구현 | 백엔드 공개 callback·302와 staging E2E |
 | 계좌·잔액 | 목록·기본 계좌·별칭·잔액 실제 API | 소유권·오류·다계좌 staging E2E |
-| 거래내역 | Mock 목록·필터·상세 | 실제 목록·상세·`IN/OUT`·페이징 |
+| 거래내역 | 목록·상세·`IN/OUT`·페이징 실제 API | 소유권 E2E와 HISTORY 음성 계약 정합화 |
 | 음성 | 타이머/입력 보조 UI | 녹음·multipart·세션·실 AI |
 | 송금·FDS | Mock 검토·위험도·결과 | 백엔드 단일 흐름과 상태 복구 |
 | 보호자 알림 | 오래된 Mock 조회 경로 존재 | Seed·백엔드 이벤트만 사용, 공개 조회 제거 |
 | 접근성 | 큰 글씨·고대비·단순 모드·TTS 기반 | 실제 P0 흐름의 보조기기 E2E |
-| 테스트 | 계약·인증·store 단위 테스트 25개와 정적 검사 존재 | 화면 통합·브라우저 E2E 도입 |
+| 테스트 | 계약·인증·store 단위 테스트 28개와 정적 검사 존재 | 화면 통합·브라우저 E2E 도입 |
 
 ## 구현된 화면
 
@@ -74,8 +75,8 @@
 | `/accounts/register` | 이전 Mock 연결 계좌 확인 | 실 경로에서 사용하지 않음 |
 | `/accounts` | 계좌 목록·기본 계좌·별칭 | 실 API |
 | `/balance` | 현재·출금 가능 잔액 조회와 TTS | 실 API |
-| `/transactions` | 거래 목록 | Mock |
-| `/transactions/[transactionId]` | 거래 상세 | Mock |
+| `/transactions` | 기간·입출금 필터·페이징 거래 목록 | 실 API |
+| `/transactions/[transactionId]` | 거래 상세와 TTS | 실 API |
 | `/transfer` 이하 | 송금·FDS 결과 | Mock |
 | `/alerts/guardian/[riskEventId]` | 계약 없는 보호자 조회 | MVP 실 경로에서 제거 대상 |
 
@@ -92,8 +93,8 @@
 
 ## 바로 다음 작업
 
-1. 잔액 조회 변경 commit·PR 및 소유권·다계좌 staging E2E
-2. 거래내역 실제 API
+1. 거래내역 변경 commit·PR 및 소유권·필터·페이징 staging E2E
+2. HISTORY 최근 3건 음성 안내 계약 정합화
 3. OpenBanking 백엔드 302 반영 후 staging E2E
 4. 음성 녹음·세션·AI 연결
 5. 송금 확인·상태 복구·FDS 통합
