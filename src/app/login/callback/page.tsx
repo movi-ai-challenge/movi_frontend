@@ -8,7 +8,7 @@ import { exchangeKakaoLoginCode } from "@/services/authService";
 import { useAuthStore } from "@/store/useAuthStore";
 import { useBankStore } from "@/store/useBankStore";
 
-const NEW_USER_RETURN_PATH = "/accounts/connect";
+const NEW_USER_RETURN_PATH = "/pin/register";
 const RETURNING_USER_RETURN_PATH = "/accounts";
 
 function getCallbackValidationError(

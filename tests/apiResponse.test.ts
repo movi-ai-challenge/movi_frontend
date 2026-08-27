@@ -5,6 +5,7 @@ import {
   ApiResponseContractError,
   isRecord,
   parseApiData,
+  readApiFailureResponse,
 } from "../src/services/apiResponse.ts";
 
 interface Payload {
@@ -75,5 +76,21 @@ test("공통 envelope 필드가 누락되면 거부한다", () => {
         isPayload,
       ),
     ApiResponseContractError,
+  );
+});
+
+test("실패 응답의 code와 사용자 음성 문구를 읽는다", () => {
+  assert.deepEqual(
+    readApiFailureResponse({
+      code: "AUTH_4021",
+      message: "PIN 입력 제한 횟수를 초과했습니다.",
+      voiceMessage: "잠시 후 다시 시도해 주세요.",
+      data: null,
+    }),
+    {
+      code: "AUTH_4021",
+      message: "PIN 입력 제한 횟수를 초과했습니다.",
+      voiceMessage: "잠시 후 다시 시도해 주세요.",
+    },
   );
 });

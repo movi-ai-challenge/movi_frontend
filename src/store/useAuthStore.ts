@@ -24,6 +24,7 @@ interface AuthStore {
   setSession: (session: AuthSession) => void;
   setBackendSession: (session: AuthSession, refreshToken: string) => void;
   applyRefreshedTokens: (tokens: AuthTokenPair) => void;
+  completePinRegistration: () => void;
   clearSession: () => void;
 }
 
@@ -241,6 +242,28 @@ export const useAuthStore = create<AuthStore>((set) => ({
         pendingBackendSession: metadata,
         hasHydrated: true,
         isRestoringSession: false,
+      };
+    }),
+
+  completePinRegistration: () =>
+    set((state) => {
+      if (!state.session?.backend || !state.refreshToken) return state;
+
+      const session: AuthSession = {
+        ...state.session,
+        backend: {
+          ...state.session.backend,
+          isNewUser: false,
+        },
+      };
+      const metadata = toBackendSessionMetadata(session);
+      if (!metadata) return state;
+
+      storeBackendSession(metadata, state.refreshToken);
+      return {
+        ...state,
+        session,
+        pendingBackendSession: metadata,
       };
     }),
 

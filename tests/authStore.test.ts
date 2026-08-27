@@ -41,7 +41,10 @@ Object.defineProperty(globalThis, "window", {
   value: { sessionStorage },
 });
 
-function backendSession(accessToken: string): AuthSession {
+function backendSession(
+  accessToken: string,
+  isNewUser = false,
+): AuthSession {
   return {
     userId: "7",
     displayName: "카카오 사용자",
@@ -51,7 +54,7 @@ function backendSession(accessToken: string): AuthSession {
       accessToken,
       tokenType: "Bearer",
       accessTokenExpiresIn: 1800,
-      isNewUser: false,
+      isNewUser,
     },
   };
 }
@@ -132,4 +135,18 @@ test("불완전한 영속 상태는 복구하지 않고 제거한다", () => {
   assert.equal(useAuthStore.getState().refreshToken, null);
   assert.equal(useAuthStore.getState().isRestoringSession, false);
   assert.equal(sessionStorage.getItem(REFRESH_TOKEN_STORAGE_KEY), null);
+});
+
+test("PIN 등록 완료 상태를 메모리와 복구 메타데이터에 함께 반영한다", () => {
+  useAuthStore
+    .getState()
+    .setBackendSession(backendSession("access", true), "refresh");
+
+  useAuthStore.getState().completePinRegistration();
+
+  assert.equal(useAuthStore.getState().session?.backend?.isNewUser, false);
+  assert.doesNotMatch(
+    sessionStorage.getItem(BACKEND_SESSION_METADATA_STORAGE_KEY) ?? "",
+    /"isNewUser":true/,
+  );
 });
