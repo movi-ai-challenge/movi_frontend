@@ -54,27 +54,6 @@ export interface AccountDisconnectionVerification {
   verifiedAt: string;
 }
 
-export interface RegisteredRecipient {
-  id: string;
-  name: string;
-  bankName: string;
-  maskedAccountNumber: string;
-}
-
-export type GuardianRiskAlertDeliveryStatus =
-  | "pending"
-  | "sent"
-  | "failed"
-  | "retrying";
-
-export interface GuardianRiskAlertRecord {
-  riskEventId: string;
-  summary: string;
-  detectedAt: string;
-  status: GuardianRiskAlertDeliveryStatus;
-  lastAttemptedAt: string | null;
-}
-
 export interface TransferDraft {
   sourceAccountId: string | null;
   recipientId: string | null;
@@ -82,20 +61,6 @@ export interface TransferDraft {
   recipientBankName: string | null;
   recipientMaskedAccountNumber: string | null;
   amount: number;
-}
-
-export interface TransferResult {
-  status: "success" | "failed";
-  recipientName: string;
-  amount: number;
-  message: string;
-  riskLevel?: FdsRiskLevel;
-}
-
-export type FdsRiskLevel = "low" | "medium" | "high";
-export interface FdsEvaluationResult {
-  riskLevel: FdsRiskLevel;
-  summary: string;
 }
 
 export type TransactionType = "IN" | "OUT";
@@ -127,19 +92,6 @@ export interface TransactionPage {
 export interface TransactionDetailResult {
   transaction: Transaction;
   voiceMessage: string;
-}
-
-export type FdsAlertSeverity = "info" | "warning" | "critical";
-export type FdsAlertStatus = "unread" | "reviewing" | "resolved";
-export interface FdsAlert {
-  id: string;
-  accountId: string;
-  transactionId?: string;
-  title: string;
-  description: string;
-  severity: FdsAlertSeverity;
-  status: FdsAlertStatus;
-  detectedAt: string;
 }
 
 export type VoiceStatus = "idle" | "listening" | "processing" | "speaking" | "error";
