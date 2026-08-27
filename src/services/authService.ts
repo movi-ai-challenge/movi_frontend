@@ -4,7 +4,13 @@ import type { AuthSession, MockAuthenticationMethod } from "@/types";
 const MOCK_AUTHENTICATION_DELAY_MS = 700;
 const MOCK_LOGOUT_DELAY_MS = 300;
 const KAKAO_AUTHORIZE_PATH = "/api/v1/auth/kakao/authorize";
+const KAKAO_TOKEN_PATH = "/api/v1/auth/kakao/token";
 const LOGOUT_PATH = "/api/v1/auth/logout";
+
+interface KakaoLoginExchangeResult {
+  session: AuthSession;
+  refreshToken: string;
+}
 
 function waitForMockResponse(delayMs: number): Promise<void> {
   return new Promise((resolve) => {
@@ -29,7 +35,7 @@ export async function authenticateWithMock(
  * 카카오 로그인은 Mock이 아니라 항상 실제 백엔드로 요청한다.
  *
  * 백엔드가 카카오 인증 페이지로 302 리다이렉트하고, 인증이 끝나면
- * 토큰을 쿼리파라미터에 실어 프론트 콜백 화면으로 다시 돌려보낸다.
+ * 짧은 수명의 일회성 교환 코드만 프론트 콜백 화면으로 전달한다.
  * 전체 페이지 이동이라 fetch가 아닌 location 이동을 사용한다.
  */
 export function getKakaoLoginUrl(): string {
@@ -45,29 +51,53 @@ export function startKakaoLogin(): void {
   window.location.href = getKakaoLoginUrl();
 }
 
-export function parseKakaoLoginResult(
-  searchParams: URLSearchParams,
-): AuthSession | null {
-  const accessToken = searchParams.get("accessToken");
-  const refreshToken = searchParams.get("refreshToken");
-  const userId = searchParams.get("userId");
-  if (!accessToken || !refreshToken || !userId) return null;
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null;
+}
+
+function parseKakaoLoginExchangeResponse(
+  value: unknown,
+): KakaoLoginExchangeResult {
+  if (!isRecord(value) || value.code !== "SUCCESS" || !isRecord(value.data)) {
+    throw new Error("카카오 로그인 응답 형식이 올바르지 않습니다.");
+  }
+
+  const data = value.data;
+  if (
+    (typeof data.userId !== "number" && typeof data.userId !== "string") ||
+    typeof data.newUser !== "boolean" ||
+    typeof data.accessToken !== "string" ||
+    data.accessToken.length === 0 ||
+    typeof data.refreshToken !== "string" ||
+    data.refreshToken.length === 0 ||
+    typeof data.tokenType !== "string" ||
+    typeof data.accessTokenExpiresIn !== "number"
+  ) {
+    throw new Error("카카오 로그인 응답 데이터가 올바르지 않습니다.");
+  }
 
   return {
-    userId,
-    displayName: "카카오로 로그인한 사용자",
-    method: "카카오",
-    authenticatedAt: new Date().toISOString(),
-    backend: {
-      accessToken,
-      refreshToken,
-      tokenType: searchParams.get("tokenType") ?? "Bearer",
-      accessTokenExpiresIn: Number(
-        searchParams.get("accessTokenExpiresIn") ?? 0,
-      ),
-      isNewUser: searchParams.get("newUser") === "true",
+    session: {
+      userId: String(data.userId),
+      displayName: "카카오로 로그인한 사용자",
+      method: "카카오",
+      authenticatedAt: new Date().toISOString(),
+      backend: {
+        accessToken: data.accessToken,
+        tokenType: data.tokenType,
+        accessTokenExpiresIn: data.accessTokenExpiresIn,
+        isNewUser: data.newUser,
+      },
     },
+    refreshToken: data.refreshToken,
   };
+}
+
+export async function exchangeKakaoLoginCode(
+  code: string,
+): Promise<KakaoLoginExchangeResult> {
+  const response = await api.post<unknown>(KAKAO_TOKEN_PATH, { code });
+  return parseKakaoLoginExchangeResponse(response.data);
 }
 
 export async function logoutMockSession(): Promise<void> {
