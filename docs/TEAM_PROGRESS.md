@@ -8,7 +8,7 @@
 
 > 갱신일: 2026-08-27
 > 최상위 구현 기준: [IMPLEMENTATION_SOURCE_OF_TRUTH.md](IMPLEMENTATION_SOURCE_OF_TRUTH.md)
-> 현재 브랜치: `feature/transfer-input-safety`
+> 현재 브랜치: `chore/remove-unused-mocks`
 
 ## 현재 목표
 
@@ -16,10 +16,15 @@
 
 ## 현재 작업
 
-### `feature/transfer-input-safety`
+### `chore/remove-unused-mocks`
 
 작업 트리에 반영:
 
+- 소비처가 없는 등록 계좌·수취인·구형 FDS·보호자 알림 Mock 서비스 제거
+- 사용되지 않는 Mock 도메인 타입과 이전 송금 결과 store 상태 제거
+- `/accounts/register`를 `/accounts` redirect로 축소
+- 송금 검토 화면의 타이머 기반 가짜 음성 결정 제거, 화면 확인·취소 대안 유지
+- 실제 개발 모드에서 사용하는 계좌·거래 서비스 Mock은 유지
 - `/transfer`의 타이머 기반 가짜 음성 입력 제거
 - 고정 Mock 수취인 목록을 실제 화면에서 제거
 - 직접 입력 화면을 이름·금액 입력과 검토 전용으로 제한
