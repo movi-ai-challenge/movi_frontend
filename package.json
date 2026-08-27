@@ -9,7 +9,7 @@
     "dev": "next dev",
     "build": "next build --webpack",
     "start": "next start",
-    "test": "node --test --experimental-strip-types tests/accountContract.test.ts tests/apiResponse.test.ts tests/authStore.test.ts tests/balanceContract.test.ts tests/bankStore.test.ts tests/openBankingContract.test.ts tests/pinValidation.test.ts tests/transactionContract.test.ts tests/voiceContract.test.ts",
+    "test": "node --test --experimental-strip-types tests/accountContract.test.ts tests/apiResponse.test.ts tests/authStore.test.ts tests/balanceContract.test.ts tests/bankStore.test.ts tests/openBankingContract.test.ts tests/pinValidation.test.ts tests/transactionContract.test.ts tests/transferContract.test.ts tests/voiceContract.test.ts",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit"
   },

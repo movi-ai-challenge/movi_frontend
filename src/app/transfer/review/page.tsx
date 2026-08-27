@@ -161,18 +161,19 @@ export default function TransferReviewPage() {
         </>
       ) : (
         <section
-          className="mt-6 rounded-xl border-2 border-[var(--color-success)] bg-[var(--color-surface)] p-5"
+          className="mt-6 rounded-xl border-2 border-[var(--color-warning)] bg-[var(--color-surface)] p-5"
           aria-live="polite"
         >
           <h2 className="text-xl font-bold">송금 정보를 확인했습니다.</h2>
           <p className="mt-2 leading-7">
-            아직 이체는 실행되지 않았습니다. 다음 단계에서 다시 확인합니다.
+            아직 이체는 실행되지 않았습니다. 현재 백엔드에는 직접 입력한 송금을
+            실행하는 공개 API가 없어 이 화면에서 실제 이체를 요청하지 않습니다.
           </p>
           <Link
-            href="/transfer/evaluate"
+            href="/accounts"
             className="mt-5 inline-flex min-h-11 w-full items-center justify-center rounded-lg border-2 border-transparent bg-[var(--color-primary)] px-6 py-3 font-semibold text-[var(--color-on-primary)] hover:bg-[var(--color-primary-hover)] focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[var(--color-focus)] focus-visible:ring-offset-2"
           >
-            거래 안전 확인 시작
+            실제 음성 송금으로 이동
           </Link>
         </section>
       )}

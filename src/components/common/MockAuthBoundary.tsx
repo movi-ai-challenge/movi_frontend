@@ -6,6 +6,7 @@ import { useEffect, useRef, useState } from "react";
 import { AccessibleButton } from "@/components/common/AccessibleButton";
 import { restoreAuthenticatedSession } from "@/services/api";
 import { logout } from "@/services/authService";
+import { clearTransferRecoveryKey } from "@/services/transferRecoveryStorage";
 import { useAuthStore } from "@/store/useAuthStore";
 import { useBankStore } from "@/store/useBankStore";
 
@@ -86,6 +87,7 @@ export function MockAuthBoundary({ children }: Readonly<{ children: React.ReactN
       redirectStartedRef.current = true;
       clearSession();
       resetBankState();
+      clearTransferRecoveryKey();
       router.replace("/login");
       setIsLoggingOut(false);
     }
