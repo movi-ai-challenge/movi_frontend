@@ -149,6 +149,82 @@ export interface VoiceState {
   errorMessage: string | null;
 }
 
+export type VoiceSessionState =
+  | "ACTIVE"
+  | "CLARIFYING"
+  | "AWAITING_CONFIRMATION"
+  | "PROCESSING"
+  | "COMPLETED"
+  | "CANCELED"
+  | "EXPIRED";
+
+export type VoiceIntent =
+  | "BALANCE"
+  | "TRANSFER"
+  | "HISTORY"
+  | "CONFIRM"
+  | "CANCEL"
+  | "UNKNOWN";
+
+export interface VoiceSessionStart {
+  voiceSessionId: string;
+  state: VoiceSessionState;
+  expiresAt: string;
+  voiceMessage: string;
+}
+
+export interface VoiceCommandResult {
+  voiceSessionId: string | null;
+  state: VoiceSessionState;
+  intent: VoiceIntent;
+  missingSlots: Array<"RECIPIENT" | "AMOUNT">;
+  confirmationId: string | null;
+  fromAccount: {
+    accountId: string;
+    alias: string | null;
+    bankName: string;
+  } | null;
+  recipient: {
+    recipientId: string | null;
+    holderName: string;
+    bankCode: string | null;
+  } | null;
+  amount: number | null;
+  expiresAt: string | null;
+  transferId: string | null;
+  status:
+    | "PENDING"
+    | "RISK_REVIEW"
+    | "COMPLETED"
+    | "BLOCKED"
+    | "FAILED"
+    | "CANCELED"
+    | null;
+  riskLevel: "LOW" | "MEDIUM" | "HIGH" | null;
+  completedAt: string | null;
+  history: {
+    periodPhrase: string;
+    accountName: string;
+    totalCount: number;
+    items: Array<{
+      transactionId: string;
+      type: TransactionType;
+      amount: number;
+      counterpartyName: string | null;
+      transactedAt: string;
+    }>;
+  } | null;
+  balance: {
+    accountId: string;
+    bankName: string;
+    accountAlias: string | null;
+    balanceAmount: number;
+    availableAmount: number;
+    fetchedAt: string;
+  } | null;
+  voiceMessage: string;
+}
+
 export interface AccessibilityPreferences {
   highContrast: boolean;
   largeText: boolean;

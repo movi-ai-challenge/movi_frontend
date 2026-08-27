@@ -6,6 +6,7 @@ import { useEffect, useRef, useState } from "react";
 import { AccessibleButton } from "@/components/common/AccessibleButton";
 import { PageBackLink } from "@/components/common/PageBackLink";
 import { AccountApiError } from "@/components/domain/accounts/AccountApiError";
+import { VoiceCommandPanel } from "@/components/domain/voice/VoiceCommandPanel";
 import { validateAccountAlias } from "@/services/accountContract";
 import {
   getConnectedAccounts,
@@ -169,6 +170,10 @@ export default function ConnectedAccountListPage() {
       >
         연결된 계좌의 기본 정보와 주로 사용할 계좌를 관리할 수 있어요.
       </p>
+
+      {status === "ready" && accounts.length > 0 ? (
+        <VoiceCommandPanel />
+      ) : null}
 
       <div className="mt-8" aria-live="polite" aria-busy={status === "loading"}>
         {status === "loading" ? (
