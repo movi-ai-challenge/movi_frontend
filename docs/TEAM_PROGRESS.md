@@ -8,7 +8,7 @@
 
 > 갱신일: 2026-08-27
 > 최상위 구현 기준: [IMPLEMENTATION_SOURCE_OF_TRUTH.md](IMPLEMENTATION_SOURCE_OF_TRUTH.md)
-> 현재 브랜치: `feature/kakao-real-login`
+> 현재 브랜치: `feature/pin-authentication`
 
 ## 현재 목표
 
@@ -16,38 +16,37 @@
 
 ## 현재 작업
 
-### `#19 feature/kakao-real-login`
+### `feature/pin-authentication`
 
 작업 트리에 반영:
 
-- 카카오 callback URL의 토큰 파싱 제거
-- 일회성 `code`를 `POST /api/v1/auth/kakao/token`으로 교환
-- 공통 응답의 로그인 data 런타임 검증
-- callback query 즉시 제거
-- Access token 메모리·Refresh token `sessionStorage` 분리
-- `newUser`에 따른 계좌 연결/계좌 화면 분기
-- 코드 누락·만료·재사용과 callback 오류 안내
+- 신규 사용자를 `/pin/register`로 분기
+- 인증된 신규 사용자의 전화번호와 6자리 PIN 등록
+- 기존 사용자의 `/login/pin` 전화번호+PIN 로그인
+- PIN 불일치·잠금·미등록·중복·네트워크 오류 구분
+- PIN 원문을 store·URL·로그에 저장하지 않음
+- 미구현 PASS·생체인증 실제 기능 노출 제거
 
 검증:
 
+- `npm test`: 14개 통과
 - `npm run typecheck`: 통과
 - `npm run lint`: 통과
-- `npm run build`: 통과, 17개 route
-- staging 실제 카카오 계정 E2E: 미검증
+- `npm run build`: 통과, 19개 route
+- staging 실제 PIN 등록·로그인 E2E: 미검증
 
 남은 작업:
 
-- 변경 commit과 PR 갱신
-- 신규 사용자의 PIN 등록 화면 연결
-- Authorization·refresh·logout 공통 기반
-- 새로고침 후 세션 복구
-- 백엔드 `legacy-token-query=false` 전환 후 URL·로그 재검증
+- 실제 카카오 계정으로 신규 사용자 PIN 등록 E2E
+- PIN 연속 실패와 잠금 해제 시간 E2E
+- 다중 탭 logout·만료 검증
+- 변경 commit과 PR 생성
 
 ## 영역별 상태
 
 | 영역 | 현재 상태 | 다음 완료 조건 |
 | --- | --- | --- |
-| 인증 | 카카오 코드 교환 작업 중, 나머지 Mock/부분 구현 | 신규·기존 로그인, refresh, logout staging E2E |
+| 인증 | 카카오·PIN·refresh·logout 실제 API 구현 | 신규·기존 로그인과 잠금 staging E2E |
 | OpenBanking | Mock 화면 | 실제 시작·callback·계좌 재조회 |
 | 계좌·잔액 | Mock UI와 서비스 경계 | DTO 매퍼와 실제 API |
 | 거래내역 | Mock 목록·필터·상세 | 실제 목록·상세·`IN/OUT`·페이징 |
@@ -55,7 +54,7 @@
 | 송금·FDS | Mock 검토·위험도·결과 | 백엔드 단일 흐름과 상태 복구 |
 | 보호자 알림 | 오래된 Mock 조회 경로 존재 | Seed·백엔드 이벤트만 사용, 공개 조회 제거 |
 | 접근성 | 큰 글씨·고대비·단순 모드·TTS 기반 | 실제 P0 흐름의 보조기기 E2E |
-| 테스트 | lint·typecheck·build만 존재 | 단위·통합·브라우저 E2E 도입 |
+| 테스트 | 인증 단위 테스트 14개와 정적 검사 존재 | 화면 통합·브라우저 E2E 도입 |
 
 ## 구현된 화면
 
@@ -64,8 +63,10 @@
 | 경로 | 현재 역할 | 연동 상태 |
 | --- | --- | --- |
 | `/` | 서비스 시작 | UI |
-| `/login` | 인증 진입 | 카카오 시작 실제, PIN/PASS/생체 일부 Mock |
-| `/login/callback` | 카카오 코드 교환 | 작업 트리 실 API |
+| `/login` | 인증 진입 | 카카오와 PIN 실제 경로 |
+| `/login/callback` | 카카오 코드 교환 | 실 API |
+| `/login/pin` | 기존 사용자 PIN 로그인 | 실 API |
+| `/pin/register` | 신규 사용자 PIN 등록 | 실 API |
 | `/accounts/connect` | 최초 계좌 연결 | Mock |
 | `/accounts/register` | 연결 계좌 확인 | Mock |
 | `/accounts` | 계좌 목록·기본 계좌 | Mock |
@@ -88,11 +89,11 @@
 
 ## 바로 다음 작업
 
-1. `#19` review·commit·PR 갱신 및 staging E2E
-2. 공통 API 파서·Authorization·refresh·logout
-3. 신규 PIN 등록과 기존 PIN 로그인
-4. OpenBanking callback
-5. 계좌·잔액·거래내역 실제 API
+1. PIN 변경 commit·PR 및 인증 staging E2E
+2. OpenBanking callback
+3. 계좌·잔액·거래내역 실제 API
+4. 음성 녹음·세션·AI 연결
+5. 송금 확인·상태 복구·FDS 통합
 
 이후 순서는 [MVP_WEEK_PLAN.md](MVP_WEEK_PLAN.md)를 따른다.
 

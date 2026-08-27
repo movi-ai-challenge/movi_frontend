@@ -1,5 +1,12 @@
+import axios from "axios";
+
 import { api } from "@/services/api";
-import { isRecord, parseApiData } from "@/services/apiResponse";
+import {
+  isRecord,
+  parseApiData,
+  parseApiResponse,
+  readApiFailureResponse,
+} from "@/services/apiResponse";
 import type {
   AuthSession,
   AuthTokenPair,
@@ -10,11 +17,29 @@ const MOCK_AUTHENTICATION_DELAY_MS = 700;
 const MOCK_LOGOUT_DELAY_MS = 300;
 const KAKAO_AUTHORIZE_PATH = "/api/v1/auth/kakao/authorize";
 const KAKAO_TOKEN_PATH = "/api/v1/auth/kakao/token";
+const PIN_LOGIN_PATH = "/api/v1/auth/pin/login";
+const PIN_REGISTER_PATH = "/api/v1/auth/pin/register";
 const LOGOUT_PATH = "/api/v1/auth/logout";
 
 interface KakaoLoginExchangeResult {
   session: AuthSession;
   refreshToken: string;
+}
+
+export type PinAuthenticationErrorKind =
+  | "pin_mismatch"
+  | "pin_locked"
+  | "pin_not_registered"
+  | "pin_already_registered"
+  | "phone_already_registered"
+  | "invalid_phone"
+  | "authentication_expired"
+  | "network"
+  | "unknown";
+
+export interface PinAuthenticationError {
+  kind: PinAuthenticationErrorKind;
+  message: string;
 }
 
 interface KakaoLoginData extends AuthTokenPair {
@@ -81,12 +106,16 @@ function isKakaoLoginData(value: unknown): value is KakaoLoginData {
 
 function toKakaoLoginExchangeResult(
   data: KakaoLoginData,
+  method: "카카오" | "PIN" = "카카오",
 ): KakaoLoginExchangeResult {
   return {
     session: {
       userId: String(data.userId),
-      displayName: "카카오로 로그인한 사용자",
-      method: "카카오",
+      displayName:
+        method === "카카오"
+          ? "카카오로 로그인한 사용자"
+          : "PIN으로 로그인한 사용자",
+      method,
       authenticatedAt: new Date().toISOString(),
       backend: {
         accessToken: data.accessToken,
@@ -99,6 +128,40 @@ function toKakaoLoginExchangeResult(
   };
 }
 
+export function toPinAuthenticationError(
+  error: unknown,
+): PinAuthenticationError {
+  if (!axios.isAxiosError(error)) {
+    return { kind: "unknown", message: "요청을 처리하지 못했습니다." };
+  }
+
+  if (!error.response) {
+    return {
+      kind: "network",
+      message: "서버와 연결할 수 없습니다. 잠시 후 다시 시도해 주세요.",
+    };
+  }
+
+  const failure = readApiFailureResponse(error.response.data);
+  const message = failure?.voiceMessage ?? failure?.message;
+  const kindByCode: Record<string, PinAuthenticationErrorKind> = {
+    AUTH_4020: "pin_mismatch",
+    AUTH_4021: "pin_locked",
+    AUTH_4022: "pin_not_registered",
+    AUTH_4090: "pin_already_registered",
+    AUTH_4091: "phone_already_registered",
+    NOTI_4001: "invalid_phone",
+    AUTH_4010: "authentication_expired",
+    AUTH_4011: "authentication_expired",
+    AUTH_4012: "authentication_expired",
+  };
+
+  return {
+    kind: failure ? (kindByCode[failure.code] ?? "unknown") : "unknown",
+    message: message ?? "요청을 처리하지 못했습니다. 다시 시도해 주세요.",
+  };
+}
+
 export async function exchangeKakaoLoginCode(
   code: string,
 ): Promise<KakaoLoginExchangeResult> {
@@ -106,6 +169,29 @@ export async function exchangeKakaoLoginCode(
   return toKakaoLoginExchangeResult(
     parseApiData(response.data, isKakaoLoginData),
   );
+}
+
+export async function loginWithPin(
+  phoneNumber: string,
+  pin: string,
+): Promise<KakaoLoginExchangeResult> {
+  const response = await api.post<unknown>(PIN_LOGIN_PATH, {
+    phoneNumber,
+    pin,
+  });
+  const data = parseApiData(response.data, isKakaoLoginData);
+  return toKakaoLoginExchangeResult(data, "PIN");
+}
+
+export async function registerPin(
+  phoneNumber: string,
+  pin: string,
+): Promise<void> {
+  const response = await api.post<unknown>(PIN_REGISTER_PATH, {
+    phoneNumber,
+    pin,
+  });
+  parseApiResponse(response.data, (data): data is null => data === null);
 }
 
 export async function logoutMockSession(): Promise<void> {

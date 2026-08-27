@@ -5,6 +5,12 @@ export interface ApiResponse<T> {
   data: T;
 }
 
+export interface ApiFailureResponse {
+  code: string;
+  message: string;
+  voiceMessage: string | null;
+}
+
 export class ApiResponseContractError extends Error {
   readonly code: string | null;
   readonly voiceMessage: string | null;
@@ -23,6 +29,26 @@ export class ApiResponseContractError extends Error {
 
 export function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null;
+}
+
+export function readApiFailureResponse(
+  value: unknown,
+): ApiFailureResponse | null {
+  if (
+    !isRecord(value) ||
+    typeof value.code !== "string" ||
+    value.code === "SUCCESS" ||
+    typeof value.message !== "string" ||
+    (value.voiceMessage !== null && typeof value.voiceMessage !== "string")
+  ) {
+    return null;
+  }
+
+  return {
+    code: value.code,
+    message: value.message,
+    voiceMessage: value.voiceMessage,
+  };
 }
 
 export function parseApiResponse<T>(

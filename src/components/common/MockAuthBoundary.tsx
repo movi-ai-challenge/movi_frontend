@@ -10,6 +10,7 @@ import { useAuthStore } from "@/store/useAuthStore";
 import { useBankStore } from "@/store/useBankStore";
 
 const PROTECTED_ROUTE_PREFIXES = [
+  "/pin",
   "/accounts",
   "/balance",
   "/transactions",
