@@ -1,7 +1,7 @@
 "use client";
 
 import { useParams } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import { AccessibleButton } from "@/components/common/AccessibleButton";
 import { PageBackLink } from "@/components/common/PageBackLink";
@@ -45,6 +45,7 @@ export default function TransactionDetailPage() {
   const [voiceMessage, setVoiceMessage] = useState("");
   const [apiError, setApiError] = useState<ApiError | null>(null);
   const [status, setStatus] = useState<DetailStatus>("loading");
+  const apiErrorRef = useRef<HTMLElement>(null);
 
   const loadDetail = async () => {
     setStatus("loading");
@@ -105,6 +106,12 @@ export default function TransactionDetailPage() {
     };
   }, [params.transactionId]);
 
+  useEffect(() => {
+    if (status !== "error" || !apiError) return;
+    const focusTimer = window.setTimeout(() => apiErrorRef.current?.focus(), 0);
+    return () => window.clearTimeout(focusTimer);
+  }, [apiError, status]);
+
   const isDeposit = transaction?.type === "IN";
 
   return (
@@ -125,7 +132,9 @@ export default function TransactionDetailPage() {
 
         {status === "error" && apiError ? (
           <section
-            className="rounded-xl border-2 border-[var(--color-danger)] bg-[var(--color-surface)] p-6"
+            ref={apiErrorRef}
+            tabIndex={-1}
+            className="rounded-xl border-2 border-[var(--color-danger)] bg-[var(--color-surface)] p-6 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[var(--color-focus)]"
             role="alert"
           >
             <h2 className="text-xl font-bold">

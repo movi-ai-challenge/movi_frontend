@@ -38,6 +38,7 @@ export default function ConnectedAccountListPage() {
   const [aliasError, setAliasError] = useState("");
   const [updateMessage, setUpdateMessage] = useState("");
   const aliasInputRef = useRef<HTMLInputElement>(null);
+  const loadErrorRef = useRef<HTMLElement>(null);
   const updateResultRef = useRef<HTMLParagraphElement>(null);
 
   const loadAccounts = async () => {
@@ -67,6 +68,12 @@ export default function ConnectedAccountListPage() {
       isActive = false;
     };
   }, [setAccounts]);
+
+  useEffect(() => {
+    if (status !== "error" || !loadError) return;
+    const focusTimer = window.setTimeout(() => loadErrorRef.current?.focus(), 0);
+    return () => window.clearTimeout(focusTimer);
+  }, [loadError, status]);
 
   const retryLoadAccounts = async () => {
     setStatus("loading");
@@ -184,6 +191,7 @@ export default function ConnectedAccountListPage() {
 
         {status === "error" && loadError ? (
           <AccountApiError
+            ref={loadErrorRef}
             error={loadError}
             onRetry={() => void retryLoadAccounts()}
           />

@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import { AccessibleButton } from "@/components/common/AccessibleButton";
 import { PageBackLink } from "@/components/common/PageBackLink";
@@ -31,6 +31,7 @@ export default function BalanceInquiryPage() {
   const [balanceVoiceMessage, setBalanceVoiceMessage] = useState("");
   const [status, setStatus] = useState<BalanceStatus>("loading-accounts");
   const [error, setError] = useState<ApiError | null>(null);
+  const errorRef = useRef<HTMLElement>(null);
 
   useEffect(() => {
     let isActive = true;
@@ -56,6 +57,12 @@ export default function BalanceInquiryPage() {
       isActive = false;
     };
   }, [setAccounts]);
+
+  useEffect(() => {
+    if (status !== "error" || !error) return;
+    const focusTimer = window.setTimeout(() => errorRef.current?.focus(), 0);
+    return () => window.clearTimeout(focusTimer);
+  }, [error, status]);
 
   const checkBalance = async () => {
     if (!selectedAccountId || status === "checking") return;
@@ -123,7 +130,7 @@ export default function BalanceInquiryPage() {
         ) : null}
 
         {status === "error" && error ? (
-          <AccountApiError error={error} onRetry={retry} />
+          <AccountApiError ref={errorRef} error={error} onRetry={retry} />
         ) : null}
 
         {status !== "loading-accounts" && accounts.length === 0 && !error ? (

@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { forwardRef } from "react";
 
 import { AccessibleButton } from "@/components/common/AccessibleButton";
 import type { ApiError } from "@/services/api";
@@ -30,47 +31,51 @@ const errorContent: Record<
   },
 };
 
-export function AccountApiError({ error, onRetry }: AccountApiErrorProps) {
-  const content = errorContent[error.kind];
-  const requiresLogin = error.kind === "authentication_expired";
-  const accessDenied = error.kind === "authorization_failed";
+export const AccountApiError = forwardRef<HTMLElement, AccountApiErrorProps>(
+  function AccountApiError({ error, onRetry }, ref) {
+    const content = errorContent[error.kind];
+    const requiresLogin = error.kind === "authentication_expired";
+    const accessDenied = error.kind === "authorization_failed";
 
-  return (
-    <section
-      className="rounded-xl border-2 border-[var(--color-danger)] bg-[var(--color-surface)] p-6"
-      aria-labelledby="account-api-error-title"
-      role="alert"
-    >
-      <h2 id="account-api-error-title" className="text-xl font-bold">
-        {content.title}
-      </h2>
-      <p className="mt-2 leading-7 text-[var(--color-text-muted)]">
-        {content.description}
-      </p>
+    return (
+      <section
+        ref={ref}
+        tabIndex={-1}
+        className="rounded-xl border-2 border-[var(--color-danger)] bg-[var(--color-surface)] p-6 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[var(--color-focus)]"
+        aria-labelledby="account-api-error-title"
+        role="alert"
+      >
+        <h2 id="account-api-error-title" className="text-xl font-bold">
+          {content.title}
+        </h2>
+        <p className="mt-2 leading-7 text-[var(--color-text-muted)]">
+          {content.description}
+        </p>
 
-      {requiresLogin ? (
-        <Link
-          href="/login"
-          className="mt-5 inline-flex min-h-11 items-center rounded-lg border-2 border-transparent bg-[var(--color-primary)] px-5 py-2 font-semibold text-[var(--color-on-primary)] hover:bg-[var(--color-primary-hover)] focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[var(--color-focus)] focus-visible:ring-offset-2"
-        >
-          다시 로그인하기
-        </Link>
-      ) : null}
+        {requiresLogin ? (
+          <Link
+            href="/login"
+            className="mt-5 inline-flex min-h-11 items-center rounded-lg border-2 border-transparent bg-[var(--color-primary)] px-5 py-2 font-semibold text-[var(--color-on-primary)] hover:bg-[var(--color-primary-hover)] focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[var(--color-focus)] focus-visible:ring-offset-2"
+          >
+            다시 로그인하기
+          </Link>
+        ) : null}
 
-      {accessDenied ? (
-        <Link
-          href="/"
-          className="mt-5 inline-flex min-h-11 items-center rounded-lg border-2 border-transparent bg-[var(--color-primary)] px-5 py-2 font-semibold text-[var(--color-on-primary)] hover:bg-[var(--color-primary-hover)] focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[var(--color-focus)] focus-visible:ring-offset-2"
-        >
-          처음 화면으로 돌아가기
-        </Link>
-      ) : null}
+        {accessDenied ? (
+          <Link
+            href="/"
+            className="mt-5 inline-flex min-h-11 items-center rounded-lg border-2 border-transparent bg-[var(--color-primary)] px-5 py-2 font-semibold text-[var(--color-on-primary)] hover:bg-[var(--color-primary-hover)] focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[var(--color-focus)] focus-visible:ring-offset-2"
+          >
+            처음 화면으로 돌아가기
+          </Link>
+        ) : null}
 
-      {!requiresLogin && !accessDenied ? (
-        <AccessibleButton className="mt-5" onClick={onRetry}>
-          다시 불러오기
-        </AccessibleButton>
-      ) : null}
-    </section>
-  );
-}
+        {!requiresLogin && !accessDenied ? (
+          <AccessibleButton className="mt-5" onClick={onRetry}>
+            다시 불러오기
+          </AccessibleButton>
+        ) : null}
+      </section>
+    );
+  },
+);
