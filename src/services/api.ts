@@ -8,10 +8,10 @@ import {
   isRecord,
   parseApiData,
   readApiFailureResponse,
-} from "@/services/apiResponse";
-import { useAuthStore } from "@/store/useAuthStore";
-import { useBankStore } from "@/store/useBankStore";
-import { clearTransferRecoveryKey } from "@/services/transferRecoveryStorage";
+} from "./apiResponse.ts";
+import { clearTransferRecoveryKey } from "./transferRecoveryStorage.ts";
+import { useAuthStore } from "../store/useAuthStore.ts";
+import { useBankStore } from "../store/useBankStore.ts";
 import type { AuthTokenPair } from "@/types";
 
 const API_TIMEOUT_MS = 10_000;
@@ -54,7 +54,7 @@ function isAuthTokenPair(value: unknown): value is AuthTokenPair {
   );
 }
 
-function clearAuthenticatedClientState(): void {
+export function clearAuthenticatedClientState(): void {
   useAuthStore.getState().clearSession();
   useBankStore.getState().resetBankState();
   clearTransferRecoveryKey();

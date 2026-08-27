@@ -4,11 +4,12 @@ import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 
 import { AccessibleButton } from "@/components/common/AccessibleButton";
-import { restoreAuthenticatedSession } from "@/services/api";
+import {
+  clearAuthenticatedClientState,
+  restoreAuthenticatedSession,
+} from "@/services/api";
 import { logout } from "@/services/authService";
-import { clearTransferRecoveryKey } from "@/services/transferRecoveryStorage";
 import { useAuthStore } from "@/store/useAuthStore";
-import { useBankStore } from "@/store/useBankStore";
 
 const PROTECTED_ROUTE_PREFIXES = [
   "/pin",
@@ -33,8 +34,6 @@ export function MockAuthBoundary({ children }: Readonly<{ children: React.ReactN
     (state) => state.isRestoringSession,
   );
   const hydrateSession = useAuthStore((state) => state.hydrateSession);
-  const clearSession = useAuthStore((state) => state.clearSession);
-  const resetBankState = useBankStore((state) => state.resetBankState);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
   const redirectStartedRef = useRef(false);
   const protectedRoute = isProtectedRoute(pathname);
@@ -85,9 +84,7 @@ export function MockAuthBoundary({ children }: Readonly<{ children: React.ReactN
       await logout(session);
     } finally {
       redirectStartedRef.current = true;
-      clearSession();
-      resetBankState();
-      clearTransferRecoveryKey();
+      clearAuthenticatedClientState();
       router.replace("/login");
       setIsLoggingOut(false);
     }
