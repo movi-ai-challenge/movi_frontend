@@ -8,7 +8,7 @@
 
 > 갱신일: 2026-08-27
 > 최상위 구현 기준: [IMPLEMENTATION_SOURCE_OF_TRUTH.md](IMPLEMENTATION_SOURCE_OF_TRUTH.md)
-> 현재 브랜치: `feature/transfer-fds-recovery`
+> 현재 브랜치: `feature/voice-retry-fallback`
 
 ## 현재 목표
 
@@ -16,24 +16,23 @@
 
 ## 현재 작업
 
-### `feature/transfer-fds-recovery`
+### `feature/voice-retry-fallback`
 
 작업 트리에 반영:
 
-- 송금 확인 음성 전송 직전에 UUID `idempotencyKey`를 `sessionStorage`에 보관
-- timeout·응답 오류·새로고침 후 `GET /api/transfers/status`를 같은 키로 조회
-- 송금 상태와 `LOW/MEDIUM/HIGH` FDS 결과 런타임 검증
-- `PENDING/RISK_REVIEW` 재조회와 완료·차단·실패·취소 최종 상태 표시
-- MEDIUM/HIGH에서만 “보호자에게 알림을 요청했어요.”로 안내
-- 직접 입력 실행 API가 없는 기존 Mock 성공·차단 경로 비활성화
+- 공통 API 오류에서 백엔드 오류 `code`를 보존
+- 백엔드가 같은 슬롯 재질문 한도를 초과해 반환하는 `VOICE_4006` 식별
+- 재시도 한도 초과 시 만료된 음성 세션을 닫고 직접 입력 화면으로 전환
+- `VOICE_4005` 세션 만료 시 오래된 세션 재사용 없이 새 세션 시작 제공
+- 임의의 클라이언트 횟수 대신 백엔드 세션의 최종 판정을 사용
 
 검증:
 
-- `npm test`: 35개 통과
+- `npm test`: 37개 통과
 - `npm run typecheck`: 통과
 - `npm run lint`: 통과
 - `npm run build`: 통과, 20개 route
-- staging 실제 Voice/FDS·상태 복구 E2E: 미검증
+- staging 실제 3회 재질문·만료 응답 E2E: 미검증
 
 남은 작업:
 
@@ -44,7 +43,7 @@
 - Safari/iOS `audio/mp4` 백엔드 허용 전 실기기 녹음 보류
 - 직접 입력 송금의 명시적 실행 API 계약 확정
 - 실제 LOW·MEDIUM·HIGH, timeout 직후 조회, 새로고침 복구 staging E2E
-- 송금 상태 복구 변경 commit과 PR 생성
+- 음성 재시도 직접 입력 전환 commit과 PR 생성
 
 ## 영역별 상태
 
@@ -54,11 +53,11 @@
 | OpenBanking | 시작·callback·계좌 수 재조회 구현 | 백엔드 공개 callback·302와 staging E2E |
 | 계좌·잔액 | 목록·기본 계좌·별칭·잔액 실제 API | 소유권·오류·다계좌 staging E2E |
 | 거래내역 | 목록·상세·`IN/OUT`·페이징 실제 API | 소유권·필터·페이징 staging E2E |
-| 음성 | 세션·녹음·multipart·응답 상태·TTS 실제 API | 실 AI·Safari/iOS·권한·timeout E2E |
+| 음성 | 세션·녹음·multipart·재질문 한도·만료·TTS 실제 API | 실 AI·Safari/iOS·권한·timeout E2E |
 | 송금·FDS | 음성 확인·동일 키 상태 복구·실제 FDS 결과 표시 | 실 AI/FDS staging E2E와 직접 입력 실행 계약 |
-| 보호자 알림 | 오래된 Mock 조회 경로 존재 | Seed·백엔드 이벤트만 사용, 공개 조회 제거 |
+| 보호자 알림 | 공개 Mock 조회 경로 제거·FDS 결과 안내 | Seed·백엔드 이벤트 staging E2E |
 | 접근성 | 큰 글씨·고대비·단순 모드·TTS 기반 | 실제 P0 흐름의 보조기기 E2E |
-| 테스트 | 계약·인증·store 단위 테스트 35개와 정적 검사 존재 | 화면 통합·브라우저 E2E 도입 |
+| 테스트 | 계약·인증·store 단위 테스트 37개와 정적 검사 존재 | 화면 통합·브라우저 E2E 도입 |
 
 ## 구현된 화면
 
@@ -95,7 +94,7 @@
 
 ## 바로 다음 작업
 
-1. 송금 상태 복구·FDS 결과 변경 commit·PR
+1. 음성 재시도 직접 입력 전환 commit·PR
 2. 실 AI·FDS·권한·MIME·timeout staging E2E
 3. OpenBanking 백엔드 302 반영 후 staging E2E
 4. 직접 입력 송금 실행 계약 확정 후 키보드 대안 완성

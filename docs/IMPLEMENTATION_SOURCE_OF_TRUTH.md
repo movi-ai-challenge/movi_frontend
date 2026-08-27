@@ -8,7 +8,7 @@
 
 > 기준일: 2026-08-25
 > 프런트 진행 반영: 2026-08-27
-> 기준 스냅샷: 백엔드 `develop` `b6c9092`, 프런트 `main` `3ff5850`
+> 기준 스냅샷: 백엔드 `develop` `b6c9092`, 프런트 `main` `bad26c8`
 
 ## 문서 역할
 
@@ -70,11 +70,11 @@
 | OpenBanking | 부분 구현 | 시작 URL·callback 화면·계좌 수 재조회 구현, 백엔드 공개 callback·302와 staging E2E 필요 |
 | 계좌·잔액 | 부분 구현 | 목록·기본 계좌·별칭·잔액 실제 API 완료, staging E2E 필요 |
 | 거래내역 | 부분 구현 | 목록·상세·`IN/OUT`·페이지네이션 실제 API 완료, staging E2E 필요 |
-| 음성 | 부분 구현 | 세션·MediaRecorder·multipart·응답 상태·TTS 구현, 실 AI·Safari/iOS E2E 필요 |
+| 음성 | 부분 구현 | 세션·MediaRecorder·multipart·재질문 한도·만료·TTS 구현, 실 AI·Safari/iOS E2E 필요 |
 | 송금·FDS | 부분 구현 | 음성 확인·동일 멱등키 상태 복구·실제 FDS 결과 표시 완료, staging E2E와 직접 입력 실행 계약 필요 |
-| 보호자 알림 | 정책 정리 필요 | `riskEventId` 공개 조회 제거, 결과 상태만 표시 |
+| 보호자 알림 | 부분 구현 | `riskEventId` 공개 조회 제거·결과 상태 표시 완료, staging 이벤트 검증 필요 |
 | 접근성 | 부분 구현 | 실제 전체 흐름의 키보드·보조기기·200% 검증 |
-| 자동 테스트 | 부분 구현 | 계약·인증·store 단위 테스트 32개 존재, 화면 통합·브라우저 E2E 필요 |
+| 자동 테스트 | 부분 구현 | 계약·인증·store 단위 테스트 37개 존재, 화면 통합·브라우저 E2E 필요 |
 
 ## 확정된 MVP 정책
 
