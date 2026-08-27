@@ -11,7 +11,7 @@ import { getConnectedAccounts } from "@/services/accountService";
 import { toApiError, type ApiError } from "@/services/api";
 import { getAccountBalance } from "@/services/balanceService";
 import { useBankStore } from "@/store/useBankStore";
-import type { Account } from "@/types";
+import type { AccountBalance } from "@/types";
 
 type BalanceStatus = "loading-accounts" | "ready" | "checking" | "error";
 
@@ -26,7 +26,9 @@ export default function BalanceInquiryPage() {
   const defaultAccountId = useBankStore((state) => state.defaultAccountId);
   const setAccounts = useBankStore((state) => state.setAccounts);
   const [selectedAccountId, setSelectedAccountId] = useState("");
-  const [balanceAccount, setBalanceAccount] = useState<Account | null>(null);
+  const [balanceAccount, setBalanceAccount] = useState<AccountBalance | null>(
+    null,
+  );
   const [status, setStatus] = useState<BalanceStatus>("loading-accounts");
   const [error, setError] = useState<ApiError | null>(null);
 

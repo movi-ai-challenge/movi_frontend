@@ -164,8 +164,9 @@ export interface ApiError {
 
 function readApiErrorMessage(error: AxiosError): string | null {
   const value: unknown = error.response?.data;
-  if (!isRecord(value) || typeof value.message !== "string") return null;
-  return value.message;
+  if (!isRecord(value)) return null;
+  if (typeof value.voiceMessage === "string") return value.voiceMessage;
+  return typeof value.message === "string" ? value.message : null;
 }
 
 export function toApiError(error: unknown): ApiError {

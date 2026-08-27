@@ -30,6 +30,13 @@ export interface Account {
   bankName: string;
   accountName: string;
   maskedAccountNumber: string;
+  accountType: "DEPOSIT" | "SAVING";
+  isPrimary: boolean;
+  balance?: number;
+  currency?: "KRW";
+}
+
+export interface AccountBalance extends Account {
   balance: number;
   currency: "KRW";
 }

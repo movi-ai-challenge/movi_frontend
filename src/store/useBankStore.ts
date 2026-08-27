@@ -51,14 +51,21 @@ export const useBankStore = create<BankStore>((set) => ({
       )
         ? state.selectedAccountId
         : (accounts[0]?.id ?? null),
-      defaultAccountId: accounts.some(
-        (account) => account.id === state.defaultAccountId,
-      )
-        ? state.defaultAccountId
-        : (accounts[0]?.id ?? null),
+      defaultAccountId:
+        accounts.find((account) => account.isPrimary)?.id ??
+        (accounts.some((account) => account.id === state.defaultAccountId)
+          ? state.defaultAccountId
+          : (accounts[0]?.id ?? null)),
     })),
   selectAccount: (selectedAccountId) => set({ selectedAccountId }),
-  setDefaultAccount: (defaultAccountId) => set({ defaultAccountId }),
+  setDefaultAccount: (defaultAccountId) =>
+    set((state) => ({
+      defaultAccountId,
+      accounts: state.accounts.map((account) => ({
+        ...account,
+        isPrimary: account.id === defaultAccountId,
+      })),
+    })),
   setVoiceState: (voice) => set({ voice }),
   resetVoiceState: () => set({ voice: initialVoiceState }),
   setTransferDraft: (transferDraft) =>
