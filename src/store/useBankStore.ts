@@ -1,6 +1,8 @@
 import { create } from "zustand";
 import type {
   Account,
+  DirectTransferResult,
+  DirectTransferReview,
   TransferDraft,
   User,
   VoiceState,
@@ -15,6 +17,9 @@ interface BankStore {
   defaultAccountId: string | null;
   voice: VoiceState;
   transferDraft: TransferDraft | null;
+  directTransferReview: DirectTransferReview | null;
+  directTransferResult: DirectTransferResult | null;
+  isTransferRequestLocked: boolean;
   setUser: (user: User | null) => void;
   setAccounts: (accounts: Account[]) => void;
   selectAccount: (accountId: string | null) => void;
@@ -23,6 +28,12 @@ interface BankStore {
   resetVoiceState: () => void;
   setTransferDraft: (transferDraft: TransferDraft) => void;
   clearTransferDraft: () => void;
+  setDirectTransferReview: (review: DirectTransferReview) => void;
+  clearDirectTransferReview: () => void;
+  setDirectTransferResult: (result: DirectTransferResult) => void;
+  clearDirectTransferResult: () => void;
+  lockTransferRequest: () => boolean;
+  unlockTransferRequest: () => void;
   resetBankState: () => void;
 }
 
@@ -33,6 +44,9 @@ export const useBankStore = create<BankStore>((set) => ({
   defaultAccountId: null,
   voice: initialVoiceState,
   transferDraft: null,
+  directTransferReview: null,
+  directTransferResult: null,
+  isTransferRequestLocked: false,
   setUser: (user) => set({ user }),
   setAccounts: (accounts) =>
     set((state) => ({
@@ -60,8 +74,29 @@ export const useBankStore = create<BankStore>((set) => ({
   setVoiceState: (voice) => set({ voice }),
   resetVoiceState: () => set({ voice: initialVoiceState }),
   setTransferDraft: (transferDraft) =>
-    set({ transferDraft }),
-  clearTransferDraft: () => set({ transferDraft: null }),
+    set({
+      transferDraft,
+      isTransferRequestLocked: false,
+    }),
+  clearTransferDraft: () =>
+    set({ transferDraft: null, isTransferRequestLocked: false }),
+  setDirectTransferReview: (directTransferReview) =>
+    set({ directTransferReview, directTransferResult: null }),
+  clearDirectTransferReview: () =>
+    set({ directTransferReview: null, isTransferRequestLocked: false }),
+  setDirectTransferResult: (directTransferResult) =>
+    set({ directTransferResult }),
+  clearDirectTransferResult: () => set({ directTransferResult: null }),
+  lockTransferRequest: () => {
+    let didLock = false;
+    set((state) => {
+      if (state.isTransferRequestLocked) return state;
+      didLock = true;
+      return { isTransferRequestLocked: true };
+    });
+    return didLock;
+  },
+  unlockTransferRequest: () => set({ isTransferRequestLocked: false }),
   resetBankState: () =>
     set({
       user: null,
@@ -70,5 +105,8 @@ export const useBankStore = create<BankStore>((set) => ({
       defaultAccountId: null,
       voice: initialVoiceState,
       transferDraft: null,
+      directTransferReview: null,
+      directTransferResult: null,
+      isTransferRequestLocked: false,
     }),
 }));

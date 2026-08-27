@@ -1,4 +1,4 @@
-import type { Account, Transaction } from "@/types";
+import type { Account, RegisteredRecipient, Transaction } from "@/types";
 
 export const mockAccounts: Account[] = [
   {
@@ -76,5 +76,23 @@ export const mockTransactions: Transaction[] = [
     occurredAt: "2026-08-11T10:10:00+09:00",
     memo: null,
     source: "OPENBANKING",
+  },
+];
+export const mockRegisteredRecipients: RegisteredRecipient[] = [
+  {
+    id: "recipient-demo-1",
+    nickname: "김모비",
+    holderName: "김모비",
+    bankCode: "090",
+    maskedAccountNumber: "456-****-1234",
+    transferCount: 3,
+  },
+  {
+    id: "recipient-demo-2",
+    nickname: "이하늘",
+    holderName: "이하늘",
+    bankCode: "091",
+    maskedAccountNumber: "789-****-5678",
+    transferCount: 1,
   },
 ];

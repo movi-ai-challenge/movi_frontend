@@ -4,42 +4,21 @@ import { useEffect, useMemo, useState } from "react";
 
 import { AccessibleButton } from "@/components/common/AccessibleButton";
 import { useBankStore } from "@/store/useBankStore";
-import type { Account, TransferDraft } from "@/types";
+import type { DirectTransferReview } from "@/types";
 
 interface TransferReviewVoiceGuideProps {
-  sourceAccount: Account;
-  transferDraft: TransferDraft;
+  review: DirectTransferReview;
 }
 
 type GuideStatus = "idle" | "speaking" | "error" | "unsupported";
 
-const amountFormatter = new Intl.NumberFormat("ko-KR", {
-  maximumFractionDigits: 0,
-});
-
-function createTransferReviewText(
-  transferDraft: TransferDraft,
-  sourceAccount: Account,
-): string {
-  const recipientAccount =
-    transferDraft.recipientBankName &&
-    transferDraft.recipientMaskedAccountNumber
-      ? `${transferDraft.recipientBankName} ${transferDraft.recipientMaskedAccountNumber}`
-      : "직접 입력한 받는 사람";
-
-  return `송금 정보를 안내합니다. 받는 사람은 ${transferDraft.recipientName}, 받는 계좌는 ${recipientAccount}, 보낼 금액은 ${amountFormatter.format(transferDraft.amount)}원, 출금 계좌는 ${sourceAccount.bankName} ${sourceAccount.accountName} ${sourceAccount.maskedAccountNumber}입니다. 아직 이체되지 않았습니다. 화면의 송금 정보를 직접 확인해 주세요.`;
-}
-
-export function TransferReviewVoiceGuide({
-  sourceAccount,
-  transferDraft,
-}: TransferReviewVoiceGuideProps) {
+export function TransferReviewVoiceGuide({ review }: TransferReviewVoiceGuideProps) {
   const setVoiceState = useBankStore((state) => state.setVoiceState);
   const resetVoiceState = useBankStore((state) => state.resetVoiceState);
   const [status, setStatus] = useState<GuideStatus>("idle");
   const guideText = useMemo(
-    () => createTransferReviewText(transferDraft, sourceAccount),
-    [sourceAccount, transferDraft],
+    () => `${review.voiceMessage} 아직 이체되지 않았습니다. 화면의 송금 정보를 직접 확인해 주세요.`,
+    [review.voiceMessage],
   );
 
   useEffect(() => {
@@ -137,7 +116,9 @@ export function TransferReviewVoiceGuide({
             음성 안내 멈추기
           </AccessibleButton>
         ) : (
-          <AccessibleButton onClick={playGuide}>
+          <AccessibleButton
+            onClick={playGuide}
+          >
             송금 정보 다시 듣기
           </AccessibleButton>
         )}

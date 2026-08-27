@@ -54,6 +54,15 @@ export interface AccountDisconnectionVerification {
   verifiedAt: string;
 }
 
+export interface RegisteredRecipient {
+  id: string;
+  nickname: string;
+  holderName: string;
+  bankCode: string;
+  maskedAccountNumber: string;
+  transferCount: number;
+}
+
 export interface TransferDraft {
   sourceAccountId: string | null;
   recipientId: string | null;
@@ -194,6 +203,36 @@ export interface TransferStatusResult {
   amount: number;
   recipientName: string;
   requestedAt: string;
+  completedAt: string | null;
+  voiceMessage: string;
+}
+
+export interface DirectTransferReview {
+  confirmationId: string;
+  idempotencyKey: string;
+  fromAccount: {
+    accountId: string;
+    alias: string | null;
+    bankName: string;
+  };
+  recipient: {
+    recipientId: string;
+    nickname: string;
+    holderName: string;
+    maskedAccountNumber: string;
+  };
+  amount: number;
+  expiresAt: string;
+  voiceMessage: string;
+}
+
+export interface DirectTransferResult {
+  transferId: string;
+  idempotencyKey: string;
+  status: TransferExecutionStatus;
+  riskLevel: TransferFdsRiskLevel | null;
+  amount: number;
+  recipientName: string;
   completedAt: string | null;
   voiceMessage: string;
 }
