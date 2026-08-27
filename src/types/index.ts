@@ -4,10 +4,16 @@ export type MockAuthenticationMethod = "PASS" | "카카오" | "PIN" | "생체인
 
 export interface KakaoBackendSession {
   accessToken: string;
-  refreshToken: string;
   tokenType: string;
   accessTokenExpiresIn: number;
   isNewUser: boolean;
+}
+
+export interface AuthTokenPair {
+  accessToken: string;
+  refreshToken: string;
+  tokenType: string;
+  accessTokenExpiresIn: number;
 }
 
 export interface AuthSession {

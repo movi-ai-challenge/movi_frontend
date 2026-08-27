@@ -1,68 +1,257 @@
 import { create } from "zustand";
 
-import type { AuthSession } from "@/types";
+import type { AuthSession, AuthTokenPair } from "@/types";
 
 const MOCK_SESSION_STORAGE_KEY = "movi.mock-auth-session";
+const REFRESH_TOKEN_STORAGE_KEY = "movi.auth-refresh-token";
+const BACKEND_SESSION_METADATA_STORAGE_KEY = "movi.auth-session-metadata";
+
+interface BackendSessionMetadata {
+  userId: string;
+  displayName: string;
+  method: "카카오" | "PIN";
+  authenticatedAt: string;
+  isNewUser: boolean;
+}
 
 interface AuthStore {
   session: AuthSession | null;
+  refreshToken: string | null;
+  pendingBackendSession: BackendSessionMetadata | null;
   hasHydrated: boolean;
+  isRestoringSession: boolean;
   hydrateSession: () => void;
   setSession: (session: AuthSession) => void;
+  setBackendSession: (session: AuthSession, refreshToken: string) => void;
+  applyRefreshedTokens: (tokens: AuthTokenPair) => void;
   clearSession: () => void;
 }
 
-function isAuthSession(value: unknown): value is AuthSession {
-  if (typeof value !== "object" || value === null) return false;
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null;
+}
 
-  const candidate = value as Record<string, unknown>;
+function isMockAuthSession(value: unknown): value is AuthSession {
+  if (!isRecord(value) || value.backend !== undefined) return false;
+
   return (
-    typeof candidate.userId === "string" &&
-    typeof candidate.displayName === "string" &&
-    (candidate.method === "PASS" ||
-      candidate.method === "카카오" ||
-      candidate.method === "PIN" ||
-      candidate.method === "생체인증") &&
-    typeof candidate.authenticatedAt === "string"
+    typeof value.userId === "string" &&
+    typeof value.displayName === "string" &&
+    (value.method === "PASS" ||
+      value.method === "카카오" ||
+      value.method === "PIN" ||
+      value.method === "생체인증") &&
+    typeof value.authenticatedAt === "string"
   );
 }
 
-function readStoredSession(): AuthSession | null {
-  try {
-    const storedSession = window.sessionStorage.getItem(
-      MOCK_SESSION_STORAGE_KEY,
-    );
-    if (!storedSession) return null;
+function isBackendSessionMetadata(
+  value: unknown,
+): value is BackendSessionMetadata {
+  if (!isRecord(value)) return false;
 
-    const parsedSession: unknown = JSON.parse(storedSession);
-    return isAuthSession(parsedSession) ? parsedSession : null;
+  return (
+    typeof value.userId === "string" &&
+    typeof value.displayName === "string" &&
+    (value.method === "카카오" || value.method === "PIN") &&
+    typeof value.authenticatedAt === "string" &&
+    typeof value.isNewUser === "boolean"
+  );
+}
+
+function readJsonStorageValue(key: string): unknown {
+  try {
+    const storedValue = window.sessionStorage.getItem(key);
+    return storedValue ? (JSON.parse(storedValue) as unknown) : null;
   } catch {
     return null;
   }
 }
 
+function readMockSession(): AuthSession | null {
+  const value = readJsonStorageValue(MOCK_SESSION_STORAGE_KEY);
+  return isMockAuthSession(value) ? value : null;
+}
+
+function readRefreshToken(): string | null {
+  try {
+    const refreshToken = window.sessionStorage.getItem(
+      REFRESH_TOKEN_STORAGE_KEY,
+    );
+    return refreshToken && refreshToken.trim().length > 0 ? refreshToken : null;
+  } catch {
+    return null;
+  }
+}
+
+function readBackendSessionMetadata(): BackendSessionMetadata | null {
+  const value = readJsonStorageValue(BACKEND_SESSION_METADATA_STORAGE_KEY);
+  return isBackendSessionMetadata(value) ? value : null;
+}
+
+function toBackendSessionMetadata(
+  session: AuthSession,
+): BackendSessionMetadata | null {
+  if (
+    !session.backend ||
+    (session.method !== "카카오" && session.method !== "PIN")
+  ) {
+    return null;
+  }
+
+  return {
+    userId: session.userId,
+    displayName: session.displayName,
+    method: session.method,
+    authenticatedAt: session.authenticatedAt,
+    isNewUser: session.backend.isNewUser,
+  };
+}
+
+function clearStoredSession(): void {
+  try {
+    window.sessionStorage.removeItem(MOCK_SESSION_STORAGE_KEY);
+    window.sessionStorage.removeItem(REFRESH_TOKEN_STORAGE_KEY);
+    window.sessionStorage.removeItem(BACKEND_SESSION_METADATA_STORAGE_KEY);
+  } catch {
+    // 저장소를 사용할 수 없어도 메모리 상태는 정리한다.
+  }
+}
+
+function storeBackendSession(
+  metadata: BackendSessionMetadata,
+  refreshToken: string,
+): void {
+  try {
+    window.sessionStorage.removeItem(MOCK_SESSION_STORAGE_KEY);
+    window.sessionStorage.setItem(REFRESH_TOKEN_STORAGE_KEY, refreshToken);
+    window.sessionStorage.setItem(
+      BACKEND_SESSION_METADATA_STORAGE_KEY,
+      JSON.stringify(metadata),
+    );
+  } catch {
+    // 저장소를 사용할 수 없어도 현재 탭의 메모리 세션은 유지한다.
+  }
+}
+
 export const useAuthStore = create<AuthStore>((set) => ({
   session: null,
+  refreshToken: null,
+  pendingBackendSession: null,
   hasHydrated: false,
-  hydrateSession: () =>
-    set({ session: readStoredSession(), hasHydrated: true }),
+  isRestoringSession: false,
+
+  hydrateSession: () => {
+    const mockSession = readMockSession();
+    if (mockSession) {
+      set({
+        session: mockSession,
+        refreshToken: null,
+        pendingBackendSession: null,
+        hasHydrated: true,
+        isRestoringSession: false,
+      });
+      return;
+    }
+
+    const refreshToken = readRefreshToken();
+    const pendingBackendSession = readBackendSessionMetadata();
+    const canRestore = Boolean(refreshToken && pendingBackendSession);
+
+    if (!canRestore) clearStoredSession();
+
+    set({
+      session: null,
+      refreshToken: canRestore ? refreshToken : null,
+      pendingBackendSession: canRestore ? pendingBackendSession : null,
+      hasHydrated: true,
+      isRestoringSession: canRestore,
+    });
+  },
+
   setSession: (session) => {
+    clearStoredSession();
     try {
       window.sessionStorage.setItem(
         MOCK_SESSION_STORAGE_KEY,
         JSON.stringify(session),
       );
     } catch {
-      // 세션 저장소를 사용할 수 없어도 메모리의 세션은 유지한다.
+      // 저장소를 사용할 수 없어도 메모리의 Mock 세션은 유지한다.
     }
-    set({ session, hasHydrated: true });
+    set({
+      session,
+      refreshToken: null,
+      pendingBackendSession: null,
+      hasHydrated: true,
+      isRestoringSession: false,
+    });
   },
-  clearSession: () => {
-    try {
-      window.sessionStorage.removeItem(MOCK_SESSION_STORAGE_KEY);
-    } catch {
-      // 저장소를 사용할 수 없어도 메모리의 세션은 정리한다.
+
+  setBackendSession: (session, refreshToken) => {
+    const metadata = toBackendSessionMetadata(session);
+    if (!metadata) {
+      throw new Error("실제 인증 세션 메타데이터가 올바르지 않습니다.");
     }
-    set({ session: null, hasHydrated: true });
+
+    storeBackendSession(metadata, refreshToken);
+    set({
+      session,
+      refreshToken,
+      pendingBackendSession: metadata,
+      hasHydrated: true,
+      isRestoringSession: false,
+    });
+  },
+
+  applyRefreshedTokens: (tokens) =>
+    set((state) => {
+      const metadata = state.session
+        ? toBackendSessionMetadata(state.session)
+        : state.pendingBackendSession;
+
+      if (!metadata) {
+        clearStoredSession();
+        return {
+          session: null,
+          refreshToken: null,
+          pendingBackendSession: null,
+          hasHydrated: true,
+          isRestoringSession: false,
+        };
+      }
+
+      const session: AuthSession = {
+        userId: metadata.userId,
+        displayName: metadata.displayName,
+        method: metadata.method,
+        authenticatedAt: metadata.authenticatedAt,
+        backend: {
+          accessToken: tokens.accessToken,
+          tokenType: tokens.tokenType,
+          accessTokenExpiresIn: tokens.accessTokenExpiresIn,
+          isNewUser: metadata.isNewUser,
+        },
+      };
+
+      storeBackendSession(metadata, tokens.refreshToken);
+      return {
+        session,
+        refreshToken: tokens.refreshToken,
+        pendingBackendSession: metadata,
+        hasHydrated: true,
+        isRestoringSession: false,
+      };
+    }),
+
+  clearSession: () => {
+    clearStoredSession();
+    set({
+      session: null,
+      refreshToken: null,
+      pendingBackendSession: null,
+      hasHydrated: true,
+      isRestoringSession: false,
+    });
   },
 }));
