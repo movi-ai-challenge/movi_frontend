@@ -35,55 +35,55 @@
 - [x] callback query 즉시 제거
 - [x] Access token 메모리·Refresh token `sessionStorage` 분리
 - [ ] `#19` commit·PR 갱신과 staging 카카오 로그인 E2E
-- [ ] 공통 `ApiResponse<T>` 파서
-- [ ] Authorization 헤더 주입
-- [ ] 401 refresh 1회 잠금과 실패 logout
-- [ ] 신규 사용자 6자리 PIN 등록
-- [ ] 기존 사용자 전화번호+PIN 로그인
-- [ ] logout 후 인증·금융 store 초기화
-- [ ] 새로고침 후 Refresh token으로 세션 복구
+- [x] 공통 `ApiResponse<T>` 파서
+- [x] Authorization 헤더 주입
+- [x] 401 refresh 1회 잠금과 실패 logout
+- [x] 신규 사용자 6자리 PIN 등록
+- [x] 기존 사용자 전화번호+PIN 로그인
+- [x] logout 후 인증·금융 store 초기화
+- [x] 새로고침 후 Refresh token으로 세션 복구
 
 완료 조건: 카카오 성공·취소·오류, 신규 PIN, 기존 PIN, refresh, logout이 staging에서 동작하고 URL에 토큰이 없다.
 
 ### Phase 2 — OpenBanking과 조회 통합
 
-- [ ] OpenBanking 시작 URL 이동
-- [ ] `/accounts/connect/callback` 성공·취소·오류·state 만료 화면
-- [ ] callback 복귀 후 계좌 목록 재조회
-- [ ] Account DTO 매퍼
-- [ ] 계좌 목록·기본 계좌·별칭 실제 API
-- [ ] 잔액 실제 API와 `voiceMessage` TTS
-- [ ] 거래 목록·상세·페이지네이션 실제 API
-- [ ] `IN`/`OUT` 단일 필터
+- [x] OpenBanking 시작 URL 이동
+- [x] `/accounts/connect/callback` 성공·취소·오류·state 만료 화면
+- [x] callback 복귀 후 계좌 목록 재조회
+- [x] Account DTO 매퍼
+- [x] 계좌 목록·기본 계좌·별칭 실제 API
+- [x] 잔액 실제 API와 `voiceMessage` TTS
+- [x] 거래 목록·상세·페이지네이션 실제 API
+- [x] `IN`/`OUT` 단일 필터
 - [ ] 계좌 0/1/여러 개와 기본 계좌 없음 상태
 
 완료 조건: 로그인부터 잔액과 거래 상세까지 Mock 없이 완료하고 다른 사용자의 리소스 접근이 거부된다.
 
 ### Phase 3 — 음성 통합
 
-- [ ] MediaRecorder 녹음과 권한 오류 처리
+- [x] MediaRecorder 녹음과 권한 오류 처리
 - [ ] WebM/Opus, WAV, Safari/iOS MP4 MIME 탐지
-- [ ] multipart 업로드
-- [ ] 음성 세션 상태 머신
-- [ ] 수취인·금액 누락 재질문과 기존 slot 유지
+- [x] multipart 업로드
+- [x] 음성 세션 상태 머신
+- [x] 수취인·금액 누락 재질문과 기존 slot 유지
 - [x] 백엔드 `VOICE_4006` 재질문 한도 초과 후 직접 입력 전환
-- [ ] 백엔드 `voiceMessage` 화면·TTS 단일화
+- [x] 백엔드 `voiceMessage` 화면·TTS 단일화
 - [ ] 다시 듣기, 도움말과 키보드 대안
 
 완료 조건: Chrome, Android, Safari, iOS에서 녹음·업로드하고 마이크 없이도 같은 주요 작업을 완료한다.
 
 ### Phase 4 — 송금·FDS·보호자 알림 통합
 
-- [ ] 백엔드 응답으로 수취인·금액·출금 계좌 검토 화면 구성
-- [ ] `confirmationId` 확인·취소 연결
-- [ ] `idempotencyKey` 생성·보관·재사용
-- [ ] timeout·새로고침 후 상태 복구
-- [ ] 프런트의 별도 Mock FDS·Mock 송금 제거
-- [ ] LOW 완료
-- [ ] MEDIUM 완료와 “보호자에게 알림을 요청했어요.” 표시
-- [ ] HIGH 차단과 알림 요청 표시
+- [x] 백엔드 응답으로 수취인·금액·출금 계좌 검토 화면 구성
+- [x] `confirmationId` 확인·취소 연결
+- [x] `idempotencyKey` 생성·보관·재사용
+- [x] timeout·새로고침 후 상태 복구
+- [x] 프런트의 별도 Mock FDS·Mock 송금 실행 경로 제거
+- [x] LOW 완료
+- [x] MEDIUM 완료와 “보호자에게 알림을 요청했어요.” 표시
+- [x] HIGH 차단과 알림 요청 표시
 - [ ] FDS 장애 시 이체 미실행
-- [ ] guardian `riskEventId` 공개 조회 화면·서비스 제거
+- [x] guardian `riskEventId` 공개 조회 화면을 실제 경로에서 제거
 
 완료 조건: 명시적 확인 전에는 이체되지 않고, 중복 요청에도 이체 1건이며, 세 위험도 결과가 백엔드 최종 상태와 일치한다.
 

@@ -8,7 +8,7 @@
 
 > 갱신일: 2026-08-27
 > 최상위 구현 기준: [IMPLEMENTATION_SOURCE_OF_TRUTH.md](IMPLEMENTATION_SOURCE_OF_TRUTH.md)
-> 현재 브랜치: `feature/voice-retry-fallback`
+> 현재 브랜치: `chore/remaining-implementation-plan`
 
 ## 현재 목표
 
@@ -16,15 +16,14 @@
 
 ## 현재 작업
 
-### `feature/voice-retry-fallback`
+### `chore/remaining-implementation-plan`
 
 작업 트리에 반영:
 
-- 공통 API 오류에서 백엔드 오류 `code`를 보존
-- 백엔드가 같은 슬롯 재질문 한도를 초과해 반환하는 `VOICE_4006` 식별
-- 재시도 한도 초과 시 만료된 음성 세션을 닫고 직접 입력 화면으로 전환
-- `VOICE_4005` 세션 만료 시 오래된 세션 재사용 없이 새 세션 시작 제공
-- 임의의 클라이언트 횟수 대신 백엔드 세션의 최종 판정을 사용
+- 남은 작업을 프런트 단독 구현, 외부 반영, 합의 필요, staging·실기기 검증으로 분류
+- 직접 입력 송금·수취인, OpenBanking callback, Voice/FDS 환경의 계약 공백 기록
+- 백엔드·AI·인프라·기획별 결정 질문과 권고안 정리
+- 출시 전 staging·접근성·보안 시나리오와 완료 증거 정의
 
 검증:
 
@@ -32,7 +31,7 @@
 - `npm run typecheck`: 통과
 - `npm run lint`: 통과
 - `npm run build`: 통과, 20개 route
-- staging 실제 3회 재질문·만료 응답 E2E: 미검증
+- 문서 변경만 수행하므로 직전 기능 검증 결과를 유지
 
 남은 작업:
 
@@ -43,7 +42,7 @@
 - Safari/iOS `audio/mp4` 백엔드 허용 전 실기기 녹음 보류
 - 직접 입력 송금의 명시적 실행 API 계약 확정
 - 실제 LOW·MEDIUM·HIGH, timeout 직후 조회, 새로고침 복구 staging E2E
-- 음성 재시도 직접 입력 전환 commit과 PR 생성
+- 남은 구현·합의 목록 검토와 팀별 담당·일정 확정
 
 ## 영역별 상태
 
