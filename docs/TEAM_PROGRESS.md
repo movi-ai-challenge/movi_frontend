@@ -8,7 +8,7 @@
 
 > 갱신일: 2026-08-27
 > 최상위 구현 기준: [IMPLEMENTATION_SOURCE_OF_TRUTH.md](IMPLEMENTATION_SOURCE_OF_TRUTH.md)
-> 현재 브랜치: `feature/pin-authentication`
+> 현재 브랜치: `feature/openbanking-callback`
 
 ## 현재 목표
 
@@ -16,30 +16,31 @@
 
 ## 현재 작업
 
-### `feature/pin-authentication`
+### `feature/openbanking-callback`
 
 작업 트리에 반영:
 
-- 신규 사용자를 `/pin/register`로 분기
-- 인증된 신규 사용자의 전화번호와 6자리 PIN 등록
-- 기존 사용자의 `/login/pin` 전화번호+PIN 로그인
-- PIN 불일치·잠금·미등록·중복·네트워크 오류 구분
-- PIN 원문을 store·URL·로그에 저장하지 않음
-- 미구현 PASS·생체인증 실제 기능 노출 제거
+- `POST /api/openbanking/connect`로 실제 인증 URL 요청
+- 검증된 HTTPS 인증 URL로만 전체 페이지 이동
+- `/accounts/connect/callback` 성공·취소·오류 화면
+- callback query 즉시 제거
+- 성공 복귀 후 인증된 `GET /api/accounts`로 계좌 수 재조회
+- 계좌 0개 재연결, 연결 성공, 조회 실패 재시도 상태 분리
 
 검증:
 
-- `npm test`: 14개 통과
+- `npm test`: 17개 통과
 - `npm run typecheck`: 통과
 - `npm run lint`: 통과
-- `npm run build`: 통과, 19개 route
-- staging 실제 PIN 등록·로그인 E2E: 미검증
+- `npm run build`: 통과, 20개 route
+- staging 실제 OpenBanking E2E: 미검증
 
 남은 작업:
 
-- 실제 카카오 계정으로 신규 사용자 PIN 등록 E2E
-- PIN 연속 실패와 잠금 해제 시간 E2E
-- 다중 탭 logout·만료 검증
+- 백엔드 `/api/openbanking/callback` 공개 경로 허용
+- 백엔드 callback JSON을 프런트 결과 URL 302로 변경
+- 성공·취소·state 만료·재사용 staging E2E
+- 실제 Account DTO 매퍼와 계좌 목록 화면 전환
 - 변경 commit과 PR 생성
 
 ## 영역별 상태
@@ -47,7 +48,7 @@
 | 영역 | 현재 상태 | 다음 완료 조건 |
 | --- | --- | --- |
 | 인증 | 카카오·PIN·refresh·logout 실제 API 구현 | 신규·기존 로그인과 잠금 staging E2E |
-| OpenBanking | Mock 화면 | 실제 시작·callback·계좌 재조회 |
+| OpenBanking | 시작·callback·계좌 수 재조회 구현 | 백엔드 공개 callback·302와 staging E2E |
 | 계좌·잔액 | Mock UI와 서비스 경계 | DTO 매퍼와 실제 API |
 | 거래내역 | Mock 목록·필터·상세 | 실제 목록·상세·`IN/OUT`·페이징 |
 | 음성 | 타이머/입력 보조 UI | 녹음·multipart·세션·실 AI |
@@ -67,7 +68,8 @@
 | `/login/callback` | 카카오 코드 교환 | 실 API |
 | `/login/pin` | 기존 사용자 PIN 로그인 | 실 API |
 | `/pin/register` | 신규 사용자 PIN 등록 | 실 API |
-| `/accounts/connect` | 최초 계좌 연결 | Mock |
+| `/accounts/connect` | 최초 계좌 연결 시작 | 실 API |
+| `/accounts/connect/callback` | OpenBanking 결과·계좌 수 확인 | 실 API, 백엔드 302 대기 |
 | `/accounts/register` | 연결 계좌 확인 | Mock |
 | `/accounts` | 계좌 목록·기본 계좌 | Mock |
 | `/balance` | 잔액조회 | Mock |
@@ -89,11 +91,11 @@
 
 ## 바로 다음 작업
 
-1. PIN 변경 commit·PR 및 인증 staging E2E
-2. OpenBanking callback
-3. 계좌·잔액·거래내역 실제 API
-4. 음성 녹음·세션·AI 연결
-5. 송금 확인·상태 복구·FDS 통합
+1. OpenBanking 변경 commit·PR 및 백엔드 302 staging E2E
+2. 계좌·잔액·거래내역 실제 API
+3. 음성 녹음·세션·AI 연결
+4. 송금 확인·상태 복구·FDS 통합
+5. 전체 접근성·장애 시나리오 E2E
 
 이후 순서는 [MVP_WEEK_PLAN.md](MVP_WEEK_PLAN.md)를 따른다.
 
