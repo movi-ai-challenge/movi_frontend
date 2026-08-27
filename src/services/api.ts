@@ -9,6 +9,7 @@ import {
   parseApiData,
   readApiFailureResponse,
 } from "@/services/apiResponse";
+import { createAuthRefreshCoordinator } from "@/services/authRefreshCoordinator";
 import { useAuthStore } from "@/store/useAuthStore";
 import { useBankStore } from "@/store/useBankStore";
 import { clearTransferRecoveryKey } from "@/services/transferRecoveryStorage";
@@ -35,8 +36,6 @@ const apiConfig = {
 export const isMockMode = process.env.NEXT_PUBLIC_USE_MOCK === "true";
 export const api = axios.create(apiConfig);
 const refreshApi = axios.create(apiConfig);
-
-let refreshPromise: Promise<string> | null = null;
 
 function isAuthTokenPair(value: unknown): value is AuthTokenPair {
   if (!isRecord(value)) return false;
@@ -87,14 +86,9 @@ async function requestRefreshedAccessToken(): Promise<string> {
   }
 }
 
-function getRefreshedAccessToken(): Promise<string> {
-  if (!refreshPromise) {
-    refreshPromise = requestRefreshedAccessToken().finally(() => {
-      refreshPromise = null;
-    });
-  }
-  return refreshPromise;
-}
+const getRefreshedAccessToken = createAuthRefreshCoordinator(
+  requestRefreshedAccessToken,
+);
 
 export async function restoreAuthenticatedSession(): Promise<void> {
   const { isRestoringSession } = useAuthStore.getState();
