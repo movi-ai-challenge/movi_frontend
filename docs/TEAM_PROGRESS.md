@@ -8,7 +8,7 @@
 
 > 갱신일: 2026-08-27
 > 최상위 구현 기준: [IMPLEMENTATION_SOURCE_OF_TRUTH.md](IMPLEMENTATION_SOURCE_OF_TRUTH.md)
-> 현재 브랜치: `feature/voice-command-api`
+> 현재 브랜치: `feature/transfer-fds-recovery`
 
 ## 현재 목표
 
@@ -16,25 +16,24 @@
 
 ## 현재 작업
 
-### `feature/voice-command-api`
+### `feature/transfer-fds-recovery`
 
 작업 트리에 반영:
 
-- `POST /api/voice/sessions` 실제 음성 세션 시작
-- MediaRecorder WebM/Opus·WAV 탐지와 권한 거부·미지원 처리
-- 15초 자동 종료·5MB 사전 제한과 전송 전 녹음 검토
-- `POST /api/voice/sessions/{voiceSessionId}/commands` multipart 업로드
-- 재질문·잔액·HISTORY·송금 확인·완료·취소 응답 런타임 검증
-- 확인 대기부터 `confirmationId`와 UUID `idempotencyKey` 동시 전송·재시도 키 유지
-- 서버 `voiceMessage` 화면·기기 TTS 단일화와 직접 조작 대안
+- 송금 확인 음성 전송 직전에 UUID `idempotencyKey`를 `sessionStorage`에 보관
+- timeout·응답 오류·새로고침 후 `GET /api/transfers/status`를 같은 키로 조회
+- 송금 상태와 `LOW/MEDIUM/HIGH` FDS 결과 런타임 검증
+- `PENDING/RISK_REVIEW` 재조회와 완료·차단·실패·취소 최종 상태 표시
+- MEDIUM/HIGH에서만 “보호자에게 알림을 요청했어요.”로 안내
+- 직접 입력 실행 API가 없는 기존 Mock 성공·차단 경로 비활성화
 
 검증:
 
-- `npm test`: 32개 통과
+- `npm test`: 35개 통과
 - `npm run typecheck`: 통과
 - `npm run lint`: 통과
 - `npm run build`: 통과, 20개 route
-- staging 실제 OpenBanking E2E: 미검증
+- staging 실제 Voice/FDS·상태 복구 E2E: 미검증
 
 남은 작업:
 
@@ -43,8 +42,9 @@
 - 성공·취소·state 만료·재사용 staging E2E
 - Voice/FDS staging URL·health/version과 실제 AI 응답 E2E
 - Safari/iOS `audio/mp4` 백엔드 허용 전 실기기 녹음 보류
-- timeout·새로고침 후 `idempotencyKey` 상태 복구 구현
-- 음성 변경 commit과 PR 생성
+- 직접 입력 송금의 명시적 실행 API 계약 확정
+- 실제 LOW·MEDIUM·HIGH, timeout 직후 조회, 새로고침 복구 staging E2E
+- 송금 상태 복구 변경 commit과 PR 생성
 
 ## 영역별 상태
 
@@ -55,10 +55,10 @@
 | 계좌·잔액 | 목록·기본 계좌·별칭·잔액 실제 API | 소유권·오류·다계좌 staging E2E |
 | 거래내역 | 목록·상세·`IN/OUT`·페이징 실제 API | 소유권·필터·페이징 staging E2E |
 | 음성 | 세션·녹음·multipart·응답 상태·TTS 실제 API | 실 AI·Safari/iOS·권한·timeout E2E |
-| 송금·FDS | Mock 검토·위험도·결과 | 백엔드 단일 흐름과 상태 복구 |
+| 송금·FDS | 음성 확인·동일 키 상태 복구·실제 FDS 결과 표시 | 실 AI/FDS staging E2E와 직접 입력 실행 계약 |
 | 보호자 알림 | 오래된 Mock 조회 경로 존재 | Seed·백엔드 이벤트만 사용, 공개 조회 제거 |
 | 접근성 | 큰 글씨·고대비·단순 모드·TTS 기반 | 실제 P0 흐름의 보조기기 E2E |
-| 테스트 | 계약·인증·store 단위 테스트 32개와 정적 검사 존재 | 화면 통합·브라우저 E2E 도입 |
+| 테스트 | 계약·인증·store 단위 테스트 35개와 정적 검사 존재 | 화면 통합·브라우저 E2E 도입 |
 
 ## 구현된 화면
 
@@ -78,8 +78,9 @@
 | `/balance` | 현재·출금 가능 잔액 조회와 TTS | 실 API |
 | `/transactions` | 기간·입출금 필터·페이징 거래 목록 | 실 API |
 | `/transactions/[transactionId]` | 거래 상세와 TTS | 실 API |
-| `/transfer` 이하 | 송금·FDS 결과 | Mock |
-| `/alerts/guardian/[riskEventId]` | 계약 없는 보호자 조회 | MVP 실 경로에서 제거 대상 |
+| `/transfer`·`/transfer/review` | 직접 입력 송금 정보·검토 | 실행 API 확인 필요, 실제 이체 미실행 |
+| `/transfer/evaluate` 이하·`/transfer/result` | 이전 Mock 결과 경로 | 실제 결과 생성 중단, `/accounts` 복귀 |
+| `/alerts/guardian/[riskEventId]` | 이전 공개 보호자 조회 | 실제 조회 제거, `/accounts` 복귀 |
 
 ## 접근성 기반
 
@@ -94,10 +95,11 @@
 
 ## 바로 다음 작업
 
-1. 음성 변경 commit·PR 및 실 AI·권한·MIME staging E2E
-2. 송금 상태 복구·FDS 결과 통합
+1. 송금 상태 복구·FDS 결과 변경 commit·PR
+2. 실 AI·FDS·권한·MIME·timeout staging E2E
 3. OpenBanking 백엔드 302 반영 후 staging E2E
-4. 전체 접근성·장애 시나리오 E2E
+4. 직접 입력 송금 실행 계약 확정 후 키보드 대안 완성
+5. 전체 접근성·장애 시나리오 E2E
 
 이후 순서는 [MVP_WEEK_PLAN.md](MVP_WEEK_PLAN.md)를 따른다.
 
