@@ -69,12 +69,12 @@
 | PIN·refresh·logout | 부분 구현 | 실제 API·세션 기반 구현 완료, staging·다중 탭 E2E 필요 |
 | OpenBanking | 부분 구현 | 시작 URL·callback 화면·계좌 수 재조회 구현, 백엔드 공개 callback·302와 staging E2E 필요 |
 | 계좌·잔액 | 부분 구현 | 목록·기본 계좌·별칭·잔액 실제 API 완료, staging E2E 필요 |
-| 거래내역 | 부분 구현 | 목록·상세·`IN/OUT`·페이지네이션 실제 API 완료, HISTORY 음성 계약 확인 필요 |
-| 음성 | 부분 구현 | MediaRecorder, multipart, 세션 상태 머신, 실 AI 검증 |
+| 거래내역 | 부분 구현 | 목록·상세·`IN/OUT`·페이지네이션 실제 API 완료, staging E2E 필요 |
+| 음성 | 부분 구현 | 세션·MediaRecorder·multipart·응답 상태·TTS 구현, 실 AI·Safari/iOS E2E 필요 |
 | 송금·FDS | 부분 구현 | 백엔드 단일 흐름, 확인 ID, 멱등성, 상태 복구 |
 | 보호자 알림 | 정책 정리 필요 | `riskEventId` 공개 조회 제거, 결과 상태만 표시 |
 | 접근성 | 부분 구현 | 실제 전체 흐름의 키보드·보조기기·200% 검증 |
-| 자동 테스트 | 부분 구현 | 계약·인증·store 단위 테스트 28개 존재, 화면 통합·브라우저 E2E 필요 |
+| 자동 테스트 | 부분 구현 | 계약·인증·store 단위 테스트 32개 존재, 화면 통합·브라우저 E2E 필요 |
 
 ## 확정된 MVP 정책
 
@@ -135,7 +135,6 @@
 | 항목 | 현재 근거와 불일치 | 확인 주체 | 구현 영향 |
 | --- | --- | --- | --- |
 | OpenBanking callback 공개·복귀 | 합의는 공개 callback과 프런트 결과 URL 302지만 백엔드 `develop@b6c9092`는 운영 경로 공개·302가 반영되지 않음 | 백엔드 | 실제 OpenBanking E2E 차단 |
-| 거래 HISTORY 음성 안내 | 합의는 최근 3건과 나머지 총 건수 안내지만 현재 `TransactionController` 목록 `voiceMessage`는 총 건수만 제공 | 백엔드·AI·프런트 | 프런트는 현재 서버 문구만 사용하며 최근 3건을 임의 생성하지 않음 |
 | OAuth 예외 복귀 | 취소·state 오류·카카오 오류가 모두 프런트 callback으로 복귀하는지 staging 미검증 | 백엔드·프런트 | 로그인 예외 E2E 미완료 |
 | Voice/FDS 실 연동 | staging URL·health/version·지원 MIME·timeout·Intent/slot 계약의 최종 환경값 미확정 | AI·백엔드 | 음성 녹음·분석·FDS 실 E2E 차단 |
 | 접근성 설정 저장 위치 | 브라우저 유지인지 계정 저장인지 미확정 | 기획·백엔드·프런트 | 새로고침 후 설정 유지 방식 보류 |
