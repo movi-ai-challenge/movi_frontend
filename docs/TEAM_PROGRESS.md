@@ -8,7 +8,7 @@
 
 > 갱신일: 2026-08-27
 > 최상위 구현 기준: [IMPLEMENTATION_SOURCE_OF_TRUTH.md](IMPLEMENTATION_SOURCE_OF_TRUTH.md)
-> 현재 브랜치: `chore/remaining-implementation-plan`
+> 현재 브랜치: `feature/transfer-input-safety`
 
 ## 현재 목표
 
@@ -16,22 +16,23 @@
 
 ## 현재 작업
 
-### `chore/remaining-implementation-plan`
+### `feature/transfer-input-safety`
 
 작업 트리에 반영:
 
-- 남은 작업을 프런트 단독 구현, 외부 반영, 합의 필요, staging·실기기 검증으로 분류
-- 직접 입력 송금·수취인, OpenBanking callback, Voice/FDS 환경의 계약 공백 기록
-- 백엔드·AI·인프라·기획별 결정 질문과 권고안 정리
-- 출시 전 staging·접근성·보안 시나리오와 완료 증거 정의
+- `/transfer`의 타이머 기반 가짜 음성 입력 제거
+- 고정 Mock 수취인 목록을 실제 화면에서 제거
+- 직접 입력 화면을 이름·금액 입력과 검토 전용으로 제한
+- 서버 수취인 검증과 실제 이체가 없음을 화면과 접근성 설명에 명시
+- 수취인 공백, 소수·지수·안전 범위 밖 금액 검증 추가
 
 검증:
 
-- `npm test`: 37개 통과
+- `npm test`: 39개 통과
 - `npm run typecheck`: 통과
 - `npm run lint`: 통과
 - `npm run build`: 통과, 20개 route
-- 문서 변경만 수행하므로 직전 기능 검증 결과를 유지
+- staging 직접 입력 송금: 백엔드 실행·수취인 계약 미확정으로 미검증
 
 남은 작업:
 
@@ -42,7 +43,7 @@
 - Safari/iOS `audio/mp4` 백엔드 허용 전 실기기 녹음 보류
 - 직접 입력 송금의 명시적 실행 API 계약 확정
 - 실제 LOW·MEDIUM·HIGH, timeout 직후 조회, 새로고침 복구 staging E2E
-- 남은 구현·합의 목록 검토와 팀별 담당·일정 확정
+- 직접 입력 송금·등록 수취인 API 계약 확정
 
 ## 영역별 상태
 
@@ -56,7 +57,7 @@
 | 송금·FDS | 음성 확인·동일 키 상태 복구·실제 FDS 결과 표시 | 실 AI/FDS staging E2E와 직접 입력 실행 계약 |
 | 보호자 알림 | 공개 Mock 조회 경로 제거·FDS 결과 안내 | Seed·백엔드 이벤트 staging E2E |
 | 접근성 | 큰 글씨·고대비·단순 모드·TTS 기반 | 실제 P0 흐름의 보조기기 E2E |
-| 테스트 | 계약·인증·store 단위 테스트 37개와 정적 검사 존재 | 화면 통합·브라우저 E2E 도입 |
+| 테스트 | 계약·인증·store 단위 테스트 39개와 정적 검사 존재 | 화면 통합·브라우저 E2E 도입 |
 
 ## 구현된 화면
 
@@ -93,10 +94,10 @@
 
 ## 바로 다음 작업
 
-1. 음성 재시도 직접 입력 전환 commit·PR
-2. 실 AI·FDS·권한·MIME·timeout staging E2E
-3. OpenBanking 백엔드 302 반영 후 staging E2E
-4. 직접 입력 송금 실행 계약 확정 후 키보드 대안 완성
+1. 직접 입력 화면 안전 정리 commit·PR
+2. 직접 입력 송금·등록 수취인 API 계약 확정
+3. 실 AI·FDS·권한·MIME·timeout staging E2E
+4. OpenBanking 백엔드 302 반영 후 staging E2E
 5. 전체 접근성·장애 시나리오 E2E
 
 이후 순서는 [MVP_WEEK_PLAN.md](MVP_WEEK_PLAN.md)를 따른다.
