@@ -1,5 +1,6 @@
 import { api, isMockMode } from "@/services/api";
 import { ApiResponseContractError, parseApiResponse } from "@/services/apiResponse";
+import { readDeviceUuid } from "@/services/deviceIdentity";
 import {
   isVoiceCommandResponseData,
   isVoiceSessionStartData,
@@ -51,7 +52,9 @@ export async function startVoiceSession(): Promise<VoiceSessionStart> {
     );
   }
 
-  const response = await api.post<unknown>(VOICE_SESSIONS_PATH);
+  const response = await api.post<unknown>(VOICE_SESSIONS_PATH, {
+    deviceUuid: readDeviceUuid(),
+  });
   const parsed = parseApiResponse(response.data, isVoiceSessionStartData);
   return mapVoiceSessionStart(parsed.data, parsed.voiceMessage);
 }
