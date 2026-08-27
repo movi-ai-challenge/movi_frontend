@@ -1,77 +1,65 @@
+import {
+  isAccountListResponseData,
+  isAccountResponseData,
+  mapAccountListResponse,
+  mapAccountResponse,
+} from "@/services/accountContract";
+import { api, isMockMode } from "@/services/api";
+import { parseApiData } from "@/services/apiResponse";
 import { mockAccounts } from "@/services/mockData";
 import type { Account } from "@/types";
 
-const MOCK_FETCH_DELAY_MS = 500;
-const MOCK_UPDATE_DELAY_MS = 500;
-const MOCK_DISCONNECT_DELAY_MS = 500;
-const MOCK_DISCONNECTED_ACCOUNT_IDS_KEY =
-  "movi.mock-disconnected-account-ids";
+const ACCOUNTS_PATH = "/api/accounts";
+const MOCK_DELAY_MS = 500;
 
-function readDisconnectedAccountIds(): Set<string> {
-  try {
-    const storedValue = window.sessionStorage.getItem(
-      MOCK_DISCONNECTED_ACCOUNT_IDS_KEY,
-    );
-    if (!storedValue) return new Set<string>();
-
-    const parsedValue: unknown = JSON.parse(storedValue);
-    if (!Array.isArray(parsedValue)) return new Set<string>();
-
-    const knownAccountIds = new Set(mockAccounts.map((account) => account.id));
-    return new Set(
-      parsedValue.filter(
-        (accountId): accountId is string =>
-          typeof accountId === "string" && knownAccountIds.has(accountId),
-      ),
-    );
-  } catch {
-    return new Set<string>();
-  }
-}
-
-function storeDisconnectedAccountIds(accountIds: Set<string>): void {
-  try {
-    window.sessionStorage.setItem(
-      MOCK_DISCONNECTED_ACCOUNT_IDS_KEY,
-      JSON.stringify([...accountIds]),
-    );
-  } catch {
-    // 저장소를 사용할 수 없어도 현재 화면의 Mock 해제 흐름은 계속한다.
-  }
+function waitForMockResponse(): Promise<void> {
+  return new Promise((resolve) => {
+    window.setTimeout(resolve, MOCK_DELAY_MS);
+  });
 }
 
 export async function getConnectedAccounts(): Promise<Account[]> {
-  await new Promise<void>((resolve) => {
-    window.setTimeout(resolve, MOCK_FETCH_DELAY_MS);
-  });
+  if (isMockMode) {
+    await waitForMockResponse();
+    return mockAccounts;
+  }
 
-  const disconnectedAccountIds = readDisconnectedAccountIds();
-  return mockAccounts.filter(
-    (account) => !disconnectedAccountIds.has(account.id),
+  const response = await api.get<unknown>(ACCOUNTS_PATH);
+  return mapAccountListResponse(
+    parseApiData(response.data, isAccountListResponseData),
   );
 }
 
 export async function updateDefaultAccount(accountId: string): Promise<string> {
-  await new Promise<void>((resolve) => {
-    window.setTimeout(resolve, MOCK_UPDATE_DELAY_MS);
-  });
-
-  return accountId;
-}
-
-export async function disconnectAccount(accountId: string): Promise<string> {
-  await new Promise<void>((resolve) => {
-    window.setTimeout(resolve, MOCK_DISCONNECT_DELAY_MS);
-  });
-
-  const accountExists = mockAccounts.some((account) => account.id === accountId);
-  if (!accountExists) {
-    throw new Error("Mock account not found");
+  if (isMockMode) {
+    await waitForMockResponse();
+    return accountId;
   }
 
-  const disconnectedAccountIds = readDisconnectedAccountIds();
-  disconnectedAccountIds.add(accountId);
-  storeDisconnectedAccountIds(disconnectedAccountIds);
+  const response = await api.patch<unknown>(
+    `${ACCOUNTS_PATH}/${encodeURIComponent(accountId)}/primary`,
+  );
+  return mapAccountResponse(
+    parseApiData(response.data, isAccountResponseData),
+  ).id;
+}
 
-  return accountId;
+export async function updateAccountAlias(
+  accountId: string,
+  alias: string,
+): Promise<Account> {
+  if (isMockMode) {
+    await waitForMockResponse();
+    const account = mockAccounts.find((item) => item.id === accountId);
+    if (!account) throw new Error("Mock account not found");
+    return { ...account, accountName: alias };
+  }
+
+  const response = await api.patch<unknown>(
+    `${ACCOUNTS_PATH}/${encodeURIComponent(accountId)}/alias`,
+    { alias },
+  );
+  return mapAccountResponse(
+    parseApiData(response.data, isAccountResponseData),
+  );
 }

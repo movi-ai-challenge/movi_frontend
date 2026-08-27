@@ -6,24 +6,21 @@ import { useEffect, useRef, useState } from "react";
 import { AccessibleButton } from "@/components/common/AccessibleButton";
 import { PageBackLink } from "@/components/common/PageBackLink";
 import { AccountApiError } from "@/components/domain/accounts/AccountApiError";
-import { verifyAccountDisconnection } from "@/services/accountReauthenticationService";
+import { validateAccountAlias } from "@/services/accountContract";
 import {
-  disconnectAccount,
   getConnectedAccounts,
+  updateAccountAlias,
   updateDefaultAccount,
 } from "@/services/accountService";
 import { toApiError, type ApiError } from "@/services/api";
 import { useBankStore } from "@/store/useBankStore";
-import type { AccountDisconnectionVerification } from "@/types";
 
 type AccountListStatus = "loading" | "ready" | "error";
-type ReauthenticationStatus = "idle" | "verifying" | "verified" | "error";
 
-const currencyFormatter = new Intl.NumberFormat("ko-KR", {
-  style: "currency",
-  currency: "KRW",
-  maximumFractionDigits: 0,
-});
+const accountTypeLabel = {
+  DEPOSIT: "입출금 계좌",
+  SAVING: "적금 계좌",
+} as const;
 
 export default function ConnectedAccountListPage() {
   const accounts = useBankStore((state) => state.accounts);
@@ -35,23 +32,19 @@ export default function ConnectedAccountListPage() {
   const [updatingAccountId, setUpdatingAccountId] = useState<string | null>(
     null,
   );
+  const [editingAccountId, setEditingAccountId] = useState<string | null>(null);
+  const [aliasDraft, setAliasDraft] = useState("");
+  const [aliasError, setAliasError] = useState("");
   const [updateMessage, setUpdateMessage] = useState("");
-  const [pendingDisconnectAccountId, setPendingDisconnectAccountId] = useState<
-    string | null
-  >(null);
-  const [disconnectingAccountId, setDisconnectingAccountId] = useState<
-    string | null
-  >(null);
-  const [reauthenticationStatus, setReauthenticationStatus] =
-    useState<ReauthenticationStatus>("idle");
-  const [disconnectionVerification, setDisconnectionVerification] =
-    useState<AccountDisconnectionVerification | null>(null);
-  const disconnectHeadingRef = useRef<HTMLHeadingElement>(null);
-  const disconnectResultRef = useRef<HTMLParagraphElement>(null);
-  const verificationResultRef = useRef<HTMLHeadingElement>(null);
+  const aliasInputRef = useRef<HTMLInputElement>(null);
+  const updateResultRef = useRef<HTMLParagraphElement>(null);
 
-  const pendingDisconnectAccount =
-    accounts.find((account) => account.id === pendingDisconnectAccountId) ?? null;
+  const loadAccounts = async () => {
+    const connectedAccounts = await getConnectedAccounts();
+    setAccounts(connectedAccounts);
+    setLoadError(null);
+    setStatus("ready");
+  };
 
   useEffect(() => {
     let isActive = true;
@@ -74,118 +67,88 @@ export default function ConnectedAccountListPage() {
     };
   }, [setAccounts]);
 
-  useEffect(() => {
-    if (
-      reauthenticationStatus === "verified" ||
-      reauthenticationStatus === "error"
-    ) {
-      verificationResultRef.current?.focus();
-    }
-  }, [reauthenticationStatus]);
-
   const retryLoadAccounts = async () => {
     setStatus("loading");
     setLoadError(null);
-
     try {
-      const connectedAccounts = await getConnectedAccounts();
-      setAccounts(connectedAccounts);
-      setStatus("ready");
+      await loadAccounts();
     } catch (error: unknown) {
       setLoadError(toApiError(error));
       setStatus("error");
     }
   };
 
+  const announceUpdate = (message: string) => {
+    setUpdateMessage(message);
+    window.setTimeout(() => updateResultRef.current?.focus(), 0);
+  };
+
   const changeDefaultAccount = async (accountId: string) => {
-    if (updatingAccountId || disconnectingAccountId) return;
+    if (updatingAccountId || editingAccountId) return;
 
     setUpdatingAccountId(accountId);
     setUpdateMessage("");
-
     try {
       const updatedAccountId = await updateDefaultAccount(accountId);
       setDefaultAccount(updatedAccountId);
       const account = accounts.find((item) => item.id === updatedAccountId);
-      setUpdateMessage(`${account?.accountName ?? "선택한 계좌"}를 기본 계좌로 설정했습니다.`);
-    } catch {
-      setUpdateMessage("기본 계좌를 바꾸지 못했습니다. 다시 시도해 주세요.");
+      announceUpdate(
+        `${account?.accountName ?? "선택한 계좌"}를 기본 계좌로 설정했습니다.`,
+      );
+    } catch (error: unknown) {
+      announceUpdate(toApiError(error).message);
     } finally {
       setUpdatingAccountId(null);
     }
   };
 
-  const openDisconnectConfirmation = (accountId: string) => {
-    setPendingDisconnectAccountId(accountId);
-    setReauthenticationStatus("idle");
-    setDisconnectionVerification(null);
+  const startAliasEdit = (accountId: string, currentAlias: string) => {
+    if (updatingAccountId || editingAccountId) return;
+    setEditingAccountId(accountId);
+    setAliasDraft(currentAlias);
+    setAliasError("");
     setUpdateMessage("");
-    window.setTimeout(() => disconnectHeadingRef.current?.focus(), 0);
+    window.setTimeout(() => aliasInputRef.current?.focus(), 0);
   };
 
-  const cancelDisconnect = () => {
-    const accountId = pendingDisconnectAccountId;
-    setPendingDisconnectAccountId(null);
-    setReauthenticationStatus("idle");
-    setDisconnectionVerification(null);
+  const cancelAliasEdit = () => {
+    const accountId = editingAccountId;
+    setEditingAccountId(null);
+    setAliasDraft("");
+    setAliasError("");
     if (accountId) {
       window.setTimeout(
-        () => document.getElementById(`disconnect-${accountId}`)?.focus(),
+        () => document.getElementById(`edit-alias-${accountId}`)?.focus(),
         0,
       );
     }
   };
 
-  const reauthenticateForDisconnect = async () => {
-    if (!pendingDisconnectAccount || reauthenticationStatus === "verifying") {
+  const saveAlias = async (accountId: string) => {
+    const alias = validateAccountAlias(aliasDraft);
+    if (!alias) {
+      setAliasError("계좌 이름은 공백 없이 1자 이상 50자 이하로 입력해 주세요.");
+      aliasInputRef.current?.focus();
       return;
     }
 
-    setReauthenticationStatus("verifying");
-    setDisconnectionVerification(null);
-
+    setUpdatingAccountId(accountId);
+    setAliasError("");
     try {
-      const verification = await verifyAccountDisconnection(
-        pendingDisconnectAccount.id,
-      );
-      setDisconnectionVerification(verification);
-      setReauthenticationStatus("verified");
-    } catch {
-      setReauthenticationStatus("error");
-    }
-  };
-
-  const confirmDisconnect = async () => {
-    if (
-      !pendingDisconnectAccount ||
-      disconnectingAccountId ||
-      reauthenticationStatus !== "verified" ||
-      disconnectionVerification?.accountId !== pendingDisconnectAccount.id
-    ) {
-      return;
-    }
-
-    const targetAccount = pendingDisconnectAccount;
-    setDisconnectingAccountId(targetAccount.id);
-    setUpdateMessage("");
-
-    try {
-      const disconnectedAccountId = await disconnectAccount(targetAccount.id);
+      const updatedAccount = await updateAccountAlias(accountId, alias);
       setAccounts(
-        accounts.filter((account) => account.id !== disconnectedAccountId),
+        accounts.map((account) =>
+          account.id === updatedAccount.id ? updatedAccount : account,
+        ),
       );
-      setPendingDisconnectAccountId(null);
-      setReauthenticationStatus("idle");
-      setDisconnectionVerification(null);
-      setUpdateMessage(`${targetAccount.accountName} 연결을 해제했습니다.`);
-      window.setTimeout(() => disconnectResultRef.current?.focus(), 0);
-    } catch {
-      setUpdateMessage(
-        "계좌 연결을 해제하지 못했습니다. 잠시 후 다시 시도해 주세요.",
-      );
-      window.setTimeout(() => disconnectHeadingRef.current?.focus(), 0);
+      setEditingAccountId(null);
+      setAliasDraft("");
+      announceUpdate(`계좌 이름을 ${updatedAccount.accountName}(으)로 바꿨습니다.`);
+    } catch (error: unknown) {
+      setAliasError(toApiError(error).message);
+      aliasInputRef.current?.focus();
     } finally {
-      setDisconnectingAccountId(null);
+      setUpdatingAccountId(null);
     }
   };
 
@@ -204,7 +167,7 @@ export default function ConnectedAccountListPage() {
         className="mt-4 text-lg leading-8 text-[var(--color-text-muted)]"
         data-secondary-content="true"
       >
-        등록한 계좌의 잔액과 기본 정보를 확인할 수 있어요.
+        연결된 계좌의 기본 정보와 주로 사용할 계좌를 관리할 수 있어요.
       </p>
 
       <div className="mt-8" aria-live="polite" aria-busy={status === "loading"}>
@@ -230,11 +193,11 @@ export default function ConnectedAccountListPage() {
               아직 연결된 계좌가 없습니다.
             </h2>
             <p className="mt-2 leading-7 text-[var(--color-text-muted)]">
-              계좌를 연결하면 여기에서 잔액을 확인할 수 있어요.
+              처음 사용할 계좌를 오픈뱅킹으로 연결해 주세요.
             </p>
             <Link
               href="/accounts/connect"
-              className="mt-5 inline-flex min-h-11 items-center rounded-lg border-2 border-transparent bg-[var(--color-primary)] px-5 py-2 font-semibold text-[var(--color-on-primary)] hover:bg-[var(--color-primary-hover)] focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[var(--color-focus)] focus-visible:ring-offset-2"
+              className="mt-5 inline-flex min-h-11 items-center rounded-lg border-2 border-transparent bg-[var(--color-primary)] px-5 py-2 font-semibold text-[var(--color-on-primary)] focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[var(--color-focus)] focus-visible:ring-offset-2"
             >
               계좌 연결하기
             </Link>
@@ -244,229 +207,149 @@ export default function ConnectedAccountListPage() {
         {status === "ready" && accounts.length > 0 ? (
           <section aria-labelledby="account-count-title">
             <h2 id="account-count-title" className="text-xl font-bold">
-              등록한 계좌 {accounts.length}개
+              연결된 계좌 {accounts.length}개
             </h2>
             <ul className="mt-4 grid list-none gap-4 p-0">
-              {accounts.map((account) => (
-                <li
-                  key={account.id}
-                  className="rounded-xl border-2 border-[var(--color-border)] bg-[var(--color-surface)] p-6"
-                >
-                  <article aria-labelledby={`${account.id}-name`}>
-                    <div className="flex flex-wrap items-center justify-between gap-3">
-                      <p className="font-semibold text-[var(--color-text-muted)]">
-                        {account.bankName}
-                      </p>
-                      {account.id === defaultAccountId ? (
-                        <span className="rounded-full border-2 border-[var(--color-success)] px-3 py-1 text-sm font-bold">
-                          기본 계좌
-                        </span>
-                      ) : null}
-                    </div>
-                    <h3 id={`${account.id}-name`} className="mt-1 text-2xl font-bold">
-                      {account.accountName}
-                    </h3>
-                    <p className="mt-2 text-lg">{account.maskedAccountNumber}</p>
-                    <dl className="mt-6 border-t-2 border-[var(--color-border)] pt-5">
-                      <div>
-                        <dt className="text-sm font-semibold text-[var(--color-text-muted)]">
-                          잔액
-                        </dt>
-                        <dd className="mt-1 text-3xl font-bold">
-                          {currencyFormatter.format(account.balance)}
-                        </dd>
+              {accounts.map((account) => {
+                const isEditing = editingAccountId === account.id;
+                return (
+                  <li
+                    key={account.id}
+                    className="rounded-xl border-2 border-[var(--color-border)] bg-[var(--color-surface)] p-6"
+                  >
+                    <article aria-labelledby={`${account.id}-name`}>
+                      <div className="flex flex-wrap items-center justify-between gap-3">
+                        <p className="font-semibold text-[var(--color-text-muted)]">
+                          {account.bankName} · {accountTypeLabel[account.accountType]}
+                        </p>
+                        {account.id === defaultAccountId ? (
+                          <span className="rounded-full border-2 border-[var(--color-success)] px-3 py-1 text-sm font-bold">
+                            기본 계좌
+                          </span>
+                        ) : null}
                       </div>
-                    </dl>
-                    {account.id !== defaultAccountId ? (
-                      <AccessibleButton
-                        className="mt-5 w-full sm:w-auto"
-                        variant="secondary"
-                        isLoading={updatingAccountId === account.id}
-                        loadingLabel="기본 계좌로 바꾸고 있어요"
-                        disabled={
-                          updatingAccountId !== null ||
-                          disconnectingAccountId !== null ||
-                          pendingDisconnectAccountId !== null
-                        }
-                        onClick={() => void changeDefaultAccount(account.id)}
+                      <h3
+                        id={`${account.id}-name`}
+                        className="mt-1 text-2xl font-bold"
                       >
-                        이 계좌를 기본으로 설정
-                      </AccessibleButton>
-                    ) : (
-                      <p
-                        className="mt-5 font-semibold text-[var(--color-success)]"
-                        data-secondary-content="true"
-                      >
-                        잔액조회와 이체에 먼저 사용됩니다.
-                      </p>
-                    )}
-                    <AccessibleButton
-                      id={`disconnect-${account.id}`}
-                      className="mt-3 w-full border-[var(--color-danger)] sm:ml-3 sm:w-auto"
-                      variant="secondary"
-                      disabled={
-                        updatingAccountId !== null ||
-                        disconnectingAccountId !== null ||
-                        pendingDisconnectAccountId !== null
-                      }
-                      onClick={() => openDisconnectConfirmation(account.id)}
-                    >
-                      {account.accountName} 연결 해제
-                    </AccessibleButton>
-                  </article>
-                </li>
-              ))}
+                        {account.accountName}
+                      </h3>
+                      <p className="mt-2 text-lg">{account.maskedAccountNumber}</p>
+
+                      {isEditing ? (
+                        <div className="mt-5 rounded-lg border-2 border-[var(--color-border)] bg-[var(--color-background)] p-4">
+                          <label
+                            htmlFor={`account-alias-${account.id}`}
+                            className="font-bold"
+                          >
+                            계좌 이름
+                          </label>
+                          <input
+                            ref={aliasInputRef}
+                            id={`account-alias-${account.id}`}
+                            value={aliasDraft}
+                            maxLength={50}
+                            aria-invalid={Boolean(aliasError) || undefined}
+                            aria-describedby={`account-alias-help-${account.id}${
+                              aliasError ? ` account-alias-error-${account.id}` : ""
+                            }`}
+                            onChange={(event) => {
+                              setAliasDraft(event.target.value);
+                              setAliasError("");
+                            }}
+                            className="mt-2 min-h-14 w-full rounded-lg border-2 border-[var(--color-border)] bg-[var(--color-surface)] px-4 py-3 text-lg focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[var(--color-focus)] focus-visible:ring-offset-2"
+                          />
+                          <p
+                            id={`account-alias-help-${account.id}`}
+                            className="mt-2 text-sm text-[var(--color-text-muted)]"
+                          >
+                            공백을 제외하고 1자 이상 50자 이하로 입력해 주세요.
+                          </p>
+                          {aliasError ? (
+                            <p
+                              id={`account-alias-error-${account.id}`}
+                              className="mt-2 font-semibold text-[var(--color-danger)]"
+                              role="alert"
+                            >
+                              {aliasError}
+                            </p>
+                          ) : null}
+                          <div className="mt-4 flex flex-col gap-3 sm:flex-row">
+                            <AccessibleButton
+                              isLoading={updatingAccountId === account.id}
+                              loadingLabel="계좌 이름을 바꾸고 있어요"
+                              onClick={() => void saveAlias(account.id)}
+                            >
+                              이름 저장
+                            </AccessibleButton>
+                            <AccessibleButton
+                              variant="secondary"
+                              disabled={updatingAccountId !== null}
+                              onClick={cancelAliasEdit}
+                            >
+                              취소
+                            </AccessibleButton>
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="mt-5 flex flex-col gap-3 sm:flex-row">
+                          {account.id !== defaultAccountId ? (
+                            <AccessibleButton
+                              variant="secondary"
+                              isLoading={updatingAccountId === account.id}
+                              loadingLabel="기본 계좌로 바꾸고 있어요"
+                              disabled={updatingAccountId !== null}
+                              onClick={() => void changeDefaultAccount(account.id)}
+                            >
+                              기본 계좌로 설정
+                            </AccessibleButton>
+                          ) : null}
+                          <AccessibleButton
+                            id={`edit-alias-${account.id}`}
+                            variant="secondary"
+                            disabled={updatingAccountId !== null}
+                            onClick={() =>
+                              startAliasEdit(account.id, account.accountName)
+                            }
+                          >
+                            계좌 이름 변경
+                          </AccessibleButton>
+                        </div>
+                      )}
+                    </article>
+                  </li>
+                );
+              })}
             </ul>
-            {pendingDisconnectAccount ? (
-              <section
-                className="mt-6 rounded-xl border-2 border-[var(--color-danger)] bg-[var(--color-surface)] p-6"
-                aria-labelledby="disconnect-account-title"
+
+            <nav className="mt-6 flex flex-wrap gap-3" aria-label="계좌 관련 기능">
+              <Link
+                href="/balance"
+                className="inline-flex min-h-11 items-center rounded-lg border-2 border-transparent bg-[var(--color-primary)] px-5 py-2 font-semibold text-[var(--color-on-primary)] focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[var(--color-focus)] focus-visible:ring-offset-2"
               >
-                <h2
-                  id="disconnect-account-title"
-                  ref={disconnectHeadingRef}
-                  tabIndex={-1}
-                  className="text-xl font-bold focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[var(--color-focus)]"
-                >
-                  이 계좌의 연결을 해제할까요?
-                </h2>
-                <p className="mt-3 text-lg font-semibold">
-                  {pendingDisconnectAccount.bankName} · {pendingDisconnectAccount.accountName}
-                </p>
-                <p className="mt-1 text-lg">
-                  {pendingDisconnectAccount.maskedAccountNumber}
-                </p>
-                <p className="mt-3 leading-7 text-[var(--color-text-muted)]">
-                  연결을 해제하면 MOVI에서 이 계좌의 잔액과 거래내역을 조회하거나
-                  이체에 사용할 수 없습니다.
-                </p>
-
-                {reauthenticationStatus === "idle" ? (
-                  <section className="mt-5 rounded-lg border-2 border-[var(--color-warning)] p-4">
-                    <h3 className="text-lg font-bold">본인 확인이 필요합니다.</h3>
-                    <p className="mt-2 leading-7 text-[var(--color-text-muted)]">
-                      계좌 연결 해제 전에 PIN 또는 생체인증으로 본인 확인을
-                      진행합니다. 현재는 실제 인증 API를 연결하기 전 Mock
-                      단계입니다.
-                    </p>
-                    <AccessibleButton
-                      className="mt-4"
-                      onClick={() => void reauthenticateForDisconnect()}
-                    >
-                      본인 확인 시작 · Mock
-                    </AccessibleButton>
-                  </section>
-                ) : null}
-
-                {reauthenticationStatus === "verifying" ? (
-                  <section
-                    className="mt-5 rounded-lg border-2 border-[var(--color-primary)] p-4"
-                    aria-live="polite"
-                    aria-busy="true"
-                  >
-                    <h3 className="text-lg font-bold">본인 확인 중입니다.</h3>
-                    <p className="mt-2">잠시만 기다려 주세요.</p>
-                  </section>
-                ) : null}
-
-                {reauthenticationStatus === "verified" ? (
-                  <section className="mt-5 rounded-lg border-2 border-[var(--color-success)] p-4">
-                    <h3
-                      ref={verificationResultRef}
-                      tabIndex={-1}
-                      className="text-lg font-bold focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[var(--color-focus)]"
-                    >
-                      Mock 본인 확인을 완료했습니다.
-                    </h3>
-                    <p className="mt-2 leading-7">
-                      아래 최종 버튼을 눌러야 계좌 연결이 해제됩니다.
-                    </p>
-                  </section>
-                ) : null}
-
-                {reauthenticationStatus === "error" ? (
-                  <section
-                    className="mt-5 rounded-lg border-2 border-[var(--color-danger)] p-4"
-                    role="alert"
-                  >
-                    <h3
-                      ref={verificationResultRef}
-                      tabIndex={-1}
-                      className="text-lg font-bold focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[var(--color-focus)]"
-                    >
-                      본인 확인을 완료하지 못했습니다.
-                    </h3>
-                    <p className="mt-2 leading-7 text-[var(--color-text-muted)]">
-                      계좌는 그대로 유지됩니다. 다시 시도해 주세요.
-                    </p>
-                    <AccessibleButton
-                      className="mt-4"
-                      variant="secondary"
-                      onClick={() => void reauthenticateForDisconnect()}
-                    >
-                      본인 확인 다시 시도
-                    </AccessibleButton>
-                  </section>
-                ) : null}
-
-                <div className="mt-5 flex flex-col gap-3 sm:flex-row">
-                  {reauthenticationStatus === "verified" ? (
-                    <AccessibleButton
-                      className="border-[var(--color-danger)]"
-                      isLoading={
-                        disconnectingAccountId === pendingDisconnectAccount.id
-                      }
-                      loadingLabel="계좌 연결을 해제하고 있어요"
-                      onClick={() => void confirmDisconnect()}
-                    >
-                      본인 확인 후 연결 해제
-                    </AccessibleButton>
-                  ) : null}
-                  <AccessibleButton
-                    variant="secondary"
-                    disabled={
-                      disconnectingAccountId !== null ||
-                      reauthenticationStatus === "verifying"
-                    }
-                    onClick={cancelDisconnect}
-                  >
-                    취소하고 계좌 유지
-                  </AccessibleButton>
-                </div>
-              </section>
-            ) : null}
-            <Link
-              href="/balance"
-              className="mt-6 mr-3 inline-flex min-h-11 items-center rounded-lg border-2 border-transparent bg-[var(--color-primary)] px-5 py-2 font-semibold text-[var(--color-on-primary)] hover:bg-[var(--color-primary-hover)] focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[var(--color-focus)] focus-visible:ring-offset-2"
-            >
-              잔액 조회하기
-            </Link>
-            <Link
-              href="/accounts/connect"
-              className="mt-6 inline-flex min-h-11 items-center rounded-lg border-2 border-[var(--color-border)] bg-[var(--color-surface)] px-5 py-2 font-semibold text-[var(--color-text)] hover:border-[var(--color-primary)] focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[var(--color-focus)] focus-visible:ring-offset-2"
-            >
-              새 계좌 연결하기
-            </Link>
-            <Link
-              href="/transactions"
-              className="mt-3 inline-flex min-h-11 items-center rounded-lg border-2 border-[var(--color-border)] bg-[var(--color-surface)] px-5 py-2 font-semibold text-[var(--color-text)] hover:border-[var(--color-primary)] focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[var(--color-focus)] focus-visible:ring-offset-2 sm:ml-3 sm:mt-6"
-            >
-              최근 거래내역 보기
-            </Link>
-            <Link
-              href="/transfer"
-              className="mt-3 inline-flex min-h-11 items-center rounded-lg border-2 border-[var(--color-border)] bg-[var(--color-surface)] px-5 py-2 font-semibold text-[var(--color-text)] hover:border-[var(--color-primary)] focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[var(--color-focus)] focus-visible:ring-offset-2 sm:ml-3 sm:mt-6"
-            >
-              송금하기
-            </Link>
+                잔액 조회하기
+              </Link>
+              <Link
+                href="/transactions"
+                className="inline-flex min-h-11 items-center rounded-lg border-2 border-[var(--color-border)] bg-[var(--color-surface)] px-5 py-2 font-semibold focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[var(--color-focus)] focus-visible:ring-offset-2"
+              >
+                최근 거래내역 보기
+              </Link>
+              <Link
+                href="/transfer"
+                className="inline-flex min-h-11 items-center rounded-lg border-2 border-[var(--color-border)] bg-[var(--color-surface)] px-5 py-2 font-semibold focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[var(--color-focus)] focus-visible:ring-offset-2"
+              >
+                송금하기
+              </Link>
+            </nav>
           </section>
         ) : null}
 
         {status === "ready" ? (
           <p
-            ref={disconnectResultRef}
+            ref={updateResultRef}
             tabIndex={updateMessage ? -1 : undefined}
-            className="mt-4 min-h-7 font-semibold"
+            className="mt-4 min-h-7 font-semibold focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[var(--color-focus)]"
             aria-live="polite"
             aria-atomic="true"
           >
