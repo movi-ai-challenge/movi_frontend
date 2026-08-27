@@ -1,5 +1,7 @@
 # 백엔드-프런트엔드 계약 및 구현 감사
 
+> 역사 자료: 이 문서는 2026-08-25 이전 계약과 당시 PR을 감사한 기록이다. 현재 구현 판단에는 [IMPLEMENTATION_SOURCE_OF_TRUTH.md](IMPLEMENTATION_SOURCE_OF_TRUTH.md)와 [backend-frontend-integration-decisions.md](backend-frontend-integration-decisions.md)를 우선한다. 아래의 PR 번호·API 상태·`확인 필요` 항목을 현재 사실로 단독 인용하지 않는다.
+
 기준일: 2026-08-25
 
 프런트 기준: `movi_frontend` `main` (`e2ee784`) 및 열린 PR #1~#9

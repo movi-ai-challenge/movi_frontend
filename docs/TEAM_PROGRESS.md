@@ -1,158 +1,103 @@
-# MOVI 프론트엔드 진행 현황
+# MOVI 프런트엔드 진행 현황
+
+> 갱신일: 2026-08-27
+> 최상위 구현 기준: [IMPLEMENTATION_SOURCE_OF_TRUTH.md](IMPLEMENTATION_SOURCE_OF_TRUTH.md)
+> 현재 브랜치: `feature/kakao-real-login`
 
 ## 현재 목표
 
-2026 금융 AI Challenge의 `Voice-First Inclusive Banking & FDS` 프론트엔드를 개발하고 있다. 첨부된 MVP 기능명세서를 기능 범위의 기준으로 사용하며, 시각장애인·저시력 사용자·운동장애 사용자·고령자가 음성, 키보드, 터치 중 편한 방법으로 이용할 수 있는 웹앱을 목표로 한다.
+접근성 중심 Mock UI를 새로 확장하는 단계가 아니라, 인증 → 조회 → 음성 → 송금 순서로 실제 백엔드·AI 흐름에 연결하는 단계다. 부분 구현 브랜치는 현재 단계에 필요한 것만 최신 계약으로 보완해 검토한다.
 
-## 기술 스택
+## 현재 작업
 
-- Next.js App Router
-- TypeScript strict mode
-- Tailwind CSS
-- Zustand
-- Axios
-- npm
+### `#19 feature/kakao-real-login`
 
-기존 Create React App 프로젝트는 Next.js 구조로 전환했다. 백엔드는 별도 IntelliJ 프로젝트에서 관리하며 이 저장소에는 프론트엔드 코드만 둔다.
+작업 트리에 반영:
 
-## 실행 방법
+- 카카오 callback URL의 토큰 파싱 제거
+- 일회성 `code`를 `POST /api/v1/auth/kakao/token`으로 교환
+- 공통 응답의 로그인 data 런타임 검증
+- callback query 즉시 제거
+- Access token 메모리·Refresh token `sessionStorage` 분리
+- `newUser`에 따른 계좌 연결/계좌 화면 분기
+- 코드 누락·만료·재사용과 callback 오류 안내
 
-```bash
-npm install
-npm run dev
-```
+검증:
 
-기본 접속 주소는 `http://localhost:3000`이다.
+- `npm run typecheck`: 통과
+- `npm run lint`: 통과
+- `npm run build`: 통과, 17개 route
+- staging 실제 카카오 계정 E2E: 미검증
 
-환경변수 예시는 `.env.example`을 참고한다.
+남은 작업:
 
-```env
-NEXT_PUBLIC_API_URL=http://localhost:8080
-NEXT_PUBLIC_USE_MOCK=true
-```
+- 변경 commit과 PR 갱신
+- 신규 사용자의 PIN 등록 화면 연결
+- Authorization·refresh·logout 공통 기반
+- 새로고침 후 세션 복구
+- 백엔드 `legacy-token-query=false` 전환 후 URL·로그 재검증
 
-## 구현 완료 화면
+## 영역별 상태
 
-| 경로 | 기능 | 명세 근거 |
-|---|---|---|
-| `/` | 서비스 시작 화면 | 서비스 진입 |
-| `/login` | PASS·카카오·PIN·생체인증 Mock 진입 | 로그인 |
-| `/accounts/connect` | 오픈뱅킹 계좌 연결 동의 및 시작 | 1.1 |
-| `/accounts/register` | 연결 계좌 확인 및 등록 | 1.2 |
-| `/accounts` | 연결 계좌 조회 및 기본 계좌 설정 | 1.3, 1.4 |
-| `/balance` | 기본 또는 지정 계좌 잔액조회 | 잔액조회 |
-| `/transactions` | 기본 계좌 최근 거래내역 | 6.1 |
+| 영역 | 현재 상태 | 다음 완료 조건 |
+| --- | --- | --- |
+| 인증 | 카카오 코드 교환 작업 중, 나머지 Mock/부분 구현 | 신규·기존 로그인, refresh, logout staging E2E |
+| OpenBanking | Mock 화면 | 실제 시작·callback·계좌 재조회 |
+| 계좌·잔액 | Mock UI와 서비스 경계 | DTO 매퍼와 실제 API |
+| 거래내역 | Mock 목록·필터·상세 | 실제 목록·상세·`IN/OUT`·페이징 |
+| 음성 | 타이머/입력 보조 UI | 녹음·multipart·세션·실 AI |
+| 송금·FDS | Mock 검토·위험도·결과 | 백엔드 단일 흐름과 상태 복구 |
+| 보호자 알림 | 오래된 Mock 조회 경로 존재 | Seed·백엔드 이벤트만 사용, 공개 조회 제거 |
+| 접근성 | 큰 글씨·고대비·단순 모드·TTS 기반 | 실제 P0 흐름의 보조기기 E2E |
+| 테스트 | lint·typecheck·build만 존재 | 단위·통합·브라우저 E2E 도입 |
 
-## 구현 완료 기능
+## 구현된 화면
 
-### 프로젝트 기반
+화면 존재는 실 API 통합 완료를 의미하지 않는다.
 
-- Next.js App Router와 TypeScript strict 설정
-- Tailwind CSS 디자인 토큰
-- Zustand 전역 상태
-- Axios 인스턴스 및 Mock 모드 플래그
-- 기능·화면별 브랜치 및 커밋 규칙
-- MVP 범위 통제와 접근성 완료 기준을 `AGENTS.md`에 기록
+| 경로 | 현재 역할 | 연동 상태 |
+| --- | --- | --- |
+| `/` | 서비스 시작 | UI |
+| `/login` | 인증 진입 | 카카오 시작 실제, PIN/PASS/생체 일부 Mock |
+| `/login/callback` | 카카오 코드 교환 | 작업 트리 실 API |
+| `/accounts/connect` | 최초 계좌 연결 | Mock |
+| `/accounts/register` | 연결 계좌 확인 | Mock |
+| `/accounts` | 계좌 목록·기본 계좌 | Mock |
+| `/balance` | 잔액조회 | Mock |
+| `/transactions` | 거래 목록 | Mock |
+| `/transactions/[transactionId]` | 거래 상세 | Mock |
+| `/transfer` 이하 | 송금·FDS 결과 | Mock |
+| `/alerts/guardian/[riskEventId]` | 계약 없는 보호자 조회 | MVP 실 경로에서 제거 대상 |
 
-### 접근성
+## 접근성 기반
 
-- 11.1 고대비 화면
-- 11.2 큰 글씨 모드
-- 11.3을 위한 semantic HTML, 레이블, 필요한 ARIA 속성 기반
-- 11.4를 위한 키보드 포커스와 44px 이상 조작 영역
-- 11.6 단순 화면 모드 기반
-- 로딩·성공·오류 상태의 화면 읽기 프로그램 안내
-- 색상 외 텍스트와 금액 부호를 통한 상태 구분
+- semantic HTML과 접근 가능한 이름
+- 키보드 포커스와 44px 이상 조작 영역
+- `aria-live` 기반 중요 상태 안내
+- 고대비·큰 글씨·단순 화면 모드
+- 색상 외 텍스트·금액 부호를 통한 상태 구분
+- 브라우저 `speechSynthesis` 기반 다시 듣기
 
-### 인증 진입
+아직 VoiceOver/TalkBack, 200% 확대와 실제 전체 P0 흐름 E2E가 남아 있다.
 
-- PASS·카카오·PIN·생체인증 방법을 숨기지 않고 모두 표시
-- 신규 사용자와 기존 사용자 선택 영역 구분
-- Mock 인증 진행·완료 상태
-- 처리 중 중복 실행 방지
+## 바로 다음 작업
 
-### 오픈뱅킹 계좌
+1. `#19` review·commit·PR 갱신 및 staging E2E
+2. 공통 API 파서·Authorization·refresh·logout
+3. 신규 PIN 등록과 기존 PIN 로그인
+4. OpenBanking callback
+5. 계좌·잔액·거래내역 실제 API
 
-- 계좌 연결 동의와 Mock 연결 시작
-- 은행명·계좌 별칭·마스킹 계좌번호 확인
-- Mock 계좌 등록
-- 연결 계좌 목록과 큰 잔액 표시
-- 기본 계좌 상태 표시와 변경
-- 인증 만료·인증 실패·통신 실패별 복구 행동
+이후 순서는 [MVP_WEEK_PLAN.md](MVP_WEEK_PLAN.md)를 따른다.
 
-### 잔액조회
+## 범위 제외
 
-- 기본 계좌 우선 선택
-- 다른 연결 계좌 선택
-- 조회 중 상태와 중복 실행 방지
-- 큰 잔액, 은행명, 계좌 별칭, 마스킹 계좌번호 표시
-- 계좌 없음 및 API 오류 복구
-
-### 거래내역
-
-- 기본 계좌의 최근 거래 조회
-- 최신 거래 순 정렬
-- 입금·출금·이체 유형 텍스트 표시
-- 입금과 출금 금액의 부호 및 스크린리더 설명
-- 로딩·빈 상태·계좌 없음·오류 재시도
-
-## 데이터 및 보안 원칙
-
-- 실제 계좌번호, 전화번호, 토큰 및 개인정보를 사용하지 않는다.
-- 모든 계좌번호는 마스킹한다.
-- 현재 사용자·계좌·거래 데이터는 시연용 Seed 데이터다.
-- 실제 인증 방식과 API 계약은 백엔드 협의 전에 확정하지 않는다.
-
-## 아직 Mock인 부분
-
-- PASS·카카오·PIN·생체인증
-- 오픈뱅킹 Sandbox 인증과 계좌 등록
-- 계좌 목록과 잔액조회
-- 기본 계좌 변경
-- 거래내역 조회
-- API 오류 시나리오
-
-Mock과 실제 API가 같은 도메인 타입을 사용하도록 서비스 계층을 분리해 두었다.
-
-## 아직 구현하지 않은 주요 명세 기능
-
-- 1.5 계좌 연결 해제 - 백엔드 통합 명세의 MVP 범위 제외
-- 6.2 기간별 거래내역 조회
-- 6.3 거래 유형 필터
-- 6.4 음성 거래내역 조회
-- 6.5 거래 상세
-- 6.6 거래내역 음성 안내
-- 음성 녹음, STT/TTS, 의도 분석 UI
-- 금액·수취인 누락 재질문과 직접 입력 전환
-- 5.x 송금 및 이체 전체 흐름
-- FDS 위험도별 처리 - LOW 완료, MEDIUM 완료+사후 알림, HIGH 차단+긴급 알림
-- 보호자 알림 연락처 연결 - 백엔드 공개 API 확인 필요
-- 위험 거래 보호자 알림 상태 - 백엔드가 발송·재시도하며 공개 조회 API 확인 필요
-- 11.5 다시 듣기
-- 11.7 오류 음성 안내
-- 전체 E2E 및 보조기기 QA
-
-## 다음 작업 순서
-
-1. 6.2 기간별 거래내역 조회
-2. 6.3 거래 유형 필터
-3. 6.5 거래 상세
-4. 음성 인터페이스와 재질문
-5. 송금 및 FDS
-6. 보호자 연결과 알림
-7. 전체 접근성·사용성 QA
-
-## 백엔드·AI 팀과 협의할 항목
-
-- 실제 로그인과 인증 방식
-- 오픈뱅킹 Sandbox 인증 URL과 콜백 방식
-- 계좌 목록·기본 계좌·잔액 API 응답 타입
-- 거래내역 기간·유형·상세 API
-- STT/TTS 요청 형식과 스트리밍 여부
-- 음성 Intent와 Entity 응답 타입
-- FDS 위험도와 위험 사유 응답 타입
-- 보호자 알림 채널과 SMS 링크 인증·만료 방식
-- 보호자 초대·수락·조회 및 알림 상태 조회 공개 API
+- 계좌 추가 연결·연결 해제
+- PIN 변경·재설정·분실 복구
+- 보호자 초대·수락·관계 입력·연결·해제
+- 보호자 금융정보 조회와 송금 승인·거절
+- 보호자 대시보드, SMS 링크와 공개 알림 조회
+- 계약에 없는 guardian `riskEventId` 모델
 
 ## 검증 명령
 
@@ -162,4 +107,4 @@ npm run typecheck
 npm run build
 ```
 
-현재까지 위 세 검증을 통과한 기능만 기능 브랜치에 커밋하고 `main`에 병합했다.
+실제 금융·음성 기능은 위 명령만으로 완료 처리하지 않고 staging·실기기·접근성 E2E 결과를 함께 기록한다.
