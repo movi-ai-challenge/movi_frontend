@@ -1,10 +1,16 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 import { AccessibleButton } from "@/components/common/AccessibleButton";
 import { toApiError } from "@/services/api";
+import {
+  clearTransferRecoveryKey,
+  readTransferRecoveryKey,
+  saveTransferRecoveryKey,
+} from "@/services/transferRecoveryStorage";
+import { getTransferStatus } from "@/services/transferService";
 import {
   MAX_VOICE_AUDIO_BYTES,
   MAX_VOICE_DURATION_SECONDS,
@@ -13,7 +19,12 @@ import {
   startVoiceSession,
 } from "@/services/voiceService";
 import { useBankStore } from "@/store/useBankStore";
-import type { VoiceCommandResult, VoiceSessionStart } from "@/types";
+import type {
+  TransferFdsRiskLevel,
+  TransferStatusResult,
+  VoiceCommandResult,
+  VoiceSessionStart,
+} from "@/types";
 
 type PanelStatus =
   | "idle"
@@ -37,6 +48,25 @@ function createIdempotencyKey(): string | null {
     : null;
 }
 
+const riskLabels: Record<TransferFdsRiskLevel, string> = {
+  LOW: "낮은 위험",
+  MEDIUM: "중간 위험",
+  HIGH: "높은 위험",
+};
+
+const transferStatusLabels: Record<TransferStatusResult["status"], string> = {
+  PENDING: "처리 대기",
+  RISK_REVIEW: "위험도 확인 중",
+  COMPLETED: "이체 완료",
+  BLOCKED: "고위험 차단",
+  FAILED: "이체 실패",
+  CANCELED: "이체 취소",
+};
+
+function isTerminalTransferStatus(result: TransferStatusResult): boolean {
+  return !["PENDING", "RISK_REVIEW"].includes(result.status);
+}
+
 export function VoiceCommandPanel() {
   const setVoiceState = useBankStore((state) => state.setVoiceState);
   const resetVoiceState = useBankStore((state) => state.resetVoiceState);
@@ -48,6 +78,10 @@ export function VoiceCommandPanel() {
   const [errorMessage, setErrorMessage] = useState("");
   const [recordingSeconds, setRecordingSeconds] = useState(0);
   const [idempotencyKey, setIdempotencyKey] = useState<string | null>(null);
+  const [transferStatus, setTransferStatus] =
+    useState<TransferStatusResult | null>(null);
+  const [isRecoveringTransfer, setIsRecoveringTransfer] = useState(false);
+  const [recoveryErrorMessage, setRecoveryErrorMessage] = useState("");
   const recorderRef = useRef<MediaRecorder | null>(null);
   const recordingFailedRef = useRef(false);
   const streamRef = useRef<MediaStream | null>(null);
@@ -55,6 +89,25 @@ export function VoiceCommandPanel() {
   const stopTimerRef = useRef<number | null>(null);
   const counterTimerRef = useRef<number | null>(null);
   const errorRef = useRef<HTMLDivElement>(null);
+
+  const recoverTransfer = useCallback(async (recoveryKey: string) => {
+    setIdempotencyKey(recoveryKey);
+    setIsRecoveringTransfer(true);
+    setRecoveryErrorMessage("");
+    try {
+      const result = await getTransferStatus(recoveryKey);
+      setTransferStatus(result);
+      setGuideText(result.voiceMessage);
+      setErrorMessage("");
+      setStatus("ready");
+      return result;
+    } catch (error: unknown) {
+      setRecoveryErrorMessage(toApiError(error).message);
+      return null;
+    } finally {
+      setIsRecoveringTransfer(false);
+    }
+  }, []);
 
   const clearRecordingTimers = () => {
     if (stopTimerRef.current !== null) {
@@ -88,6 +141,15 @@ export function VoiceCommandPanel() {
     },
     [resetVoiceState],
   );
+
+  useEffect(() => {
+    const recoveryKey = readTransferRecoveryKey();
+    if (!recoveryKey) return;
+    const recoveryTimer = window.setTimeout(() => {
+      void recoverTransfer(recoveryKey);
+    }, 0);
+    return () => window.clearTimeout(recoveryTimer);
+  }, [recoverTransfer]);
 
   const showError = (message: string) => {
     setErrorMessage(message);
@@ -201,6 +263,17 @@ export function VoiceCommandPanel() {
       return;
     }
 
+    if (awaitingConfirmation && idempotencyKey) {
+      try {
+        saveTransferRecoveryKey(idempotencyKey);
+      } catch {
+        showError(
+          "송금 상태를 복구할 키를 안전하게 보관하지 못했습니다. 이체를 진행하지 않았습니다.",
+        );
+        return;
+      }
+    }
+
     setStatus("uploading");
     setErrorMessage("");
     setVoiceState({ status: "processing", transcript: "", errorMessage: null });
@@ -220,13 +293,37 @@ export function VoiceCommandPanel() {
       setAudio(null);
       if (result.state === "AWAITING_CONFIRMATION") {
         setIdempotencyKey((current) => current ?? createIdempotencyKey());
-      } else if (result.state !== "PROCESSING") {
+      } else if (awaitingConfirmation && result.state === "CANCELED") {
+        clearTransferRecoveryKey();
+        setIdempotencyKey(null);
+      } else if (!awaitingConfirmation && result.state !== "PROCESSING") {
         setIdempotencyKey(null);
       }
       setStatus("ready");
       resetVoiceState();
+
+      if (
+        awaitingConfirmation &&
+        idempotencyKey &&
+        result.state === "COMPLETED"
+      ) {
+        await recoverTransfer(idempotencyKey);
+      }
     } catch (error: unknown) {
-      showError(toApiError(error).message);
+      const uploadError = toApiError(error).message;
+      if (awaitingConfirmation && idempotencyKey) {
+        const recovered = await recoverTransfer(idempotencyKey);
+        if (recovered) {
+          setAudio(null);
+          resetVoiceState();
+          return;
+        }
+        showError(
+          `${uploadError} 송금 처리 여부를 확인하지 못했습니다. 같은 키로 상태를 다시 확인해 주세요.`,
+        );
+        return;
+      }
+      showError(uploadError);
     }
   };
 
@@ -251,7 +348,9 @@ export function VoiceCommandPanel() {
   };
 
   const sessionClosed =
-    command?.state === "COMPLETED" || command?.state === "CANCELED";
+    command?.state === "COMPLETED" ||
+    command?.state === "CANCELED" ||
+    transferStatus !== null;
   const awaitingConfirmation = command?.state === "AWAITING_CONFIRMATION";
 
   return (
@@ -328,7 +427,113 @@ export function VoiceCommandPanel() {
           </p>
         ) : null}
 
-        {status === "idle" ? (
+        {transferStatus ? (
+          <section
+            className="mt-5 rounded-xl border-2 border-[var(--color-primary)] p-5"
+            aria-labelledby="recovered-transfer-title"
+          >
+            <h3 id="recovered-transfer-title" className="text-xl font-bold">
+              실제 송금 처리 결과
+            </h3>
+            <p className="mt-2 text-lg font-semibold">
+              {transferStatus.voiceMessage}
+            </p>
+            <dl className="mt-4 grid gap-3">
+              <div>
+                <dt className="font-semibold">받는 사람</dt>
+                <dd>{transferStatus.recipientName}</dd>
+              </div>
+              <div>
+                <dt className="font-semibold">금액</dt>
+                <dd>{currencyFormatter.format(transferStatus.amount)}</dd>
+              </div>
+              <div>
+                <dt className="font-semibold">처리 상태</dt>
+                <dd>{transferStatusLabels[transferStatus.status]}</dd>
+              </div>
+              <div>
+                <dt className="font-semibold">FDS 판정</dt>
+                <dd>
+                  {transferStatus.riskLevel
+                    ? riskLabels[transferStatus.riskLevel]
+                    : "판정 진행 중"}
+                </dd>
+              </div>
+            </dl>
+            {transferStatus.riskLevel === "MEDIUM" ||
+            transferStatus.riskLevel === "HIGH" ? (
+              <p className="mt-4 font-semibold">
+                보호자에게 알림을 요청했어요.
+              </p>
+            ) : null}
+            {transferStatus.status === "PENDING" ||
+            transferStatus.status === "RISK_REVIEW" ? (
+              <p className="mt-4 font-semibold">
+                아직 최종 결과가 아닙니다. 새 송금을 시작하지 말고 같은 키로
+                상태를 확인해 주세요.
+              </p>
+            ) : null}
+            {transferStatus.status === "BLOCKED" ||
+            transferStatus.status === "FAILED" ||
+            transferStatus.status === "CANCELED" ? (
+              <p className="mt-4 font-semibold">
+                이체가 완료되지 않았으며 계좌에서 돈이 빠져나가지 않았습니다.
+              </p>
+            ) : null}
+            {!isTerminalTransferStatus(transferStatus) && idempotencyKey ? (
+              <AccessibleButton
+                className="mt-4"
+                onClick={() => void recoverTransfer(idempotencyKey)}
+                disabled={isRecoveringTransfer}
+                isLoading={isRecoveringTransfer}
+                loadingLabel="송금 상태를 확인하고 있어요"
+              >
+                같은 키로 상태 다시 확인
+              </AccessibleButton>
+            ) : (
+              <AccessibleButton
+                className="mt-4"
+                variant="secondary"
+                onClick={() => {
+                  clearTransferRecoveryKey();
+                  setIdempotencyKey(null);
+                  setTransferStatus(null);
+                  setCommand(null);
+                  setSession(null);
+                  setGuideText("");
+                  setStatus("idle");
+                  resetVoiceState();
+                }}
+              >
+                결과 확인 완료
+              </AccessibleButton>
+            )}
+          </section>
+        ) : null}
+
+        {!transferStatus && idempotencyKey && recoveryErrorMessage ? (
+          <section
+            className="mt-5 rounded-xl border-2 border-[var(--color-warning)] p-5"
+            role="alert"
+          >
+            <h3 className="text-xl font-bold">송금 상태를 확인하지 못했습니다.</h3>
+            <p className="mt-2">{recoveryErrorMessage}</p>
+            <p className="mt-2 font-semibold">
+              새 송금 키를 만들지 않고 저장된 같은 키로 다시 확인합니다.
+            </p>
+            <AccessibleButton
+              className="mt-4"
+              onClick={() => void recoverTransfer(idempotencyKey)}
+              disabled={isRecoveringTransfer}
+              isLoading={isRecoveringTransfer}
+              loadingLabel="송금 상태를 확인하고 있어요"
+            >
+              같은 키로 송금 상태 확인
+            </AccessibleButton>
+          </section>
+        ) : null}
+
+        {status === "idle" && !idempotencyKey ? (
           <AccessibleButton className="mt-5" onClick={() => void beginSession()}>
             음성 세션 시작하기
           </AccessibleButton>

@@ -225,6 +225,27 @@ export interface VoiceCommandResult {
   voiceMessage: string;
 }
 
+export type TransferExecutionStatus =
+  | "PENDING"
+  | "RISK_REVIEW"
+  | "COMPLETED"
+  | "BLOCKED"
+  | "FAILED"
+  | "CANCELED";
+
+export type TransferFdsRiskLevel = "LOW" | "MEDIUM" | "HIGH";
+
+export interface TransferStatusResult {
+  transferId: string;
+  status: TransferExecutionStatus;
+  riskLevel: TransferFdsRiskLevel | null;
+  amount: number;
+  recipientName: string;
+  requestedAt: string;
+  completedAt: string | null;
+  voiceMessage: string;
+}
+
 export interface AccessibilityPreferences {
   highContrast: boolean;
   largeText: boolean;

@@ -1,14 +1,7 @@
-import type { FdsEvaluationResult } from "@/types";
+import { ApiResponseContractError } from "@/services/apiResponse";
 
-const MOCK_FDS_DELAY_MS = 1_000;
-
-export async function requestFdsEvaluation(): Promise<FdsEvaluationResult> {
-  await new Promise<void>((resolve) => {
-    window.setTimeout(resolve, MOCK_FDS_DELAY_MS);
-  });
-
-  return {
-    riskLevel: "low",
-    summary: "평소 거래와 비슷해 낮은 위험으로 확인했습니다.",
-  };
+export async function requestFdsEvaluation(): Promise<never> {
+  throw new ApiResponseContractError(
+    "FDS 판정은 프런트엔드에서 만들지 않습니다. 실제 음성 송금 흐름을 이용해 주세요.",
+  );
 }
