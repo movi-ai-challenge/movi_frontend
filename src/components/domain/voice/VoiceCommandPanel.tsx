@@ -667,8 +667,8 @@ export function VoiceCommandPanel() {
 
         {status === "unsupported" ? (
           <p className="mt-5 rounded-xl border-2 border-[var(--color-warning)] p-4 font-semibold">
-            이 브라우저는 WebM/Opus 또는 WAV 녹음을 지원하지 않습니다. 아래
-            화면 버튼과 입력란으로 같은 업무를 진행해 주세요.
+            이 브라우저는 WebM/Opus, MP4/M4A 또는 WAV 녹음을 지원하지
+            않습니다. 아래 화면 버튼과 입력란으로 같은 업무를 진행해 주세요.
           </p>
         ) : null}
       </div>

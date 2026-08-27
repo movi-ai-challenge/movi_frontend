@@ -6,16 +6,23 @@ import {
   mapVoiceCommandResponse,
   mapVoiceSessionStart,
 } from "@/services/voiceContract";
+import {
+  getVoiceAudioFileExtension,
+  isSupportedVoiceMimeType,
+  MAX_VOICE_AUDIO_BYTES,
+  MAX_VOICE_DURATION_SECONDS,
+  selectSupportedVoiceMimeType,
+  SUPPORTED_VOICE_MIME_TYPES,
+} from "@/services/voiceAudioContract";
 import type { VoiceCommandResult, VoiceSessionStart } from "@/types";
 
 const VOICE_SESSIONS_PATH = "/api/voice/sessions";
-export const MAX_VOICE_AUDIO_BYTES = 5 * 1024 * 1024;
-export const MAX_VOICE_DURATION_SECONDS = 15;
-export const SUPPORTED_VOICE_MIME_TYPES = [
-  "audio/webm;codecs=opus",
-  "audio/webm",
-  "audio/wav",
-] as const;
+export {
+  MAX_VOICE_AUDIO_BYTES,
+  MAX_VOICE_DURATION_SECONDS,
+  selectSupportedVoiceMimeType,
+  SUPPORTED_VOICE_MIME_TYPES,
+};
 
 export interface VoiceCommandUpload {
   voiceSessionId: string;
@@ -24,30 +31,15 @@ export interface VoiceCommandUpload {
   idempotencyKey?: string;
 }
 
-export function selectSupportedVoiceMimeType(): string | null {
-  if (typeof MediaRecorder === "undefined") return null;
-  return (
-    SUPPORTED_VOICE_MIME_TYPES.find((mimeType) =>
-      MediaRecorder.isTypeSupported(mimeType),
-    ) ?? null
-  );
-}
-
 function assertValidAudio(audio: Blob): void {
   if (audio.size < 1 || audio.size > MAX_VOICE_AUDIO_BYTES) {
     throw new ApiResponseContractError(
       "음성 파일은 비어 있지 않아야 하며 최대 5MB까지 전송할 수 있습니다.",
     );
   }
-  if (
-    !SUPPORTED_VOICE_MIME_TYPES.some(
-      (mimeType) =>
-        audio.type === mimeType ||
-        (mimeType === "audio/webm" && audio.type.startsWith("audio/webm")),
-    )
-  ) {
+  if (!isSupportedVoiceMimeType(audio.type)) {
     throw new ApiResponseContractError(
-      "지원하지 않는 음성 형식입니다. WebM/Opus 또는 WAV로 녹음해 주세요.",
+      "지원하지 않는 음성 형식입니다. WebM/Opus, MP4/M4A 또는 WAV로 녹음해 주세요.",
     );
   }
 }
@@ -81,7 +73,7 @@ export async function sendVoiceCommand(
   }
 
   const formData = new FormData();
-  const extension = upload.audio.type.startsWith("audio/wav") ? "wav" : "webm";
+  const extension = getVoiceAudioFileExtension(upload.audio.type);
   formData.append("audio", upload.audio, `voice-command.${extension}`);
   if (upload.confirmationId && upload.idempotencyKey) {
     formData.append("confirmationId", upload.confirmationId);
