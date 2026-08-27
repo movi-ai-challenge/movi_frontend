@@ -8,7 +8,7 @@
 
 > 갱신일: 2026-08-27
 > 최상위 구현 기준: [IMPLEMENTATION_SOURCE_OF_TRUTH.md](IMPLEMENTATION_SOURCE_OF_TRUTH.md)
-> 현재 브랜치: `chore/remove-unused-mocks`
+> 현재 브랜치: `feature/session-recovery-safety-tests`
 
 ## 현재 목표
 
@@ -16,10 +16,18 @@
 
 ## 현재 작업
 
-### `chore/remove-unused-mocks`
+### `feature/session-recovery-safety-tests`
 
 작업 트리에 반영:
 
+- 로그아웃 성공·실패와 refresh 실패가 같은 인증 클라이언트 정리 경계를 사용하도록 통합
+- 인증 세션·Refresh token·계좌·음성·송금 초안·송금 복구 키의 일괄 제거 검증
+- refresh 성공 시 유효한 인증·금융·송금 복구 상태가 유지되는지 검증
+- 공통 API의 동시 401 요청이 하나의 refresh 실행 결과를 공유하도록 조정 로직 분리
+- refresh 성공·실패 후 잠금을 해제해 다음 인증 만료에서 다시 시도하는 동작 검증
+- 송금 복구 키의 유효 UUID 저장·복구 검증
+- 잘못된 UUID와 손상된 JSON·시각 데이터의 복구 차단 및 정리 검증
+- `sessionStorage` 접근 제한 시 조회·정리·저장 실패 동작 검증
 - 소비처가 없는 등록 계좌·수취인·구형 FDS·보호자 알림 Mock 서비스 제거
 - 사용되지 않는 Mock 도메인 타입과 이전 송금 결과 store 상태 제거
 - `/accounts/register`를 `/accounts` redirect로 축소
@@ -33,7 +41,7 @@
 
 검증:
 
-- `npm test`: 39개 통과
+- `npm test`: 50개 통과
 - `npm run typecheck`: 통과
 - `npm run lint`: 통과
 - `npm run build`: 통과, 20개 route
@@ -62,7 +70,7 @@
 | 송금·FDS | 음성 확인·동일 키 상태 복구·실제 FDS 결과 표시 | 실 AI/FDS staging E2E와 직접 입력 실행 계약 |
 | 보호자 알림 | 공개 Mock 조회 경로 제거·FDS 결과 안내 | Seed·백엔드 이벤트 staging E2E |
 | 접근성 | 큰 글씨·고대비·단순 모드·TTS 기반 | 실제 P0 흐름의 보조기기 E2E |
-| 테스트 | 계약·인증·store 단위 테스트 39개와 정적 검사 존재 | 화면 통합·브라우저 E2E 도입 |
+| 테스트 | 계약·인증 refresh·store·송금 복구 단위 테스트 50개와 정적 검사 존재 | 화면 통합·브라우저 E2E 도입 |
 
 ## 구현된 화면
 

@@ -9,9 +9,12 @@ import {
   parseApiData,
   readApiFailureResponse,
 } from "@/services/apiResponse";
+import { createAuthRefreshCoordinator } from "@/services/authRefreshCoordinator";
+import {
+  clearAuthenticatedClientState,
+  clearAuthenticatedClientStateOnError,
+} from "@/services/authenticatedClientState";
 import { useAuthStore } from "@/store/useAuthStore";
-import { useBankStore } from "@/store/useBankStore";
-import { clearTransferRecoveryKey } from "@/services/transferRecoveryStorage";
 import type { AuthTokenPair } from "@/types";
 
 const API_TIMEOUT_MS = 10_000;
@@ -36,8 +39,6 @@ export const isMockMode = process.env.NEXT_PUBLIC_USE_MOCK === "true";
 export const api = axios.create(apiConfig);
 const refreshApi = axios.create(apiConfig);
 
-let refreshPromise: Promise<string> | null = null;
-
 function isAuthTokenPair(value: unknown): value is AuthTokenPair {
   if (!isRecord(value)) return false;
 
@@ -54,12 +55,6 @@ function isAuthTokenPair(value: unknown): value is AuthTokenPair {
   );
 }
 
-function clearAuthenticatedClientState(): void {
-  useAuthStore.getState().clearSession();
-  useBankStore.getState().resetBankState();
-  clearTransferRecoveryKey();
-}
-
 function isAuthenticationExcludedRequest(
   config: InternalAxiosRequestConfig,
 ): boolean {
@@ -74,27 +69,19 @@ async function requestRefreshedAccessToken(): Promise<string> {
     throw new Error("저장된 Refresh token이 없습니다.");
   }
 
-  try {
+  return clearAuthenticatedClientStateOnError(async () => {
     const response = await refreshApi.post<unknown>(TOKEN_REFRESH_PATH, {
       refreshToken,
     });
     const tokens = parseApiData(response.data, isAuthTokenPair);
     useAuthStore.getState().applyRefreshedTokens(tokens);
     return tokens.accessToken;
-  } catch (error) {
-    clearAuthenticatedClientState();
-    throw error;
-  }
+  });
 }
 
-function getRefreshedAccessToken(): Promise<string> {
-  if (!refreshPromise) {
-    refreshPromise = requestRefreshedAccessToken().finally(() => {
-      refreshPromise = null;
-    });
-  }
-  return refreshPromise;
-}
+const getRefreshedAccessToken = createAuthRefreshCoordinator(
+  requestRefreshedAccessToken,
+);
 
 export async function restoreAuthenticatedSession(): Promise<void> {
   const { isRestoringSession } = useAuthStore.getState();
