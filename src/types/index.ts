@@ -29,6 +29,7 @@ export interface Account {
   id: string;
   bankName: string;
   accountName: string;
+  accountAlias: string | null;
   maskedAccountNumber: string;
   accountType: "DEPOSIT" | "SAVING";
   isPrimary: boolean;
@@ -38,7 +39,14 @@ export interface Account {
 
 export interface AccountBalance extends Account {
   balance: number;
+  availableBalance: number;
   currency: "KRW";
+  fetchedAt: string;
+}
+
+export interface BalanceInquiryResult {
+  account: AccountBalance;
+  voiceMessage: string;
 }
 
 export interface AccountDisconnectionVerification {

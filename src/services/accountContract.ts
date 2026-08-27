@@ -57,6 +57,7 @@ export function mapAccountResponse(data: AccountResponseData): Account {
     id: String(data.accountId),
     bankName: data.bankName,
     accountName: alias || `${data.bankName} 계좌`,
+    accountAlias: alias || null,
     maskedAccountNumber: data.accountNumMasked,
     accountType: data.accountType,
     isPrimary: data.primary,

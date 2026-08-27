@@ -52,7 +52,7 @@ export async function updateAccountAlias(
     await waitForMockResponse();
     const account = mockAccounts.find((item) => item.id === accountId);
     if (!account) throw new Error("Mock account not found");
-    return { ...account, accountName: alias };
+    return { ...account, accountName: alias, accountAlias: alias };
   }
 
   const response = await api.patch<unknown>(

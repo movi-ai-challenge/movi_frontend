@@ -1,31 +1,19 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 
 import { AccessibleButton } from "@/components/common/AccessibleButton";
 import { useBankStore } from "@/store/useBankStore";
-import type { AccountBalance } from "@/types";
-
 interface BalanceVoiceGuideProps {
-  account: AccountBalance;
+  guideText: string;
 }
 
 type GuideStatus = "idle" | "speaking" | "error" | "unsupported";
 
-const amountFormatter = new Intl.NumberFormat("ko-KR", {
-  maximumFractionDigits: 0,
-});
-
-function createBalanceGuideText(account: AccountBalance): string {
-  return `${account.bankName} ${account.accountName}, 계좌번호 ${account.maskedAccountNumber}의 현재 잔액은 ${amountFormatter.format(account.balance)}원입니다.`;
-}
-
-export function BalanceVoiceGuide({ account }: BalanceVoiceGuideProps) {
+export function BalanceVoiceGuide({ guideText }: BalanceVoiceGuideProps) {
   const setVoiceState = useBankStore((state) => state.setVoiceState);
   const resetVoiceState = useBankStore((state) => state.resetVoiceState);
   const [status, setStatus] = useState<GuideStatus>("idle");
-  const guideText = useMemo(() => createBalanceGuideText(account), [account]);
-
   useEffect(
     () => () => {
       if (typeof window !== "undefined" && "speechSynthesis" in window) {
