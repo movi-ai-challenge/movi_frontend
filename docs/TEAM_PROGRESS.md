@@ -1,5 +1,11 @@
 # MOVI 프런트엔드 진행 현황
 
+## 개발 환경
+
+- 필수 Node.js 버전: `22.6.0` 이상
+- nvm 사용 시 저장소 루트에서 `nvm use`
+- 의존성 설치: `npm ci`
+
 > 갱신일: 2026-08-27
 > 최상위 구현 기준: [IMPLEMENTATION_SOURCE_OF_TRUTH.md](IMPLEMENTATION_SOURCE_OF_TRUTH.md)
 > 현재 브랜치: `feature/kakao-real-login`
