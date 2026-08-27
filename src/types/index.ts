@@ -98,15 +98,35 @@ export interface FdsEvaluationResult {
   summary: string;
 }
 
-export type TransactionType = "deposit" | "withdrawal" | "transfer" | "blocked";
+export type TransactionType = "IN" | "OUT";
+export type TransactionSource = "OPENBANKING" | "INTERNAL";
 export interface Transaction {
   id: string;
   accountId: string;
   type: TransactionType;
   description: string;
   amount: number;
-  balanceAfter: number;
+  balanceAfter: number | null;
+  counterpartyName: string | null;
+  category: string | null;
   occurredAt: string;
+  memo: string | null;
+  source: TransactionSource;
+}
+
+export interface TransactionPage {
+  transactions: Transaction[];
+  page: number;
+  size: number;
+  totalElements: number;
+  totalPages: number;
+  hasNext: boolean;
+  voiceMessage: string;
+}
+
+export interface TransactionDetailResult {
+  transaction: Transaction;
+  voiceMessage: string;
 }
 
 export type FdsAlertSeverity = "info" | "warning" | "critical";
