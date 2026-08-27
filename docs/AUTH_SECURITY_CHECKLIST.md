@@ -1,6 +1,7 @@
 # MOVI 인증·권한·금융 안전 체크리스트
 
 > 최신 정책 반영: 2026-08-27
+> 최신 확정 결정: [DECISIONS_2026-08-27.md](DECISIONS_2026-08-27.md)
 > 상위 기준: [IMPLEMENTATION_SOURCE_OF_TRUTH.md](IMPLEMENTATION_SOURCE_OF_TRUTH.md)
 > API 계약: [backend-frontend-integration-decisions.md](backend-frontend-integration-decisions.md)
 
@@ -21,12 +22,12 @@
 | 기본 계좌·별칭 변경 | Access token + 백엔드 소유권·규칙 검증 | 변경 버튼 |
 | 최초 OpenBanking 연결 | Access token + OpenBanking 본인 인증 + 5분·1회용 state | 연결 시작 |
 | PIN 최초 등록 | 카카오 로그인 직후 인증 사용자 | 6자리 PIN 입력 확인 |
-| 송금 | Access token + `confirmationId` + `idempotencyKey` + FDS | 수취인·금액·출금 계좌 검토 후 실행 |
+| 송금 | Access token + `confirmationId` + 1회용 확인 코드 + 필요 시 거래 결속 PIN proof + `idempotencyKey` + FDS | 수취인·금액·출금 계좌 검토 후 실행 |
 | 위험 거래 알림 | 검증된 FDS 결과에 따른 백엔드 이벤트 | 사용자 화면에서 발송하지 않음 |
 
-계좌 추가 연결·연결 해제, PIN 변경·재설정·분실 복구, 범용 `reauthProof`, 보호자 연결 공개 흐름은 MVP에서 제외한다.
+계좌 추가 연결·연결 해제, PIN 변경·재설정·분실 복구, 생체인증·Passkey와 보호자 연결 공개 흐름은 MVP에서 제외한다. 기존 PIN을 이용한 거래 결속 proof는 송금 보호 수단으로 포함한다.
 
-## `#19` 카카오 로그인
+## 카카오 로그인 (과거 `#19` 구현)
 
 - [x] callback URL의 Access/Refresh token 파싱을 제거했다.
 - [x] URL에는 일회성 `code`만 사용한다.
@@ -80,16 +81,21 @@
 
 ## 송금·멱등성·FDS
 
+- [ ] 등록 수취인 선택 기반의 비음성 송금이 서버 검토 → 명시적 확인 → 필요 시 PIN proof → 멱등 실행 순서로 완료된다.
 - [ ] 수취인, 금액과 출금 계좌를 서버 응답으로 검토 화면에 표시한다.
 - [x] 화면 또는 음성 검토 후 별도의 명시적 확인이 있다.
+- [ ] 서버가 무작위 6자리 확인 코드를 발급하며 60초·1회용·최대 3회 시도를 강제한다.
+- [ ] 수취인·금액·출금 계좌가 바뀌면 `confirmationId`, 확인 코드와 PIN proof가 모두 무효화된다.
+- [ ] PIN proof가 필요한 거래는 해당 거래에 결속된 유효 proof 없이는 실행되지 않는다.
 - [x] `confirmationId`를 다른 거래에 재사용하지 않는다.
 - [x] `AWAITING_CONFIRMATION`부터 `idempotencyKey`를 보관한다.
 - [ ] 중복 클릭·순차·동시 요청에도 이체는 한 건이다.
 - [x] timeout·새로고침 후 같은 키로 최종 상태를 조회한다.
 - [x] 프런트가 FDS 위험도나 결정 값을 만들지 않는다.
-- [x] LOW는 완료, MEDIUM은 완료+알림 요청, HIGH는 차단+알림 요청으로 표시한다.
+- [ ] FDS 원본 0~100 점수와 정책 버전을 보존하고 점수를 사기 확률로 표시하거나 임의로 100으로 나누지 않는다.
+- [x] LOW는 완료, MEDIUM은 완료+알림 요청, HIGH·CRITICAL은 차단+알림 요청으로 표시한다.
 - [ ] Voice/FDS timeout·5xx·잘못된 payload에서 이체가 실행되지 않는다.
-- [x] HIGH 차단을 PIN 등으로 우회하는 UI가 없다.
+- [x] HIGH·CRITICAL 차단을 PIN 등 추가 인증으로 우회하는 UI가 없다.
 - [x] 성공 화면은 백엔드에서 확정한 최종 상태만 표시한다.
 
 ## 보호자 알림
@@ -130,4 +136,4 @@
 
 ## 결정 기록
 
-정책이나 API가 바뀌면 결정일, 참여 팀, 동작과 예외, 관련 API, 반영 브랜치·커밋과 검증 결과를 [backend-frontend-integration-decisions.md](backend-frontend-integration-decisions.md)에 기록한다. 확정되지 않은 동작은 `확인 필요`로 유지한다.
+2026-08-27 범위와 정책은 [DECISIONS_2026-08-27.md](DECISIONS_2026-08-27.md)를 우선한다. 이후 정책이나 API가 바뀌면 결정일, 참여 팀, 동작과 예외, 관련 API, 반영 브랜치·커밋과 검증 결과를 [backend-frontend-integration-decisions.md](backend-frontend-integration-decisions.md)에 기록한다. 확정 문서에 값이 없는 endpoint·DTO·환경 변수는 `상세 계약 필요`로 유지한다.

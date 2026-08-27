@@ -8,18 +8,22 @@
 
 > 갱신일: 2026-08-27
 > 최상위 구현 기준: [IMPLEMENTATION_SOURCE_OF_TRUTH.md](IMPLEMENTATION_SOURCE_OF_TRUTH.md)
-> 현재 브랜치: `feature/session-recovery-safety-tests`
+> 최신 확정 결정: [DECISIONS_2026-08-27.md](DECISIONS_2026-08-27.md)
+> 현재 브랜치: `feature/error-focus-recovery`
 
 ## 현재 목표
 
-접근성 중심 Mock UI를 새로 확장하는 단계가 아니라, 인증 → 조회 → 음성 → 송금 순서로 실제 백엔드·AI 흐름에 연결하는 단계다. 부분 구현 브랜치는 현재 단계에 필요한 것만 최신 계약으로 보완해 검토한다.
+접근성 중심 Mock UI를 새로 확장하는 단계가 아니라, 실제 AI Voice/FDS 계약 정합 → OpenBanking 복귀 → 거래 확인·PIN proof → 최소 비음성 송금 → 제한 Streaming 게이트 순서로 통합하는 단계다. 내부 완료 목표는 2026-09-02이며 8/30 이후 신규 기능을 추가하지 않는다.
 
 ## 현재 작업
 
-### `feature/session-recovery-safety-tests`
+### `feature/error-focus-recovery`
 
 작업 트리에 반영:
 
+- 계좌 목록·잔액·거래 목록·거래 상세의 비동기 API 오류 패널로 포커스 이동
+- 공통 계좌 API 오류 패널에 프로그래밍 방식 포커스와 명확한 focus-visible 표시 추가
+- 실제 키보드·화면 읽기 프로그램의 이동 순서와 중복 안내 검증은 `확인 필요`로 유지
 - 로그아웃 성공·실패와 refresh 실패가 같은 인증 클라이언트 정리 경계를 사용하도록 통합
 - 인증 세션·Refresh token·계좌·음성·송금 초안·송금 복구 키의 일괄 제거 검증
 - refresh 성공 시 유효한 인증·금융·송금 복구 상태가 유지되는지 검증
@@ -49,14 +53,15 @@
 
 남은 작업:
 
-- 백엔드 `/api/openbanking/callback` 공개 경로 허용
-- 백엔드 callback JSON을 프런트 결과 URL 302로 변경
-- 성공·취소·state 만료·재사용 staging E2E
-- Voice/FDS staging URL·health/version과 실제 AI 응답 E2E
-- Safari/iOS `audio/mp4` 백엔드 허용 전 실기기 녹음 보류
-- 직접 입력 송금의 명시적 실행 API 계약 확정
-- 실제 LOW·MEDIUM·HIGH, timeout 직후 조회, 새로고침 복구 staging E2E
-- 직접 입력 송금·등록 수취인 API 계약 확정
+- 실제 AI Voice/FDS Schema·버전·환경과 Adapter 필드 확정
+- FDS 0~100 원본 의미, LOW/MEDIUM/HIGH/CRITICAL과 정책 버전 반영
+- 백엔드 OpenBanking callback GET 공개와 `result=success|error` 프런트 URL 302
+- 6자리·60초·1회·최대 3회 거래 확인 코드와 거래 변경 무효화 구현
+- 거래 바인딩 PIN proof와 적용 조건 상세 계약·구현
+- 등록 수취인 기반 직접 입력 검토·확인·PIN·멱등 실행 계약과 UI
+- 8/29 제한 Streaming 채택 게이트, 실패 시 multipart 유지
+- MP4 PR·프런트 MIME·AI 디코딩과 8/30 iOS 실기기 검증
+- Playwright 핵심 흐름과 실제 VoiceOver/TalkBack·200%·모바일 검증
 
 ## 영역별 상태
 
@@ -66,8 +71,8 @@
 | OpenBanking | 시작·callback·계좌 수 재조회 구현 | 백엔드 공개 callback·302와 staging E2E |
 | 계좌·잔액 | 목록·기본 계좌·별칭·잔액 실제 API | 소유권·오류·다계좌 staging E2E |
 | 거래내역 | 목록·상세·`IN/OUT`·페이징 실제 API | 소유권·필터·페이징 staging E2E |
-| 음성 | 세션·녹음·multipart·재질문 한도·만료·TTS 실제 API | 실 AI·Safari/iOS·권한·timeout E2E |
-| 송금·FDS | 음성 확인·동일 키 상태 복구·실제 FDS 결과 표시 | 실 AI/FDS staging E2E와 직접 입력 실행 계약 |
+| 음성 | 세션·녹음·multipart·재질문 한도·만료·TTS 실제 API | AI Adapter·제한 Streaming·MP4/iOS·timeout E2E |
+| 송금·FDS | 음성 확인·동일 키 상태 복구·실제 FDS 결과 표시 | 확인 코드·PIN proof·직접 입력·CRITICAL과 응답 유실 E2E |
 | 보호자 알림 | 공개 Mock 조회 경로 제거·FDS 결과 안내 | Seed·백엔드 이벤트 staging E2E |
 | 접근성 | 큰 글씨·고대비·단순 모드·TTS 기반 | 실제 P0 흐름의 보조기기 E2E |
 | 테스트 | 계약·인증 refresh·store·송금 복구 단위 테스트 50개와 정적 검사 존재 | 화면 통합·브라우저 E2E 도입 |
@@ -90,7 +95,7 @@
 | `/balance` | 현재·출금 가능 잔액 조회와 TTS | 실 API |
 | `/transactions` | 기간·입출금 필터·페이징 거래 목록 | 실 API |
 | `/transactions/[transactionId]` | 거래 상세와 TTS | 실 API |
-| `/transfer`·`/transfer/review` | 직접 입력 송금 정보·검토 | 실행 API 확인 필요, 실제 이체 미실행 |
+| `/transfer`·`/transfer/review` | 직접 입력 송금 정보·검토 | P0 완료 경로로 확정, 등록 수취인·검토·PIN·실행 상세 계약 필요 |
 | `/transfer/evaluate` 이하·`/transfer/result` | 이전 Mock 결과 경로 | 실제 결과 생성 중단, `/accounts` 복귀 |
 | `/alerts/guardian/[riskEventId]` | 이전 공개 보호자 조회 | 실제 조회 제거, `/accounts` 복귀 |
 
@@ -107,11 +112,11 @@
 
 ## 바로 다음 작업
 
-1. 직접 입력 화면 안전 정리 commit·PR
-2. 직접 입력 송금·등록 수취인 API 계약 확정
-3. 실 AI·FDS·권한·MIME·timeout staging E2E
-4. OpenBanking 백엔드 302 반영 후 staging E2E
-5. 전체 접근성·장애 시나리오 E2E
+1. 실제 AI Voice/FDS Schema·버전·환경과 기존 도메인 Adapter 계약 고정
+2. OpenBanking 공개 callback·302 반영과 staging 예외 E2E
+3. 거래 확인 코드·PIN proof 상세 계약과 구현
+4. 등록 수취인 기반 직접 입력 송금 완료 경로 구현
+5. 제한 Streaming·MP4 게이트와 접근성·안전 시나리오 E2E
 
 이후 순서는 [MVP_WEEK_PLAN.md](MVP_WEEK_PLAN.md)를 따른다.
 
@@ -123,6 +128,9 @@
 - 보호자 금융정보 조회와 송금 승인·거절
 - 보호자 대시보드, SMS 링크와 공개 알림 조회
 - 계약에 없는 guardian `riskEventId` 모델
+- 적금 조회와 준비된 Sandbox 계약이 없는 미등록 계좌번호 송금
+- 실제 SMS 전환, 생체인증·Passkey와 SHAP 화면
+- 새 디자인 전면 개편과 새 배포 시스템
 
 ## 검증 명령
 
