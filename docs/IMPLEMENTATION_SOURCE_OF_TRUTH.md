@@ -8,11 +8,13 @@
 
 > 기준일: 2026-08-25
 > 프런트 진행 반영: 2026-08-27
-> 기준 스냅샷: 백엔드 `develop` `b6c9092`, 프런트 `main` `bad26c8`
+> 기준 스냅샷: 백엔드 `develop` `b6c9092`, 프런트 `main` `65df24a`
 
 ## 문서 역할
 
 이 문서는 MOVI MVP를 구현할 때 가장 먼저 확인하는 저장소 내 최상위 실행 기준이다. 2026-08-25 역할별 구현 점검 문서를 저장소에서 계속 참조할 수 있도록 핵심 결정, 현재 상태, 작업 순서와 완료 조건을 정리한다.
+
+현재 남은 작업의 우선순위, 담당과 합의 질문은 [REMAINING_IMPLEMENTATION_AND_AGREEMENTS.md](REMAINING_IMPLEMENTATION_AND_AGREEMENTS.md)에서 관리한다.
 
 문서와 코드가 다르면 다음 순서로 판단한다.
 
@@ -141,6 +143,8 @@
 | 접근성 설정 저장 위치 | 브라우저 유지인지 계정 저장인지 미확정 | 기획·백엔드·프런트 | 새로고침 후 설정 유지 방식 보류 |
 | Google TTS 사용 | 현재는 브라우저 기기 TTS 기준이며 Google TTS 도입 여부 미확정 | 기획·AI·프런트 | 별도 TTS SDK·API를 추가하지 않음 |
 | staging·실기기 검증 | 카카오·OpenBanking·소유권·다중 탭·VoiceOver/TalkBack·200% 확대 결과 없음 | 전 팀 | 정적 검사 통과만으로 완료 처리하지 않음 |
+
+위 표의 구체적인 결정 질문, 권고안, 담당과 완료 증거는 [남은 구현 및 팀 합의 목록](REMAINING_IMPLEMENTATION_AND_AGREEMENTS.md)을 따른다.
 
 ## 역할별 선행 조건
 
