@@ -9,6 +9,13 @@ export interface KakaoBackendSession {
   isNewUser: boolean;
 }
 
+export interface AuthTokenPair {
+  accessToken: string;
+  refreshToken: string;
+  tokenType: string;
+  accessTokenExpiresIn: number;
+}
+
 export interface AuthSession {
   userId: string;
   displayName: string;

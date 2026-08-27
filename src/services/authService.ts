@@ -1,5 +1,10 @@
 import { api } from "@/services/api";
-import type { AuthSession, MockAuthenticationMethod } from "@/types";
+import { isRecord, parseApiData } from "@/services/apiResponse";
+import type {
+  AuthSession,
+  AuthTokenPair,
+  MockAuthenticationMethod,
+} from "@/types";
 
 const MOCK_AUTHENTICATION_DELAY_MS = 700;
 const MOCK_LOGOUT_DELAY_MS = 300;
@@ -10,6 +15,11 @@ const LOGOUT_PATH = "/api/v1/auth/logout";
 interface KakaoLoginExchangeResult {
   session: AuthSession;
   refreshToken: string;
+}
+
+interface KakaoLoginData extends AuthTokenPair {
+  userId: number | string;
+  newUser: boolean;
 }
 
 function waitForMockResponse(delayMs: number): Promise<void> {
@@ -51,31 +61,27 @@ export function startKakaoLogin(): void {
   window.location.href = getKakaoLoginUrl();
 }
 
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === "object" && value !== null;
+function isKakaoLoginData(value: unknown): value is KakaoLoginData {
+  if (!isRecord(value)) return false;
+
+  return (
+    (typeof value.userId === "number" || typeof value.userId === "string") &&
+    typeof value.newUser === "boolean" &&
+    typeof value.accessToken === "string" &&
+    value.accessToken.length > 0 &&
+    typeof value.refreshToken === "string" &&
+    value.refreshToken.length > 0 &&
+    typeof value.tokenType === "string" &&
+    value.tokenType.length > 0 &&
+    typeof value.accessTokenExpiresIn === "number" &&
+    Number.isFinite(value.accessTokenExpiresIn) &&
+    value.accessTokenExpiresIn > 0
+  );
 }
 
-function parseKakaoLoginExchangeResponse(
-  value: unknown,
+function toKakaoLoginExchangeResult(
+  data: KakaoLoginData,
 ): KakaoLoginExchangeResult {
-  if (!isRecord(value) || value.code !== "SUCCESS" || !isRecord(value.data)) {
-    throw new Error("카카오 로그인 응답 형식이 올바르지 않습니다.");
-  }
-
-  const data = value.data;
-  if (
-    (typeof data.userId !== "number" && typeof data.userId !== "string") ||
-    typeof data.newUser !== "boolean" ||
-    typeof data.accessToken !== "string" ||
-    data.accessToken.length === 0 ||
-    typeof data.refreshToken !== "string" ||
-    data.refreshToken.length === 0 ||
-    typeof data.tokenType !== "string" ||
-    typeof data.accessTokenExpiresIn !== "number"
-  ) {
-    throw new Error("카카오 로그인 응답 데이터가 올바르지 않습니다.");
-  }
-
   return {
     session: {
       userId: String(data.userId),
@@ -97,7 +103,9 @@ export async function exchangeKakaoLoginCode(
   code: string,
 ): Promise<KakaoLoginExchangeResult> {
   const response = await api.post<unknown>(KAKAO_TOKEN_PATH, { code });
-  return parseKakaoLoginExchangeResponse(response.data);
+  return toKakaoLoginExchangeResult(
+    parseApiData(response.data, isKakaoLoginData),
+  );
 }
 
 export async function logoutMockSession(): Promise<void> {
@@ -115,7 +123,5 @@ export async function logout(session: AuthSession | null): Promise<void> {
     return;
   }
 
-  await api.post(LOGOUT_PATH, null, {
-    headers: { Authorization: `Bearer ${session.backend.accessToken}` },
-  });
+  await api.post(LOGOUT_PATH);
 }

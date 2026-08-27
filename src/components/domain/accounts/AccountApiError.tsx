@@ -16,9 +16,9 @@ const errorContent: Record<
     title: "인증 시간이 만료되었습니다.",
     description: "안전을 위해 다시 로그인한 뒤 계좌를 확인해 주세요.",
   },
-  authentication_failed: {
-    title: "계좌 인증을 완료하지 못했습니다.",
-    description: "인증 정보를 다시 확인하고 계좌 연결을 시도해 주세요.",
+  authorization_failed: {
+    title: "이 계좌 정보에 접근할 수 없습니다.",
+    description: "현재 로그인한 사용자의 계좌인지 확인해 주세요.",
   },
   network: {
     title: "계좌 정보를 불러오지 못했습니다.",
@@ -33,7 +33,7 @@ const errorContent: Record<
 export function AccountApiError({ error, onRetry }: AccountApiErrorProps) {
   const content = errorContent[error.kind];
   const requiresLogin = error.kind === "authentication_expired";
-  const requiresReconnection = error.kind === "authentication_failed";
+  const accessDenied = error.kind === "authorization_failed";
 
   return (
     <section
@@ -57,16 +57,16 @@ export function AccountApiError({ error, onRetry }: AccountApiErrorProps) {
         </Link>
       ) : null}
 
-      {requiresReconnection ? (
+      {accessDenied ? (
         <Link
-          href="/accounts/connect"
+          href="/"
           className="mt-5 inline-flex min-h-11 items-center rounded-lg border-2 border-transparent bg-[var(--color-primary)] px-5 py-2 font-semibold text-[var(--color-on-primary)] hover:bg-[var(--color-primary-hover)] focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[var(--color-focus)] focus-visible:ring-offset-2"
         >
-          계좌 다시 연결하기
+          처음 화면으로 돌아가기
         </Link>
       ) : null}
 
-      {!requiresLogin && !requiresReconnection ? (
+      {!requiresLogin && !accessDenied ? (
         <AccessibleButton className="mt-5" onClick={onRetry}>
           다시 불러오기
         </AccessibleButton>
