@@ -81,9 +81,9 @@
 ## 송금·멱등성·FDS
 
 - [ ] 수취인, 금액과 출금 계좌를 서버 응답으로 검토 화면에 표시한다.
-- [ ] 화면 또는 음성 검토 후 별도의 명시적 확인이 있다.
-- [ ] `confirmationId`를 다른 거래에 재사용하지 않는다.
-- [ ] `AWAITING_CONFIRMATION`부터 `idempotencyKey`를 보관한다.
+- [x] 화면 또는 음성 검토 후 별도의 명시적 확인이 있다.
+- [x] `confirmationId`를 다른 거래에 재사용하지 않는다.
+- [x] `AWAITING_CONFIRMATION`부터 `idempotencyKey`를 보관한다.
 - [ ] 중복 클릭·순차·동시 요청에도 이체는 한 건이다.
 - [ ] timeout·새로고침 후 같은 키로 최종 상태를 조회한다.
 - [ ] 프런트가 FDS 위험도나 결정 값을 만들지 않는다.

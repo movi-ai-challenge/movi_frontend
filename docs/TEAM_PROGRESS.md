@@ -8,7 +8,7 @@
 
 > 갱신일: 2026-08-27
 > 최상위 구현 기준: [IMPLEMENTATION_SOURCE_OF_TRUTH.md](IMPLEMENTATION_SOURCE_OF_TRUTH.md)
-> 현재 브랜치: `feature/transaction-history-api`
+> 현재 브랜치: `feature/voice-command-api`
 
 ## 현재 목표
 
@@ -16,20 +16,21 @@
 
 ## 현재 작업
 
-### `feature/transaction-history-api`
+### `feature/voice-command-api`
 
 작업 트리에 반영:
 
-- `GET /api/transactions` 실제 목록·기간·`IN/OUT` 단일 필터 연동
-- 기본 20건 페이징과 이전·다음 페이지 키보드 조작
-- 거래 목록 DTO와 페이지 메타데이터 런타임 검증
-- `GET /api/transactions/{transactionId}` 실제 상세 연동
-- 목록·상세의 백엔드 `voiceMessage`를 TTS 문구로 사용
-- `blocked` 거래 유형과 실제 경로의 고정 음성 인식 Mock 제거
+- `POST /api/voice/sessions` 실제 음성 세션 시작
+- MediaRecorder WebM/Opus·WAV 탐지와 권한 거부·미지원 처리
+- 15초 자동 종료·5MB 사전 제한과 전송 전 녹음 검토
+- `POST /api/voice/sessions/{voiceSessionId}/commands` multipart 업로드
+- 재질문·잔액·HISTORY·송금 확인·완료·취소 응답 런타임 검증
+- 확인 대기부터 `confirmationId`와 UUID `idempotencyKey` 동시 전송·재시도 키 유지
+- 서버 `voiceMessage` 화면·기기 TTS 단일화와 직접 조작 대안
 
 검증:
 
-- `npm test`: 28개 통과
+- `npm test`: 32개 통과
 - `npm run typecheck`: 통과
 - `npm run lint`: 통과
 - `npm run build`: 통과, 20개 route
@@ -40,10 +41,10 @@
 - 백엔드 `/api/openbanking/callback` 공개 경로 허용
 - 백엔드 callback JSON을 프런트 결과 URL 302로 변경
 - 성공·취소·state 만료·재사용 staging E2E
-- 계좌·거래 소유권과 목록·상세 staging E2E
-- 확인 필요: HISTORY 최근 3건 안내 계약과 목록 API의 총 건수 안내 불일치
-- 거래내역 변경 commit과 PR 생성
-- 변경 commit과 PR 생성
+- Voice/FDS staging URL·health/version과 실제 AI 응답 E2E
+- Safari/iOS `audio/mp4` 백엔드 허용 전 실기기 녹음 보류
+- timeout·새로고침 후 `idempotencyKey` 상태 복구 구현
+- 음성 변경 commit과 PR 생성
 
 ## 영역별 상태
 
@@ -52,12 +53,12 @@
 | 인증 | 카카오·PIN·refresh·logout 실제 API 구현 | 신규·기존 로그인과 잠금 staging E2E |
 | OpenBanking | 시작·callback·계좌 수 재조회 구현 | 백엔드 공개 callback·302와 staging E2E |
 | 계좌·잔액 | 목록·기본 계좌·별칭·잔액 실제 API | 소유권·오류·다계좌 staging E2E |
-| 거래내역 | 목록·상세·`IN/OUT`·페이징 실제 API | 소유권 E2E와 HISTORY 음성 계약 정합화 |
-| 음성 | 타이머/입력 보조 UI | 녹음·multipart·세션·실 AI |
+| 거래내역 | 목록·상세·`IN/OUT`·페이징 실제 API | 소유권·필터·페이징 staging E2E |
+| 음성 | 세션·녹음·multipart·응답 상태·TTS 실제 API | 실 AI·Safari/iOS·권한·timeout E2E |
 | 송금·FDS | Mock 검토·위험도·결과 | 백엔드 단일 흐름과 상태 복구 |
 | 보호자 알림 | 오래된 Mock 조회 경로 존재 | Seed·백엔드 이벤트만 사용, 공개 조회 제거 |
 | 접근성 | 큰 글씨·고대비·단순 모드·TTS 기반 | 실제 P0 흐름의 보조기기 E2E |
-| 테스트 | 계약·인증·store 단위 테스트 28개와 정적 검사 존재 | 화면 통합·브라우저 E2E 도입 |
+| 테스트 | 계약·인증·store 단위 테스트 32개와 정적 검사 존재 | 화면 통합·브라우저 E2E 도입 |
 
 ## 구현된 화면
 
@@ -73,7 +74,7 @@
 | `/accounts/connect` | 최초 계좌 연결 시작 | 실 API |
 | `/accounts/connect/callback` | OpenBanking 결과·계좌 수 확인 | 실 API, 백엔드 302 대기 |
 | `/accounts/register` | 이전 Mock 연결 계좌 확인 | 실 경로에서 사용하지 않음 |
-| `/accounts` | 계좌 목록·기본 계좌·별칭 | 실 API |
+| `/accounts` | 계좌 목록·기본 계좌·별칭·공통 음성 진입 | 실 API |
 | `/balance` | 현재·출금 가능 잔액 조회와 TTS | 실 API |
 | `/transactions` | 기간·입출금 필터·페이징 거래 목록 | 실 API |
 | `/transactions/[transactionId]` | 거래 상세와 TTS | 실 API |
@@ -93,12 +94,10 @@
 
 ## 바로 다음 작업
 
-1. 거래내역 변경 commit·PR 및 소유권·필터·페이징 staging E2E
-2. HISTORY 최근 3건 음성 안내 계약 정합화
+1. 음성 변경 commit·PR 및 실 AI·권한·MIME staging E2E
+2. 송금 상태 복구·FDS 결과 통합
 3. OpenBanking 백엔드 302 반영 후 staging E2E
-4. 음성 녹음·세션·AI 연결
-5. 송금 확인·상태 복구·FDS 통합
-6. 전체 접근성·장애 시나리오 E2E
+4. 전체 접근성·장애 시나리오 E2E
 
 이후 순서는 [MVP_WEEK_PLAN.md](MVP_WEEK_PLAN.md)를 따른다.
 
