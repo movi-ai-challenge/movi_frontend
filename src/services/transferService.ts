@@ -1,4 +1,5 @@
 import { api, isMockMode } from "@/services/api";
+import { readDeviceUuid } from "@/services/deviceIdentity";
 import { ApiResponseContractError, parseApiResponse } from "@/services/apiResponse";
 import {
   isTransferResultResponseData,
@@ -137,6 +138,7 @@ export async function executeDirectTransfer(
   const response = await api.post<unknown>(TRANSFERS_PATH, {
     confirmationId: review.confirmationId,
     idempotencyKey: review.idempotencyKey,
+    deviceUuid: readDeviceUuid(),
   });
   const parsed = parseApiResponse(response.data, isTransferResultResponseData);
   return mapTransferResultResponse(

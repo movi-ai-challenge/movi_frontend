@@ -7,6 +7,7 @@ import {
   parseApiResponse,
   readApiFailureResponse,
 } from "@/services/apiResponse";
+import { readDeviceUuid } from "@/services/deviceIdentity";
 import type {
   AuthSession,
   AuthTokenPair,
@@ -178,6 +179,7 @@ export async function loginWithPin(
   const response = await api.post<unknown>(PIN_LOGIN_PATH, {
     phoneNumber,
     pin,
+    deviceUuid: readDeviceUuid(),
   });
   const data = parseApiData(response.data, isKakaoLoginData);
   return toKakaoLoginExchangeResult(data, "PIN");
@@ -190,6 +192,7 @@ export async function registerPin(
   const response = await api.post<unknown>(PIN_REGISTER_PATH, {
     phoneNumber,
     pin,
+    deviceUuid: readDeviceUuid(),
   });
   parseApiResponse(response.data, (data): data is null => data === null);
 }
