@@ -2,7 +2,6 @@ import { create } from "zustand";
 import type {
   Account,
   TransferDraft,
-  TransferResult,
   User,
   VoiceState,
 } from "@/types";
@@ -16,8 +15,6 @@ interface BankStore {
   defaultAccountId: string | null;
   voice: VoiceState;
   transferDraft: TransferDraft | null;
-  transferResult: TransferResult | null;
-  isTransferRequestLocked: boolean;
   setUser: (user: User | null) => void;
   setAccounts: (accounts: Account[]) => void;
   selectAccount: (accountId: string | null) => void;
@@ -26,10 +23,6 @@ interface BankStore {
   resetVoiceState: () => void;
   setTransferDraft: (transferDraft: TransferDraft) => void;
   clearTransferDraft: () => void;
-  setTransferResult: (transferResult: TransferResult) => void;
-  clearTransferResult: () => void;
-  lockTransferRequest: () => boolean;
-  unlockTransferRequest: () => void;
   resetBankState: () => void;
 }
 
@@ -40,8 +33,6 @@ export const useBankStore = create<BankStore>((set) => ({
   defaultAccountId: null,
   voice: initialVoiceState,
   transferDraft: null,
-  transferResult: null,
-  isTransferRequestLocked: false,
   setUser: (user) => set({ user }),
   setAccounts: (accounts) =>
     set((state) => ({
@@ -68,26 +59,8 @@ export const useBankStore = create<BankStore>((set) => ({
     })),
   setVoiceState: (voice) => set({ voice }),
   resetVoiceState: () => set({ voice: initialVoiceState }),
-  setTransferDraft: (transferDraft) =>
-    set({
-      transferDraft,
-      transferResult: null,
-      isTransferRequestLocked: false,
-    }),
-  clearTransferDraft: () =>
-    set({ transferDraft: null, isTransferRequestLocked: false }),
-  setTransferResult: (transferResult) => set({ transferResult }),
-  clearTransferResult: () => set({ transferResult: null }),
-  lockTransferRequest: () => {
-    let didLock = false;
-    set((state) => {
-      if (state.isTransferRequestLocked) return state;
-      didLock = true;
-      return { isTransferRequestLocked: true };
-    });
-    return didLock;
-  },
-  unlockTransferRequest: () => set({ isTransferRequestLocked: false }),
+  setTransferDraft: (transferDraft) => set({ transferDraft }),
+  clearTransferDraft: () => set({ transferDraft: null }),
   resetBankState: () =>
     set({
       user: null,
@@ -96,7 +69,5 @@ export const useBankStore = create<BankStore>((set) => ({
       defaultAccountId: null,
       voice: initialVoiceState,
       transferDraft: null,
-      transferResult: null,
-      isTransferRequestLocked: false,
     }),
 }));

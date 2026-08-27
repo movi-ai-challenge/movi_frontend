@@ -8,7 +8,7 @@
 
 > 갱신일: 2026-08-27
 > 최상위 구현 기준: [IMPLEMENTATION_SOURCE_OF_TRUTH.md](IMPLEMENTATION_SOURCE_OF_TRUTH.md)
-> 현재 브랜치: `chore/remaining-implementation-plan`
+> 현재 브랜치: `feature/transfer-review-only-cleanup`
 
 ## 현재 목표
 
@@ -16,14 +16,16 @@
 
 ## 현재 작업
 
-### `chore/remaining-implementation-plan`
+### `feature/transfer-review-only-cleanup`
 
 작업 트리에 반영:
 
-- 남은 작업을 프런트 단독 구현, 외부 반영, 합의 필요, staging·실기기 검증으로 분류
-- 직접 입력 송금·수취인, OpenBanking callback, Voice/FDS 환경의 계약 공백 기록
-- 백엔드·AI·인프라·기획별 결정 질문과 권고안 정리
-- 출시 전 staging·접근성·보안 시나리오와 완료 증거 정의
+- `/transfer`의 고정 Mock 수취인 목록과 타이머 기반 가짜 음성 입력 제거
+- `/transfer/review`의 타이머 기반 가짜 음성 확인·취소 판정 제거
+- 직접 입력 이름이 서버에서 확인되지 않고 검토 화면에만 표시됨을 명시
+- 직접 입력 경로가 이체·FDS·보호자 결과를 만들지 않도록 유지
+- 미사용 수취인·보호자 Mock 서비스, 가짜 음성 판정 컴포넌트와 이전 transfer result store·타입 제거
+- 폐기된 공개 URL은 금융 결과를 만들지 않는 `/accounts` 리다이렉트로 유지
 
 검증:
 
@@ -31,7 +33,7 @@
 - `npm run typecheck`: 통과
 - `npm run lint`: 통과
 - `npm run build`: 통과, 20개 route
-- 문서 변경만 수행하므로 직전 기능 검증 결과를 유지
+- staging·브라우저 보조기기 검증은 직접 입력 실행 계약과 테스트 환경 확정 전까지 미완료
 
 남은 작업:
 
@@ -76,7 +78,7 @@
 | `/balance` | 현재·출금 가능 잔액 조회와 TTS | 실 API |
 | `/transactions` | 기간·입출금 필터·페이징 거래 목록 | 실 API |
 | `/transactions/[transactionId]` | 거래 상세와 TTS | 실 API |
-| `/transfer`·`/transfer/review` | 직접 입력 송금 정보·검토 | 실행 API 확인 필요, 실제 이체 미실행 |
+| `/transfer`·`/transfer/review` | 직접 입력 송금 정보·검토 | 고정 수취인·가짜 음성 시연 제거, 실행 API 확인 필요, 실제 이체 미실행 |
 | `/transfer/evaluate` 이하·`/transfer/result` | 이전 Mock 결과 경로 | 실제 결과 생성 중단, `/accounts` 복귀 |
 | `/alerts/guardian/[riskEventId]` | 이전 공개 보호자 조회 | 실제 조회 제거, `/accounts` 복귀 |
 
@@ -93,10 +95,10 @@
 
 ## 바로 다음 작업
 
-1. 음성 재시도 직접 입력 전환 commit·PR
+1. 직접 입력 송금 API·수취인 계약 확정
 2. 실 AI·FDS·권한·MIME·timeout staging E2E
 3. OpenBanking 백엔드 302 반영 후 staging E2E
-4. 직접 입력 송금 실행 계약 확정 후 키보드 대안 완성
+4. 계약 확정 후 직접 입력 송금 키보드 대안 완성
 5. 전체 접근성·장애 시나리오 E2E
 
 이후 순서는 [MVP_WEEK_PLAN.md](MVP_WEEK_PLAN.md)를 따른다.

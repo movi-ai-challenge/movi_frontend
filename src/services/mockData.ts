@@ -1,7 +1,5 @@
 import type {
   Account,
-  FdsAlert,
-  RegisteredRecipient,
   Transaction,
   User,
 } from "@/types";
@@ -85,18 +83,3 @@ export const mockTransactions: Transaction[] = [
     source: "OPENBANKING",
   },
 ];
-export const mockRegisteredRecipients: RegisteredRecipient[] = [
-  {
-    id: "recipient-demo-1",
-    name: "김모비",
-    bankName: "모비은행",
-    maskedAccountNumber: "456-****-1234",
-  },
-  {
-    id: "recipient-demo-2",
-    name: "이하늘",
-    bankName: "함께은행",
-    maskedAccountNumber: "789-****-5678",
-  },
-];
-export const mockFdsAlerts: FdsAlert[] = [];

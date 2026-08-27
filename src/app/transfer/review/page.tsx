@@ -7,7 +7,6 @@ import { useEffect, useState } from "react";
 import { AccessibleButton } from "@/components/common/AccessibleButton";
 import { PageBackLink } from "@/components/common/PageBackLink";
 import { TransferReviewVoiceGuide } from "@/components/domain/transfer/TransferReviewVoiceGuide";
-import { VoiceTransferDecision } from "@/components/domain/transfer/VoiceTransferDecision";
 import { getConnectedAccounts } from "@/services/accountService";
 import { useBankStore } from "@/store/useBankStore";
 import type { Account } from "@/types";
@@ -24,7 +23,6 @@ export default function TransferReviewPage() {
   const clearTransferDraft = useBankStore((state) => state.clearTransferDraft);
   const [sourceAccount, setSourceAccount] = useState<Account | null>(null);
   const [isConfirmed, setIsConfirmed] = useState(false);
-  const [isVoiceDecisionActive, setIsVoiceDecisionActive] = useState(false);
 
   useEffect(() => {
     let isActive = true;
@@ -128,37 +126,31 @@ export default function TransferReviewPage() {
 
       {sourceAccount ? (
         <TransferReviewVoiceGuide
-          key={isVoiceDecisionActive ? "decision-active" : "decision-idle"}
-          isVoiceDecisionActive={isVoiceDecisionActive}
+          isVoiceDecisionActive={false}
           sourceAccount={sourceAccount}
           transferDraft={transferDraft}
         />
       ) : null}
 
       {!isConfirmed ? (
-        <>
-          <VoiceTransferDecision
-            onActiveChange={setIsVoiceDecisionActive}
-            onConfirm={() => {
-              setIsVoiceDecisionActive(false);
-              setIsConfirmed(true);
-            }}
-            onCancel={() => {
-              setIsVoiceDecisionActive(false);
-              clearTransferDraft();
-              router.push("/transfer");
-            }}
-          />
+        <div className="mt-6 grid gap-3">
           <AccessibleButton
-            className="mt-6 w-full"
-            onClick={() => {
-              setIsVoiceDecisionActive(false);
-              setIsConfirmed(true);
-            }}
+            className="w-full"
+            onClick={() => setIsConfirmed(true)}
           >
             화면에서 이체 내용 확인 완료
           </AccessibleButton>
-        </>
+          <AccessibleButton
+            className="w-full"
+            variant="secondary"
+            onClick={() => {
+              clearTransferDraft();
+              router.push("/transfer");
+            }}
+          >
+            송금 정보 입력 취소
+          </AccessibleButton>
+        </div>
       ) : (
         <section
           className="mt-6 rounded-xl border-2 border-[var(--color-warning)] bg-[var(--color-surface)] p-5"
@@ -173,7 +165,7 @@ export default function TransferReviewPage() {
             href="/accounts"
             className="mt-5 inline-flex min-h-11 w-full items-center justify-center rounded-lg border-2 border-transparent bg-[var(--color-primary)] px-6 py-3 font-semibold text-[var(--color-on-primary)] hover:bg-[var(--color-primary-hover)] focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[var(--color-focus)] focus-visible:ring-offset-2"
           >
-            실제 음성 송금으로 이동
+            계좌 목록으로 돌아가기
           </Link>
         </section>
       )}
