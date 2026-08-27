@@ -4,6 +4,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 
 import { AccessibleButton } from "@/components/common/AccessibleButton";
+import { restoreAuthenticatedSession } from "@/services/api";
 import { logout } from "@/services/authService";
 import { useAuthStore } from "@/store/useAuthStore";
 import { useBankStore } from "@/store/useBankStore";
@@ -26,6 +27,9 @@ export function MockAuthBoundary({ children }: Readonly<{ children: React.ReactN
   const router = useRouter();
   const session = useAuthStore((state) => state.session);
   const hasHydrated = useAuthStore((state) => state.hasHydrated);
+  const isRestoringSession = useAuthStore(
+    (state) => state.isRestoringSession,
+  );
   const hydrateSession = useAuthStore((state) => state.hydrateSession);
   const clearSession = useAuthStore((state) => state.clearSession);
   const resetBankState = useBankStore((state) => state.resetBankState);
@@ -38,8 +42,17 @@ export function MockAuthBoundary({ children }: Readonly<{ children: React.ReactN
   }, [hydrateSession]);
 
   useEffect(() => {
+    if (!hasHydrated || !isRestoringSession) return;
+
+    void restoreAuthenticatedSession().catch(() => {
+      // API 계층이 실패한 인증·금융 상태를 정리한다.
+    });
+  }, [hasHydrated, isRestoringSession]);
+
+  useEffect(() => {
     if (
       !hasHydrated ||
+      isRestoringSession ||
       !protectedRoute ||
       session ||
       redirectStartedRef.current
@@ -49,7 +62,14 @@ export function MockAuthBoundary({ children }: Readonly<{ children: React.ReactN
 
     redirectStartedRef.current = true;
     router.replace(`/login?next=${encodeURIComponent(pathname)}`);
-  }, [hasHydrated, pathname, protectedRoute, router, session]);
+  }, [
+    hasHydrated,
+    isRestoringSession,
+    pathname,
+    protectedRoute,
+    router,
+    session,
+  ]);
 
   useEffect(() => {
     redirectStartedRef.current = false;
@@ -70,7 +90,10 @@ export function MockAuthBoundary({ children }: Readonly<{ children: React.ReactN
     }
   };
 
-  if (protectedRoute && (!hasHydrated || !session)) {
+  if (
+    protectedRoute &&
+    (!hasHydrated || isRestoringSession || !session)
+  ) {
     return (
       <main
         id="main-content"
@@ -91,12 +114,16 @@ export function MockAuthBoundary({ children }: Readonly<{ children: React.ReactN
       {session && protectedRoute ? (
         <header className="mx-auto flex w-full max-w-3xl flex-wrap items-center justify-between gap-3 px-6 pt-6">
           <div>
-            <p className="font-bold">{session.displayName} · Mock 로그인</p>
+            <p className="font-bold">
+              {session.displayName} · {session.backend ? "실제" : "Mock"} 로그인
+            </p>
             <p
               className="mt-1 text-sm text-[var(--color-text-muted)]"
               data-secondary-content="true"
             >
-              실제 세션과 권한 검증은 백엔드 연동이 필요합니다.
+              {session.backend
+                ? "백엔드 인증 세션을 사용하고 있습니다."
+                : "Mock 세션은 실제 금융 권한을 제공하지 않습니다."}
             </p>
           </div>
           <AccessibleButton
