@@ -5,10 +5,9 @@ import { useEffect, useRef, useState } from "react";
 
 import { AccessibleButton } from "@/components/common/AccessibleButton";
 import { restoreAuthenticatedSession } from "@/services/api";
+import { runWithAuthenticatedClientCleanup } from "@/services/authenticatedClientState";
 import { logout } from "@/services/authService";
-import { clearTransferRecoveryKey } from "@/services/transferRecoveryStorage";
 import { useAuthStore } from "@/store/useAuthStore";
-import { useBankStore } from "@/store/useBankStore";
 
 const PROTECTED_ROUTE_PREFIXES = [
   "/pin",
@@ -33,8 +32,6 @@ export function MockAuthBoundary({ children }: Readonly<{ children: React.ReactN
     (state) => state.isRestoringSession,
   );
   const hydrateSession = useAuthStore((state) => state.hydrateSession);
-  const clearSession = useAuthStore((state) => state.clearSession);
-  const resetBankState = useBankStore((state) => state.resetBankState);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
   const redirectStartedRef = useRef(false);
   const protectedRoute = isProtectedRoute(pathname);
@@ -82,12 +79,11 @@ export function MockAuthBoundary({ children }: Readonly<{ children: React.ReactN
 
     setIsLoggingOut(true);
     try {
-      await logout(session);
+      await runWithAuthenticatedClientCleanup(() => logout(session));
+    } catch {
+      // 서버 로그아웃 실패 여부와 관계없이 로컬 인증·금융 상태는 정리한다.
     } finally {
       redirectStartedRef.current = true;
-      clearSession();
-      resetBankState();
-      clearTransferRecoveryKey();
       router.replace("/login");
       setIsLoggingOut(false);
     }

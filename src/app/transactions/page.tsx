@@ -71,6 +71,7 @@ export default function TransactionListPage() {
     useState<TransactionTypeFilter>("ALL");
   const [dateError, setDateError] = useState("");
   const [apiError, setApiError] = useState<ApiError | null>(null);
+  const apiErrorRef = useRef<HTMLElement>(null);
   const dateErrorRef = useRef<HTMLDivElement>(null);
 
   const queryTransactions = async (
@@ -137,6 +138,12 @@ export default function TransactionListPage() {
       isActive = false;
     };
   }, [setAccounts]);
+
+  useEffect(() => {
+    if (status !== "error" || !apiError) return;
+    const focusTimer = window.setTimeout(() => apiErrorRef.current?.focus(), 0);
+    return () => window.clearTimeout(focusTimer);
+  }, [apiError, status]);
 
   const applyFilters = () => {
     if (!account) return;
@@ -211,7 +218,9 @@ export default function TransactionListPage() {
 
         {status === "error" && apiError ? (
           <section
-            className="rounded-xl border-2 border-[var(--color-danger)] bg-[var(--color-surface)] p-6"
+            ref={apiErrorRef}
+            tabIndex={-1}
+            className="rounded-xl border-2 border-[var(--color-danger)] bg-[var(--color-surface)] p-6 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[var(--color-focus)]"
             role="alert"
           >
             <h2 className="text-xl font-bold">

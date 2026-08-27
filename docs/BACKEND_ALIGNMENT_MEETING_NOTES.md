@@ -1,6 +1,6 @@
 # MOVI 백엔드-프런트엔드 연동 합의 회의록
 
-> 역사 자료: 아래 질문과 권장안은 합의 전 회의 준비 기록이다. 2026-08-25 이후 구현에는 [IMPLEMENTATION_SOURCE_OF_TRUTH.md](IMPLEMENTATION_SOURCE_OF_TRUTH.md)와 [backend-frontend-integration-decisions.md](backend-frontend-integration-decisions.md)의 확정 내용을 우선한다.
+> 역사 자료: 아래 질문과 권장안은 합의 전 회의 준비 기록이다. 현재 구현에는 [2026-08-27 확정 결정](DECISIONS_2026-08-27.md), [IMPLEMENTATION_SOURCE_OF_TRUTH.md](IMPLEMENTATION_SOURCE_OF_TRUTH.md), [backend-frontend-integration-decisions.md](backend-frontend-integration-decisions.md) 순서로 우선한다.
 
 문서 작성일: 2026-08-25
 
