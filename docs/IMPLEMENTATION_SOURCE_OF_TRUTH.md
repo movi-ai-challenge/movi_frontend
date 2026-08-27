@@ -67,7 +67,7 @@
 | --- | --- | --- |
 | 카카오 로그인 | 부분 구현 | 코드 교환·신규 사용자 분기 구현, staging E2E 필요 |
 | PIN·refresh·logout | 부분 구현 | 실제 API·세션 기반 구현 완료, staging·다중 탭 E2E 필요 |
-| OpenBanking | 부분 구현 | 실제 시작 URL, callback 화면, 계좌 재조회 |
+| OpenBanking | 부분 구현 | 시작 URL·callback 화면·계좌 수 재조회 구현, 백엔드 공개 callback·302와 staging E2E 필요 |
 | 계좌·잔액 | 부분 구현 | DTO 매퍼와 실제 API 전환 |
 | 거래내역 | 부분 구현 | 실제 목록·상세·`IN/OUT`·페이지네이션 |
 | 음성 | 부분 구현 | MediaRecorder, multipart, 세션 상태 머신, 실 AI 검증 |
