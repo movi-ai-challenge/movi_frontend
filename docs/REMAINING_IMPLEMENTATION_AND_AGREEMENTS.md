@@ -24,7 +24,7 @@
 | P0-2 | OpenBanking callback 복귀 | 외부 반영 | callback 공개 허용과 프런트 결과 URL 302 반영 | 백엔드·인프라 |
 | P0-3 | Voice/FDS 실제 환경 | 합의 필요 | staging URL, health/version, timeout, MIME과 오류 계약 고정 | AI·백엔드·인프라 |
 | P0-4 | 인증·조회·송금 staging E2E | 검증 | 테스트 계정·계좌·Seed 보호자와 시나리오 확보 후 수행 | 전 팀 |
-| P1-1 | 직접 입력 화면의 남은 Mock 제거 | 부분 구현 | 가짜 음성·Mock 수취인 노출 제거 완료, 사용되지 않는 Mock 서비스·타입 정리 | 프런트 |
+| P1-1 | 직접 입력 화면의 남은 Mock 제거 | 완료 | 미사용 Mock 서비스·타입·store 상태와 가짜 음성 결정을 제거하고 레거시 경로는 안전한 redirect로 유지 | 프런트 |
 | P1-2 | 브라우저 통합 테스트 기반 | 합의 필요 | Testing Library·Playwright 도입 승인 후 P0 흐름 자동화 | 프런트 |
 | P1-3 | 접근성 완료 검증 | 검증 | 키보드, 포커스, 200%, VoiceOver/TalkBack 실측 및 결함 수정 | 프런트·QA |
 | P1-4 | 인증·보안 운영 점검 | 검증 | 다중 탭, secret 이력, CORS, redirect URI, 로그의 민감정보 점검 | 프런트·백엔드·인프라 |
@@ -42,8 +42,9 @@ P0 합의가 끝나기 전에도 P1-1의 안전한 Mock 제거와 테스트 설�
 - [x] 고정 Mock 수취인 목록을 실제 화면에서 제거한다.
 - [x] 직접 입력 화면은 계약 확정 전까지 “정보 입력·검토만 가능, 이체 미실행”을 일관되게 표시한다.
 - [x] 수취인 이름과 금액을 서버 검증 결과로 오해하지 않도록 안내한다.
-- `guardianRiskAlertService`, 이전 transfer result store와 폐기된 Mock route 의존성을 조사한다.
-- 사용되지 않는 파일을 삭제할 때는 별도 승인을 받고 하나의 cleanup 브랜치로 처리한다.
+- [x] `guardianRiskAlertService`, 이전 transfer result store와 폐기된 Mock route 의존성을 조사하고 소비처가 없는 구현을 제거한다.
+- [x] `/accounts/register`와 폐기된 송금·보호자 결과 경로는 기존 북마크 호환을 위한 redirect만 유지한다.
+- [x] 서비스 계층의 계좌·거래 Mock은 `NEXT_PUBLIC_USE_MOCK` 개발 모드에서 사용하므로 유지한다.
 
 완료 조건: 실제 경로 어디에서도 프런트가 수취인, FDS 판정, 이체 성공 또는 보호자 발송 결과를 만들어 내지 않는다.
 

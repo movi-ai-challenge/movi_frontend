@@ -7,7 +7,6 @@ import { useBankStore } from "@/store/useBankStore";
 import type { Account, TransferDraft } from "@/types";
 
 interface TransferReviewVoiceGuideProps {
-  isVoiceDecisionActive: boolean;
   sourceAccount: Account;
   transferDraft: TransferDraft;
 }
@@ -32,7 +31,6 @@ function createTransferReviewText(
 }
 
 export function TransferReviewVoiceGuide({
-  isVoiceDecisionActive,
   sourceAccount,
   transferDraft,
 }: TransferReviewVoiceGuideProps) {
@@ -61,8 +59,6 @@ export function TransferReviewVoiceGuide({
   }, [guideText, resetVoiceState]);
 
   const playGuide = () => {
-    if (isVoiceDecisionActive) return;
-
     if (
       !("speechSynthesis" in window) ||
       !("SpeechSynthesisUtterance" in window)
@@ -141,13 +137,8 @@ export function TransferReviewVoiceGuide({
             음성 안내 멈추기
           </AccessibleButton>
         ) : (
-          <AccessibleButton
-            disabled={isVoiceDecisionActive}
-            onClick={playGuide}
-          >
-            {isVoiceDecisionActive
-              ? "음성 확인을 마친 후 다시 듣기"
-              : "송금 정보 다시 듣기"}
+          <AccessibleButton onClick={playGuide}>
+            송금 정보 다시 듣기
           </AccessibleButton>
         )}
       </div>
@@ -158,9 +149,6 @@ export function TransferReviewVoiceGuide({
           : null}
         {status === "unsupported"
           ? "이 브라우저는 음성 안내를 지원하지 않습니다. 위의 송금 정보를 확인해 주세요."
-          : null}
-        {isVoiceDecisionActive
-          ? "음성 확인 또는 취소 흐름이 진행 중입니다. 이 흐름을 마친 뒤 송금 정보를 다시 들을 수 있습니다."
           : null}
       </p>
     </section>
