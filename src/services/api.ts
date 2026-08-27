@@ -7,6 +7,7 @@ import {
   ApiResponseContractError,
   isRecord,
   parseApiData,
+  readApiFailureResponse,
 } from "@/services/apiResponse";
 import { useAuthStore } from "@/store/useAuthStore";
 import { useBankStore } from "@/store/useBankStore";
@@ -164,21 +165,41 @@ export type ApiErrorKind =
 
 export interface ApiError {
   kind: ApiErrorKind;
+  code: string | null;
   message: string;
   status: number | null;
 }
 
-function readApiErrorMessage(error: AxiosError): string | null {
+function readApiErrorDetails(error: AxiosError): {
+  code: string | null;
+  message: string | null;
+} {
+  const failure = readApiFailureResponse(error.response?.data);
+  if (failure) {
+    return {
+      code: failure.code,
+      message: failure.voiceMessage ?? failure.message,
+    };
+  }
+
   const value: unknown = error.response?.data;
-  if (!isRecord(value)) return null;
-  if (typeof value.voiceMessage === "string") return value.voiceMessage;
-  return typeof value.message === "string" ? value.message : null;
+  if (!isRecord(value)) return { code: null, message: null };
+  return {
+    code: null,
+    message:
+      typeof value.voiceMessage === "string"
+        ? value.voiceMessage
+        : typeof value.message === "string"
+          ? value.message
+          : null,
+  };
 }
 
 export function toApiError(error: unknown): ApiError {
   if (error instanceof ApiResponseContractError) {
     return {
       kind: "unknown",
+      code: error.code,
       message: error.voiceMessage ?? error.message,
       status: null,
     };
@@ -186,10 +207,12 @@ export function toApiError(error: unknown): ApiError {
 
   if (axios.isAxiosError(error)) {
     const status = error.response?.status ?? null;
+    const details = readApiErrorDetails(error);
 
     if (status === 401) {
       return {
         kind: "authentication_expired",
+        code: details.code,
         message: "인증 시간이 만료되었습니다. 다시 로그인해 주세요.",
         status,
       };
@@ -198,8 +221,8 @@ export function toApiError(error: unknown): ApiError {
     if (status === 403) {
       return {
         kind: "authorization_failed",
-        message:
-          readApiErrorMessage(error) ?? "이 작업을 수행할 권한이 없습니다.",
+        code: details.code,
+        message: details.message ?? "이 작업을 수행할 권한이 없습니다.",
         status,
       };
     }
@@ -207,6 +230,7 @@ export function toApiError(error: unknown): ApiError {
     if (!error.response) {
       return {
         kind: "network",
+        code: null,
         message: "서버와 연결할 수 없습니다.",
         status,
       };
@@ -214,13 +238,15 @@ export function toApiError(error: unknown): ApiError {
 
     return {
       kind: "unknown",
-      message: readApiErrorMessage(error) ?? "요청을 처리하지 못했습니다.",
+      code: details.code,
+      message: details.message ?? "요청을 처리하지 못했습니다.",
       status,
     };
   }
 
   return {
     kind: "unknown",
+    code: null,
     message: "알 수 없는 오류가 발생했습니다.",
     status: null,
   };

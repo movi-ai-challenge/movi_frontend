@@ -11,6 +11,7 @@ import {
   saveTransferRecoveryKey,
 } from "@/services/transferRecoveryStorage";
 import { getTransferStatus } from "@/services/transferService";
+import { selectVoiceErrorRecoveryAction } from "@/services/voiceErrorRecovery";
 import {
   MAX_VOICE_AUDIO_BYTES,
   MAX_VOICE_DURATION_SECONDS,
@@ -82,6 +83,7 @@ export function VoiceCommandPanel() {
     useState<TransferStatusResult | null>(null);
   const [isRecoveringTransfer, setIsRecoveringTransfer] = useState(false);
   const [recoveryErrorMessage, setRecoveryErrorMessage] = useState("");
+  const [voiceRetryLimitReached, setVoiceRetryLimitReached] = useState(false);
   const recorderRef = useRef<MediaRecorder | null>(null);
   const recordingFailedRef = useRef(false);
   const streamRef = useRef<MediaStream | null>(null);
@@ -170,6 +172,7 @@ export function VoiceCommandPanel() {
 
     setStatus("starting");
     setErrorMessage("");
+    setVoiceRetryLimitReached(false);
     try {
       const started = await startVoiceSession();
       setSession(started);
@@ -310,7 +313,7 @@ export function VoiceCommandPanel() {
         await recoverTransfer(idempotencyKey);
       }
     } catch (error: unknown) {
-      const uploadError = toApiError(error).message;
+      const uploadError = toApiError(error);
       if (awaitingConfirmation && idempotencyKey) {
         const recovered = await recoverTransfer(idempotencyKey);
         if (recovered) {
@@ -319,11 +322,27 @@ export function VoiceCommandPanel() {
           return;
         }
         showError(
-          `${uploadError} 송금 처리 여부를 확인하지 못했습니다. 같은 키로 상태를 다시 확인해 주세요.`,
+          `${uploadError.message} 송금 처리 여부를 확인하지 못했습니다. 같은 키로 상태를 다시 확인해 주세요.`,
         );
         return;
       }
-      showError(uploadError);
+
+      const recoveryAction = selectVoiceErrorRecoveryAction(uploadError.code);
+      if (recoveryAction === "direct_input") {
+        setAudio(null);
+        setSession(null);
+        setCommand(null);
+        setVoiceRetryLimitReached(true);
+        showError(uploadError.message);
+        return;
+      }
+
+      if (recoveryAction === "restart_session") {
+        setAudio(null);
+        setSession(null);
+        setCommand(null);
+      }
+      showError(uploadError.message);
     }
   };
 
@@ -595,7 +614,7 @@ export function VoiceCommandPanel() {
             className="mt-5 rounded-xl border-2 border-[var(--color-danger)] p-4 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[var(--color-focus)]"
           >
             <p className="font-semibold">{errorMessage}</p>
-            {audio && session ? (
+            {voiceRetryLimitReached ? null : audio && session ? (
               <AccessibleButton className="mt-3" onClick={() => void uploadRecording()}>
                 같은 녹음 다시 보내기
               </AccessibleButton>
@@ -609,6 +628,41 @@ export function VoiceCommandPanel() {
               </AccessibleButton>
             )}
           </div>
+        ) : null}
+
+        {voiceRetryLimitReached ? (
+          <section
+            className="mt-5 rounded-xl border-2 border-[var(--color-warning)] p-5"
+            aria-labelledby="voice-direct-input-title"
+          >
+            <h3 id="voice-direct-input-title" className="text-xl font-bold">
+              음성 재시도 한도에 도달했습니다
+            </h3>
+            <p className="mt-2 leading-7">
+              서버가 기존 음성 세션과 저장된 송금 정보를 폐기했습니다. 같은
+              세션을 계속 사용하지 말고 아래 화면에서 직접 진행해 주세요.
+            </p>
+            <nav className="mt-4 flex flex-wrap gap-3" aria-label="직접 입력 업무 선택">
+              <Link
+                href="/balance"
+                className="inline-flex min-h-11 items-center rounded-lg border-2 border-[var(--color-border)] px-4 py-2 font-semibold focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[var(--color-focus)]"
+              >
+                잔액 직접 조회
+              </Link>
+              <Link
+                href="/transactions"
+                className="inline-flex min-h-11 items-center rounded-lg border-2 border-[var(--color-border)] px-4 py-2 font-semibold focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[var(--color-focus)]"
+              >
+                거래내역 직접 조회
+              </Link>
+              <Link
+                href="/transfer"
+                className="inline-flex min-h-11 items-center rounded-lg border-2 border-[var(--color-border)] px-4 py-2 font-semibold focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[var(--color-focus)]"
+              >
+                송금 정보 직접 입력
+              </Link>
+            </nav>
+          </section>
         ) : null}
 
         {status === "unsupported" ? (
