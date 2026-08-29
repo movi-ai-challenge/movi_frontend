@@ -11,9 +11,16 @@ interface AccessibilityProviderProps {
 export function AccessibilityProvider({
   children,
 }: AccessibilityProviderProps) {
+  const hydrateAccessibilityPreferences = useAccessibilityStore(
+    (state) => state.hydrateAccessibilityPreferences,
+  );
   const highContrast = useAccessibilityStore((state) => state.highContrast);
   const largeText = useAccessibilityStore((state) => state.largeText);
   const simpleMode = useAccessibilityStore((state) => state.simpleMode);
+
+  useEffect(() => {
+    hydrateAccessibilityPreferences();
+  }, [hydrateAccessibilityPreferences]);
 
   useEffect(() => {
     const root = document.documentElement;
