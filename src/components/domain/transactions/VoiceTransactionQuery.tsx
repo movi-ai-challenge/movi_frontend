@@ -71,7 +71,7 @@ export function VoiceTransactionQuery({
 
   return (
     <section
-      className="mb-8 rounded-xl border-2 border-[var(--color-primary)] bg-[var(--color-surface)] p-5"
+      className="mb-8 rounded-xl border-2 border-[var(--color-accent)] bg-[var(--color-surface)] p-5"
       aria-labelledby="voice-transaction-title"
     >
       <h2 id="voice-transaction-title" className="text-xl font-bold">

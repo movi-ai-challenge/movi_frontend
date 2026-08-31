@@ -75,7 +75,7 @@ export function VoiceTransferDecision({
 
   return (
     <section
-      className="mt-6 rounded-xl border-2 border-[var(--color-primary)] bg-[var(--color-surface)] p-5"
+      className="mt-6 rounded-xl border-2 border-[var(--color-accent)] bg-[var(--color-surface)] p-5"
       aria-labelledby="voice-transfer-decision-title"
     >
       <h2 id="voice-transfer-decision-title" className="text-xl font-bold">
