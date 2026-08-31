@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useState } from "react";
 
+import { AppScreen } from "@/components/common/AppScreen";
 import { AccessibleButton } from "@/components/common/AccessibleButton";
 import { PageBackLink } from "@/components/common/PageBackLink";
 import {
@@ -37,20 +38,20 @@ export default function AccountRegistrationPage() {
   };
 
   return (
-    <main className="mx-auto flex min-h-[70vh] w-full max-w-xl flex-col justify-center px-6 py-12">
+    <AppScreen className="gap-5 pb-10 pt-6">
       <PageBackLink href="/accounts/connect">계좌 연결 화면으로</PageBackLink>
 
       <p
-        className="text-base font-bold text-[var(--color-primary)]"
+        className="text-base font-bold text-[var(--color-accent)]"
         data-secondary-content="true"
       >
         연결된 계좌 확인
       </p>
-      <h1 className="mt-2 text-4xl font-bold tracking-tight">
+      <h1 className="mt-2 text-2xl font-extrabold tracking-tight">
         이 계좌를 등록할까요?
       </h1>
       <p
-        className="mt-4 text-lg leading-8 text-[var(--color-text-muted)]"
+        className="mt-4 text-[15px] leading-relaxed text-[var(--color-text-muted)]"
         data-secondary-content="true"
       >
         계좌번호는 안전을 위해 일부만 보여드려요.
@@ -61,7 +62,7 @@ export default function AccountRegistrationPage() {
           className="mt-8 rounded-xl border-2 border-[var(--color-border)] bg-[var(--color-surface)] p-5"
           aria-labelledby="connected-account-title"
         >
-          <h2 id="connected-account-title" className="text-xl font-bold">
+          <h2 id="connected-account-title" className="text-[15px] font-bold">
             연결된 계좌
           </h2>
           <dl className="mt-5 grid gap-4">
@@ -69,13 +70,13 @@ export default function AccountRegistrationPage() {
               <dt className="text-sm font-semibold text-[var(--color-text-muted)]">
                 은행
               </dt>
-              <dd className="mt-1 text-xl font-bold">{candidate.bankName}</dd>
+              <dd className="mt-1 text-[15px] font-bold">{candidate.bankName}</dd>
             </div>
             <div>
               <dt className="text-sm font-semibold text-[var(--color-text-muted)]">
                 계좌 이름
               </dt>
-              <dd className="mt-1 text-lg font-semibold">
+              <dd className="mt-1 text-[15px] font-semibold">
                 {candidate.accountName}
               </dd>
             </div>
@@ -83,7 +84,7 @@ export default function AccountRegistrationPage() {
               <dt className="text-sm font-semibold text-[var(--color-text-muted)]">
                 계좌번호
               </dt>
-              <dd className="mt-1 text-lg font-semibold">
+              <dd className="mt-1 text-[15px] font-semibold">
                 {candidate.maskedAccountNumber}
               </dd>
             </div>
@@ -94,8 +95,8 @@ export default function AccountRegistrationPage() {
           className="mt-8 rounded-xl border-2 border-[var(--color-danger)] bg-[var(--color-surface)] p-5"
           role="alert"
         >
-          <h2 className="text-xl font-bold">연결된 계좌를 찾지 못했습니다.</h2>
-          <p className="mt-2 leading-7 text-[var(--color-text-muted)]">
+          <h2 className="text-[15px] font-bold">연결된 계좌를 찾지 못했습니다.</h2>
+          <p className="mt-2 leading-relaxed text-[var(--color-text-muted)]">
             계좌 연결 화면으로 돌아가 다시 시도해 주세요.
           </p>
         </div>
@@ -134,6 +135,6 @@ export default function AccountRegistrationPage() {
           </div>
         ) : null}
       </div>
-    </main>
+    </AppScreen>
   );
 }

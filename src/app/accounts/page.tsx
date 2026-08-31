@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 
+import { AppScreen } from "@/components/common/AppScreen";
 import { AccessibleButton } from "@/components/common/AccessibleButton";
 import { PageBackLink } from "@/components/common/PageBackLink";
 import { AccountApiError } from "@/components/domain/accounts/AccountApiError";
@@ -190,18 +191,18 @@ export default function ConnectedAccountListPage() {
   };
 
   return (
-    <main className="mx-auto min-h-[70vh] w-full max-w-3xl px-6 py-12">
+    <AppScreen className="gap-5 pb-10 pt-6">
       <PageBackLink href="/">처음 화면으로</PageBackLink>
 
       <p
-        className="text-base font-bold text-[var(--color-primary)]"
+        className="text-base font-bold text-[var(--color-accent)]"
         data-secondary-content="true"
       >
         오픈뱅킹
       </p>
-      <h1 className="mt-2 text-4xl font-bold tracking-tight">연결된 계좌</h1>
+      <h1 className="mt-2 text-2xl font-extrabold tracking-tight">연결된 계좌</h1>
       <p
-        className="mt-4 text-lg leading-8 text-[var(--color-text-muted)]"
+        className="mt-4 text-[15px] leading-relaxed text-[var(--color-text-muted)]"
         data-secondary-content="true"
       >
         등록한 계좌의 잔액과 기본 정보를 확인할 수 있어요.
@@ -209,7 +210,7 @@ export default function ConnectedAccountListPage() {
 
       <div className="mt-8" aria-live="polite" aria-busy={status === "loading"}>
         {status === "loading" ? (
-          <p className="rounded-xl border-2 border-[var(--color-border)] bg-[var(--color-surface)] p-6 text-lg font-semibold">
+          <p className="rounded-xl border-2 border-[var(--color-border)] bg-[var(--color-surface)] p-6 text-[15px] font-semibold">
             연결된 계좌를 불러오고 있어요.
           </p>
         ) : null}
@@ -226,10 +227,10 @@ export default function ConnectedAccountListPage() {
             className="rounded-xl border-2 border-[var(--color-border)] bg-[var(--color-surface)] p-6"
             aria-labelledby="empty-account-title"
           >
-            <h2 id="empty-account-title" className="text-xl font-bold">
+            <h2 id="empty-account-title" className="text-[15px] font-bold">
               아직 연결된 계좌가 없습니다.
             </h2>
-            <p className="mt-2 leading-7 text-[var(--color-text-muted)]">
+            <p className="mt-2 leading-relaxed text-[var(--color-text-muted)]">
               계좌를 연결하면 여기에서 잔액을 확인할 수 있어요.
             </p>
             <Link
@@ -243,7 +244,7 @@ export default function ConnectedAccountListPage() {
 
         {status === "ready" && accounts.length > 0 ? (
           <section aria-labelledby="account-count-title">
-            <h2 id="account-count-title" className="text-xl font-bold">
+            <h2 id="account-count-title" className="text-[15px] font-bold">
               등록한 계좌 {accounts.length}개
             </h2>
             <ul className="mt-4 grid list-none gap-4 p-0">
@@ -263,16 +264,18 @@ export default function ConnectedAccountListPage() {
                         </span>
                       ) : null}
                     </div>
-                    <h3 id={`${account.id}-name`} className="mt-1 text-2xl font-bold">
+                    <h3 id={`${account.id}-name`} className="mt-1 text-[15px] font-bold">
                       {account.accountName}
                     </h3>
-                    <p className="mt-2 text-lg">{account.maskedAccountNumber}</p>
+                    <p className="tabular mt-2 text-[13px] text-[var(--color-text-muted)]">
+                      {account.maskedAccountNumber}
+                    </p>
                     <dl className="mt-6 border-t-2 border-[var(--color-border)] pt-5">
                       <div>
                         <dt className="text-sm font-semibold text-[var(--color-text-muted)]">
                           잔액
                         </dt>
-                        <dd className="mt-1 text-3xl font-bold">
+                        <dd className="mt-1 text-[28px] font-black">
                           {currencyFormatter.format(account.balance)}
                         </dd>
                       </div>
@@ -326,25 +329,25 @@ export default function ConnectedAccountListPage() {
                   id="disconnect-account-title"
                   ref={disconnectHeadingRef}
                   tabIndex={-1}
-                  className="text-xl font-bold focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[var(--color-focus)]"
+                  className="text-[15px] font-bold focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[var(--color-focus)]"
                 >
                   이 계좌의 연결을 해제할까요?
                 </h2>
-                <p className="mt-3 text-lg font-semibold">
+                <p className="mt-3 text-[15px] font-semibold">
                   {pendingDisconnectAccount.bankName} · {pendingDisconnectAccount.accountName}
                 </p>
-                <p className="mt-1 text-lg">
+                <p className="tabular mt-1 text-[13px] text-[var(--color-text-muted)]">
                   {pendingDisconnectAccount.maskedAccountNumber}
                 </p>
-                <p className="mt-3 leading-7 text-[var(--color-text-muted)]">
+                <p className="mt-3 leading-relaxed text-[var(--color-text-muted)]">
                   연결을 해제하면 MOVI에서 이 계좌의 잔액과 거래내역을 조회하거나
                   이체에 사용할 수 없습니다.
                 </p>
 
                 {reauthenticationStatus === "idle" ? (
                   <section className="mt-5 rounded-lg border-2 border-[var(--color-warning)] p-4">
-                    <h3 className="text-lg font-bold">본인 확인이 필요합니다.</h3>
-                    <p className="mt-2 leading-7 text-[var(--color-text-muted)]">
+                    <h3 className="text-[15px] font-bold">본인 확인이 필요합니다.</h3>
+                    <p className="mt-2 leading-relaxed text-[var(--color-text-muted)]">
                       계좌 연결 해제 전에 PIN 또는 생체인증으로 본인 확인을
                       진행합니다. 현재는 실제 인증 API를 연결하기 전 Mock
                       단계입니다.
@@ -360,11 +363,11 @@ export default function ConnectedAccountListPage() {
 
                 {reauthenticationStatus === "verifying" ? (
                   <section
-                    className="mt-5 rounded-lg border-2 border-[var(--color-primary)] p-4"
+                    className="mt-5 rounded-lg border-2 border-[var(--color-accent)] p-4"
                     aria-live="polite"
                     aria-busy="true"
                   >
-                    <h3 className="text-lg font-bold">본인 확인 중입니다.</h3>
+                    <h3 className="text-[15px] font-bold">본인 확인 중입니다.</h3>
                     <p className="mt-2">잠시만 기다려 주세요.</p>
                   </section>
                 ) : null}
@@ -374,11 +377,11 @@ export default function ConnectedAccountListPage() {
                     <h3
                       ref={verificationResultRef}
                       tabIndex={-1}
-                      className="text-lg font-bold focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[var(--color-focus)]"
+                      className="text-[15px] font-bold focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[var(--color-focus)]"
                     >
                       Mock 본인 확인을 완료했습니다.
                     </h3>
-                    <p className="mt-2 leading-7">
+                    <p className="mt-2 leading-relaxed">
                       아래 최종 버튼을 눌러야 계좌 연결이 해제됩니다.
                     </p>
                   </section>
@@ -392,11 +395,11 @@ export default function ConnectedAccountListPage() {
                     <h3
                       ref={verificationResultRef}
                       tabIndex={-1}
-                      className="text-lg font-bold focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[var(--color-focus)]"
+                      className="text-[15px] font-bold focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[var(--color-focus)]"
                     >
                       본인 확인을 완료하지 못했습니다.
                     </h3>
-                    <p className="mt-2 leading-7 text-[var(--color-text-muted)]">
+                    <p className="mt-2 leading-relaxed text-[var(--color-text-muted)]">
                       계좌는 그대로 유지됩니다. 다시 시도해 주세요.
                     </p>
                     <AccessibleButton
@@ -443,19 +446,19 @@ export default function ConnectedAccountListPage() {
             </Link>
             <Link
               href="/accounts/connect"
-              className="mt-6 inline-flex min-h-11 items-center rounded-lg border-2 border-[var(--color-border)] bg-[var(--color-surface)] px-5 py-2 font-semibold text-[var(--color-text)] hover:border-[var(--color-primary)] focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[var(--color-focus)] focus-visible:ring-offset-2"
+              className="mt-6 inline-flex min-h-11 items-center rounded-lg border-2 border-[var(--color-border)] bg-[var(--color-surface)] px-5 py-2 font-semibold text-[var(--color-text)] hover:border-[var(--color-accent)] focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[var(--color-focus)] focus-visible:ring-offset-2"
             >
               새 계좌 연결하기
             </Link>
             <Link
               href="/transactions"
-              className="mt-3 inline-flex min-h-11 items-center rounded-lg border-2 border-[var(--color-border)] bg-[var(--color-surface)] px-5 py-2 font-semibold text-[var(--color-text)] hover:border-[var(--color-primary)] focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[var(--color-focus)] focus-visible:ring-offset-2 sm:ml-3 sm:mt-6"
+              className="mt-3 inline-flex min-h-11 items-center rounded-lg border-2 border-[var(--color-border)] bg-[var(--color-surface)] px-5 py-2 font-semibold text-[var(--color-text)] hover:border-[var(--color-accent)] focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[var(--color-focus)] focus-visible:ring-offset-2 sm:ml-3 sm:mt-6"
             >
               최근 거래내역 보기
             </Link>
             <Link
               href="/transfer"
-              className="mt-3 inline-flex min-h-11 items-center rounded-lg border-2 border-[var(--color-border)] bg-[var(--color-surface)] px-5 py-2 font-semibold text-[var(--color-text)] hover:border-[var(--color-primary)] focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[var(--color-focus)] focus-visible:ring-offset-2 sm:ml-3 sm:mt-6"
+              className="mt-3 inline-flex min-h-11 items-center rounded-lg border-2 border-[var(--color-border)] bg-[var(--color-surface)] px-5 py-2 font-semibold text-[var(--color-text)] hover:border-[var(--color-accent)] focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[var(--color-focus)] focus-visible:ring-offset-2 sm:ml-3 sm:mt-6"
             >
               송금하기
             </Link>
@@ -474,6 +477,6 @@ export default function ConnectedAccountListPage() {
           </p>
         ) : null}
       </div>
-    </main>
+    </AppScreen>
   );
 }
