@@ -1,10 +1,12 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useRef, useState } from "react";
 
 import { AccessibleButton } from "@/components/common/AccessibleButton";
-import { PageBackLink } from "@/components/common/PageBackLink";
+import { AppScreen } from "@/components/common/AppScreen";
+import { SurfaceCard } from "@/components/common/SurfaceCard";
 import { isMockMode } from "@/services/api";
 import { authenticateWithMock, startKakaoLogin } from "@/services/authService";
 import { useAuthStore } from "@/store/useAuthStore";
@@ -14,7 +16,7 @@ import type { MockAuthenticationMethod } from "@/types";
 const NEW_USER_RETURN_PATH = "/accounts/connect";
 const RETURNING_USER_RETURN_PATH = "/accounts";
 
-function getSafeReturnPath(defaultPath: string): string {
+function readRequestedPath(): string | null {
   const requestedPath = new URLSearchParams(window.location.search).get("next");
   if (
     !requestedPath ||
@@ -22,17 +24,20 @@ function getSafeReturnPath(defaultPath: string): string {
     requestedPath.startsWith("//") ||
     requestedPath.startsWith("/login")
   ) {
-    return defaultPath;
+    return null;
   }
 
   return requestedPath;
 }
 
+function getSafeReturnPath(defaultPath: string): string {
+  return readRequestedPath() ?? defaultPath;
+}
+
 export default function LoginPage() {
-  const [pendingMethod, setPendingMethod] =
-    useState<MockAuthenticationMethod | null>(null);
-  const [completedMethod, setCompletedMethod] =
-    useState<MockAuthenticationMethod | null>(null);
+  const router = useRouter();
+  const [pendingMethod, setPendingMethod] = useState<MockAuthenticationMethod | null>(null);
+  const [completedMethod, setCompletedMethod] = useState<MockAuthenticationMethod | null>(null);
   const [returnPath, setReturnPath] = useState(RETURNING_USER_RETURN_PATH);
   const [authenticationError, setAuthenticationError] = useState("");
   const setSession = useAuthStore((state) => state.setSession);
@@ -41,9 +46,7 @@ export default function LoginPage() {
 
   const authenticate = async (method: MockAuthenticationMethod) => {
     const defaultPath =
-      method === "PIN" || method === "생체인증"
-        ? RETURNING_USER_RETURN_PATH
-        : NEW_USER_RETURN_PATH;
+      method === "PIN" || method === "생체인증" ? RETURNING_USER_RETURN_PATH : NEW_USER_RETURN_PATH;
 
     setCompletedMethod(null);
     setAuthenticationError("");
@@ -56,9 +59,7 @@ export default function LoginPage() {
       setUser({ id: session.userId, name: session.displayName });
       setCompletedMethod(method);
     } catch {
-      setAuthenticationError(
-        "Mock 본인 확인을 완료하지 못했습니다. 다시 시도해 주세요.",
-      );
+      setAuthenticationError("Mock 본인 확인을 완료하지 못했습니다. 다시 시도해 주세요.");
       window.setTimeout(() => errorRef.current?.focus(), 0);
     } finally {
       setPendingMethod(null);
@@ -76,56 +77,74 @@ export default function LoginPage() {
     startKakaoLogin();
   };
 
+  // PIN 은 목업과 동일하게 별도 입력 화면으로 보낸다.
+  const goToPinScreen = () => {
+    const requestedPath = readRequestedPath();
+    router.push(requestedPath ? `/login/pin?next=${encodeURIComponent(requestedPath)}` : "/login/pin");
+  };
+
   return (
-    <main
-      id="main-content"
-      className="mx-auto flex min-h-[70vh] w-full max-w-xl flex-col justify-center px-6 py-12"
+    <AppScreen
+      className="gap-5 pt-6"
+      footer={
+        <>
+          <button
+            type="button"
+            disabled={isPending}
+            onClick={handleKakaoLogin}
+            className="flex h-14 items-center justify-center gap-2 rounded-2xl bg-[#FEE500] text-[16px] font-bold text-[#1A1200] transition-opacity hover:opacity-90 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[var(--color-focus)] focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-60 motion-reduce:transition-none"
+          >
+            {pendingMethod === "카카오" ? "카카오 인증을 준비하고 있어요" : "카카오로 시작하기"}
+          </button>
+          <p
+            className="text-center text-xs text-[var(--color-text-muted)]"
+            data-secondary-content="true"
+          >
+            로그인 시 서비스 이용약관에 동의합니다
+          </p>
+        </>
+      }
     >
-      <PageBackLink href="/">처음 화면으로</PageBackLink>
+      <nav aria-label="이전 단계">
+        <Link
+          href="/"
+          aria-label="첫 화면으로"
+          className="flex h-11 w-11 items-center justify-center rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] text-lg focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[var(--color-focus)] focus-visible:ring-offset-2"
+        >
+          <span aria-hidden="true">←</span>
+        </Link>
+      </nav>
 
-      <p
-        className="text-base font-bold text-[var(--color-primary)]"
-        data-secondary-content="true"
-      >
-        MOVI
-      </p>
-      <h1 className="mt-2 text-4xl font-bold tracking-tight">MOVI 시작하기</h1>
-      <p
-        className="mt-4 text-lg leading-8 text-[var(--color-text-muted)]"
-        data-secondary-content="true"
-      >
-        안전한 금융 서비스를 위해 본인 확인이 필요해요.
-      </p>
-
-      <section
-        className="mt-8 rounded-xl border-2 border-[var(--color-primary)] bg-[var(--color-surface)] p-6"
-        aria-labelledby="returning-user-login-title"
-      >
+      <div className="flex flex-col gap-2">
+        <h1 className="text-2xl font-extrabold tracking-tight">로그인</h1>
         <p
-          className="font-bold text-[var(--color-primary)]"
+          className="text-[15px] leading-relaxed text-[var(--color-text-muted)]"
           data-secondary-content="true"
         >
+          안전한 금융 서비스를 위해 본인 확인이 필요해요.
+        </p>
+      </div>
+
+      {/* 재방문 사용자 */}
+      <SurfaceCard accent as="section" className="p-5" aria-labelledby="returning-user-login-title">
+        <p className="text-xs font-bold text-[var(--color-accent)]" data-secondary-content="true">
           자주 사용하는 로그인
         </p>
-        <h2 id="returning-user-login-title" className="mt-2 text-2xl font-bold">
+        <h2 id="returning-user-login-title" className="mt-1 text-lg font-bold">
           다시 오셨나요?
         </h2>
         <p
-          className="mt-2 leading-7 text-[var(--color-text-muted)]"
+          className="mt-1 text-[13px] leading-relaxed text-[var(--color-text-muted)]"
           data-secondary-content="true"
         >
           PIN이나 생체인증으로 바로 로그인하세요.
         </p>
-        <div className="mt-5 grid gap-3 sm:grid-cols-2">
-          <AccessibleButton
-            isLoading={pendingMethod === "PIN"}
-            loadingLabel="PIN 로그인을 준비하고 있어요"
-            disabled={isPending}
-            onClick={() => void authenticate("PIN")}
-          >
+        <div className="mt-4 grid gap-2.5">
+          <AccessibleButton disabled={isPending} onClick={goToPinScreen}>
             PIN으로 로그인
           </AccessibleButton>
           <AccessibleButton
+            variant="secondary"
             isLoading={pendingMethod === "생체인증"}
             loadingLabel="생체인증을 준비하고 있어요"
             disabled={isPending}
@@ -134,23 +153,21 @@ export default function LoginPage() {
             생체인증으로 로그인
           </AccessibleButton>
         </div>
-      </section>
+      </SurfaceCard>
 
-      <section
-        className="mt-8 border-t-2 border-[var(--color-border)] pt-8"
-        aria-labelledby="new-user-login-title"
-      >
-        <h2 id="new-user-login-title" className="text-xl font-bold">
+      {/* 신규 사용자 */}
+      <section aria-labelledby="new-user-login-title">
+        <h2 id="new-user-login-title" className="text-[15px] font-bold">
           처음 이용하시나요?
         </h2>
         <p
-          className="mt-2 leading-7 text-[var(--color-text-muted)]"
+          className="mt-1 text-[13px] leading-relaxed text-[var(--color-text-muted)]"
           data-secondary-content="true"
         >
           PASS 또는 카카오로 본인 확인을 시작하세요.
         </p>
         <AccessibleButton
-          className="mt-4 w-full"
+          className="mt-3 w-full"
           variant="secondary"
           isLoading={pendingMethod === "PASS"}
           loadingLabel="PASS 인증을 준비하고 있어요"
@@ -159,37 +176,25 @@ export default function LoginPage() {
         >
           PASS로 처음 시작하기
         </AccessibleButton>
-        <AccessibleButton
-          className="mt-3 w-full"
-          variant="secondary"
-          isLoading={pendingMethod === "카카오"}
-          loadingLabel="카카오 인증을 준비하고 있어요"
-          disabled={isPending}
-          onClick={handleKakaoLogin}
-        >
-          카카오로 처음 시작하기
-        </AccessibleButton>
       </section>
 
-      <div className="mt-6 min-h-16" aria-live="polite" aria-atomic="true">
+      <div className="min-h-16" aria-live="polite" aria-atomic="true">
         {authenticationError ? (
           <div
             ref={errorRef}
             tabIndex={-1}
             role="alert"
-            className="rounded-lg border-2 border-[var(--color-danger)] bg-[var(--color-surface)] p-4 font-semibold focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[var(--color-focus)]"
+            className="rounded-2xl border border-[var(--color-danger)] bg-[var(--color-danger-surface)] p-4 text-[15px] font-semibold focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[var(--color-focus)]"
           >
             {authenticationError}
           </div>
         ) : null}
         {completedMethod ? (
-          <div className="rounded-lg border-2 border-[var(--color-success)] bg-[var(--color-surface)] p-4">
-            <p className="font-semibold">
-              {completedMethod} Mock 인증을 완료했습니다.
-            </p>
+          <div className="rounded-2xl border border-[var(--color-success-border)] bg-[var(--color-success-surface)] p-4">
+            <p className="text-[15px] font-semibold">{completedMethod} Mock 인증을 완료했습니다.</p>
             <Link
               href={returnPath}
-              className="mt-4 inline-flex min-h-11 items-center rounded-lg border-2 border-transparent bg-[var(--color-primary)] px-5 py-2 font-semibold text-[var(--color-on-primary)] hover:bg-[var(--color-primary-hover)] focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[var(--color-focus)] focus-visible:ring-offset-2"
+              className="mt-3 inline-flex min-h-11 items-center rounded-xl bg-[var(--color-primary)] px-5 py-2 font-semibold text-[var(--color-on-primary)] hover:bg-[var(--color-primary-hover)] focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[var(--color-focus)] focus-visible:ring-offset-2"
             >
               {returnPath === NEW_USER_RETURN_PATH
                 ? "계좌 연결하기"
@@ -200,6 +205,6 @@ export default function LoginPage() {
           </div>
         ) : null}
       </div>
-    </main>
+    </AppScreen>
   );
 }
