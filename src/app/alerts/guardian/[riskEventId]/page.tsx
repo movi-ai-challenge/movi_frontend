@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 
+import { AppScreen } from "@/components/common/AppScreen";
 import { AccessibleButton } from "@/components/common/AccessibleButton";
 import { getGuardianRiskAlertRecord } from "@/services/guardianRiskAlertService";
 import type {
@@ -119,17 +120,17 @@ export default function GuardianRiskAlertPage() {
   const content = record ? statusContent[record.status] : null;
 
   return (
-    <main className="mx-auto min-h-[70vh] w-full max-w-xl px-6 py-12">
+    <AppScreen className="gap-5 pb-10 pt-6">
       <p
-        className="font-bold text-[var(--color-primary)]"
+        className="font-bold text-[var(--color-accent)]"
         data-secondary-content="true"
       >
         위험 거래 보호자 알림
       </p>
-      <h1 className="mt-2 text-4xl font-bold tracking-tight">
+      <h1 className="mt-2 text-2xl font-extrabold tracking-tight">
         보호자 알림 상태를 확인합니다
       </h1>
-      <p className="mt-4 text-lg leading-8 text-[var(--color-text-muted)]">
+      <p className="mt-4 text-[15px] leading-relaxed text-[var(--color-text-muted)]">
         보호자는 위험 거래 알림만 받습니다. 계좌나 거래내역을 조회하거나 이체를
         승인·거절할 수 없습니다.
       </p>
@@ -141,7 +142,7 @@ export default function GuardianRiskAlertPage() {
         aria-busy={status === "loading"}
       >
         {status === "loading" ? (
-          <p className="rounded-xl border-2 border-[var(--color-border)] bg-[var(--color-surface)] p-6 text-lg font-semibold">
+          <p className="rounded-xl border-2 border-[var(--color-border)] bg-[var(--color-surface)] p-6 text-[15px] font-semibold">
             백엔드가 처리한 보호자 알림 상태를 불러오고 있어요.
           </p>
         ) : null}
@@ -151,11 +152,11 @@ export default function GuardianRiskAlertPage() {
             <h2
               ref={resultHeadingRef}
               tabIndex={-1}
-              className="text-xl font-bold focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[var(--color-focus)]"
+              className="text-[15px] font-bold focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[var(--color-focus)]"
             >
               위험 거래 알림 기록을 찾지 못했습니다.
             </h2>
-            <p className="mt-2 leading-7 text-[var(--color-text-muted)]">
+            <p className="mt-2 leading-relaxed text-[var(--color-text-muted)]">
               잘못된 경로이거나 더 이상 확인할 수 없는 위험 이벤트입니다.
             </p>
           </section>
@@ -169,11 +170,11 @@ export default function GuardianRiskAlertPage() {
             <h2
               ref={resultHeadingRef}
               tabIndex={-1}
-              className="text-xl font-bold focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[var(--color-focus)]"
+              className="text-[15px] font-bold focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[var(--color-focus)]"
             >
               보호자 알림 상태를 불러오지 못했습니다.
             </h2>
-            <p className="mt-2 leading-7 text-[var(--color-text-muted)]">
+            <p className="mt-2 leading-relaxed text-[var(--color-text-muted)]">
               네트워크 상태를 확인하고 다시 불러와 주세요. 다시 불러와도 알림을
               새로 발송하지 않습니다.
             </p>
@@ -194,11 +195,11 @@ export default function GuardianRiskAlertPage() {
             <h2
               ref={resultHeadingRef}
               tabIndex={-1}
-              className="mt-2 text-xl font-bold focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[var(--color-focus)]"
+              className="mt-2 text-[15px] font-bold focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[var(--color-focus)]"
             >
               {content.title}
             </h2>
-            <p className="mt-2 leading-7 text-[var(--color-text-muted)]">
+            <p className="mt-2 leading-relaxed text-[var(--color-text-muted)]">
               {content.description}
             </p>
             <dl className="mt-5 grid gap-4 border-t-2 border-[var(--color-border)] pt-5">
@@ -206,7 +207,7 @@ export default function GuardianRiskAlertPage() {
                 <dt className="font-semibold text-[var(--color-text-muted)]">
                   감지 내용
                 </dt>
-                <dd className="mt-1 text-lg font-bold">{record.summary}</dd>
+                <dd className="mt-1 text-[15px] font-bold">{record.summary}</dd>
               </div>
               <div>
                 <dt className="font-semibold text-[var(--color-text-muted)]">
@@ -227,7 +228,7 @@ export default function GuardianRiskAlertPage() {
                 </div>
               ) : null}
             </dl>
-            <p className="mt-5 leading-7 text-[var(--color-text-muted)]">
+            <p className="mt-5 leading-relaxed text-[var(--color-text-muted)]">
               알림 채널과 보호자에게 표시할 최소 정보는 백엔드·기획 협의 후
               확정합니다. 이 화면에는 계좌번호, 잔액, 수취인, 금액을 표시하지
               않습니다.
@@ -238,10 +239,10 @@ export default function GuardianRiskAlertPage() {
 
       <Link
         href="/"
-        className="mt-6 inline-flex min-h-11 items-center rounded-lg border-2 border-[var(--color-border)] bg-[var(--color-surface)] px-5 py-2 font-semibold text-[var(--color-text)] hover:border-[var(--color-primary)] focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[var(--color-focus)] focus-visible:ring-offset-2"
+        className="mt-6 inline-flex min-h-11 items-center rounded-lg border-2 border-[var(--color-border)] bg-[var(--color-surface)] px-5 py-2 font-semibold text-[var(--color-text)] hover:border-[var(--color-accent)] focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[var(--color-focus)] focus-visible:ring-offset-2"
       >
         MOVI 처음 화면으로
       </Link>
-    </main>
+    </AppScreen>
   );
 }
