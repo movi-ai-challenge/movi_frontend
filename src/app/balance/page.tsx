@@ -101,7 +101,7 @@ export default function BalanceInquiryPage() {
       <PageBackLink href="/accounts">연결된 계좌로</PageBackLink>
 
       <p
-        className="text-base font-bold text-[var(--color-primary)]"
+        className="text-base font-bold text-[var(--color-accent)]"
         data-secondary-content="true"
       >
         잔액조회
@@ -195,7 +195,7 @@ export default function BalanceInquiryPage() {
                 기본 계좌가 아닌 계좌는{" "}
                 <Link
                   href="/accounts"
-                  className="font-semibold text-[var(--color-primary)] underline underline-offset-4 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[var(--color-focus)]"
+                  className="font-semibold text-[var(--color-accent)] underline underline-offset-4 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[var(--color-focus)]"
                 >
                   계좌 목록에서 별칭을 설정
                 </Link>

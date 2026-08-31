@@ -84,7 +84,7 @@ export default function TransferResultPage() {
 
   return (
     <main className="mx-auto min-h-[70vh] w-full max-w-xl px-6 py-12">
-      <p className="font-bold text-[var(--color-primary)]">송금 결과</p>
+      <p className="font-bold text-[var(--color-accent)]">송금 결과</p>
       <h1 className="mt-2 text-4xl font-bold tracking-tight">{statusLabels[result.status]}</h1>
       <p className="mt-4 text-lg leading-8" aria-live="polite">{result.voiceMessage}</p>
 

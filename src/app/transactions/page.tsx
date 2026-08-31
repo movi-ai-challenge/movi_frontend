@@ -194,7 +194,7 @@ export default function TransactionListPage() {
     <main className="mx-auto min-h-[70vh] w-full max-w-3xl px-6 py-12">
       <PageBackLink href="/accounts">연결된 계좌로</PageBackLink>
 
-      <p className="text-base font-bold text-[var(--color-primary)]">
+      <p className="text-base font-bold text-[var(--color-accent)]">
         거래내역
       </p>
       <h1 className="mt-2 text-4xl font-bold tracking-tight">최근 거래내역</h1>
@@ -353,7 +353,7 @@ export default function TransactionListPage() {
                       <article aria-labelledby={`${transaction.id}-description`}>
                         <div className="flex flex-wrap items-start justify-between gap-4">
                           <div>
-                            <p className="font-bold text-[var(--color-primary)]">
+                            <p className="font-bold text-[var(--color-accent)]">
                               {typeLabels[transaction.type]}
                             </p>
                             <h3

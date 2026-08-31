@@ -127,7 +127,7 @@ export default function PinRegisterPage() {
       id="main-content"
       className="mx-auto min-h-[70vh] w-full max-w-xl px-6 py-12"
     >
-      <p className="font-bold text-[var(--color-primary)]">마지막 가입 단계</p>
+      <p className="font-bold text-[var(--color-accent)]">마지막 가입 단계</p>
       <h1 className="mt-2 text-3xl font-bold">PIN 등록</h1>
       <p className="mt-4 text-lg leading-8 text-[var(--color-text-muted)]">
         다음 로그인에 사용할 휴대전화 번호와 숫자 6자리 PIN을 등록해

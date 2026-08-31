@@ -73,7 +73,7 @@ export default function TransferReviewPage() {
   return (
     <main className="mx-auto min-h-[70vh] w-full max-w-xl px-6 py-12">
       <PageBackLink href="/transfer">송금 정보 수정하기</PageBackLink>
-      <p className="font-bold text-[var(--color-primary)]">최종 확인</p>
+      <p className="font-bold text-[var(--color-accent)]">최종 확인</p>
       <h1 className="mt-2 text-4xl font-bold tracking-tight">이 내용대로 송금할까요?</h1>
       <p className="mt-4 text-lg leading-8 text-[var(--color-text-muted)]">
         아직 이체되지 않았습니다. 아래 버튼을 누르면 실제 송금과 FDS 검사가 시작됩니다.
