@@ -5,18 +5,14 @@ import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 
 import { AccessibleButton } from "@/components/common/AccessibleButton";
-import { PageBackLink } from "@/components/common/PageBackLink";
+import { Amount } from "@/components/common/Amount";
+import { AppScreen } from "@/components/common/AppScreen";
+import { SurfaceCard } from "@/components/common/SurfaceCard";
 import { TransferReviewVoiceGuide } from "@/components/domain/transfer/TransferReviewVoiceGuide";
 import { VoiceTransferDecision } from "@/components/domain/transfer/VoiceTransferDecision";
 import { getConnectedAccounts } from "@/services/accountService";
 import { useBankStore } from "@/store/useBankStore";
 import type { Account } from "@/types";
-
-const currencyFormatter = new Intl.NumberFormat("ko-KR", {
-  style: "currency",
-  currency: "KRW",
-  maximumFractionDigits: 0,
-});
 
 export default function TransferReviewPage() {
   const router = useRouter();
@@ -33,9 +29,7 @@ export default function TransferReviewPage() {
       .then((accounts) => {
         if (!isActive || !transferDraft) return;
         setSourceAccount(
-          accounts.find(
-            (account) => account.id === transferDraft.sourceAccountId,
-          ) ??
+          accounts.find((account) => account.id === transferDraft.sourceAccountId) ??
             accounts[0] ??
             null,
         );
@@ -51,80 +45,119 @@ export default function TransferReviewPage() {
 
   if (!transferDraft) {
     return (
-      <main className="mx-auto min-h-[70vh] w-full max-w-xl px-6 py-12">
-        <h1 className="text-3xl font-bold">확인할 송금 정보가 없습니다.</h1>
-        <p className="mt-4 leading-7 text-[var(--color-text-muted)]">
+      <AppScreen
+        className="justify-center gap-3"
+        footer={
+          <Link
+            href="/transfer"
+            className="flex h-14 items-center justify-center rounded-2xl bg-[var(--color-primary)] text-[15px] font-bold text-[var(--color-on-primary)] focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[var(--color-focus)] focus-visible:ring-offset-2"
+          >
+            송금 정보 입력하기
+          </Link>
+        }
+      >
+        <h1 className="text-2xl font-extrabold">확인할 송금 정보가 없습니다.</h1>
+        <p className="leading-relaxed text-[var(--color-text-muted)]">
           받는 사람과 금액을 먼저 입력해 주세요.
         </p>
-        <Link
-          href="/transfer"
-          className="mt-6 inline-flex min-h-11 items-center rounded-lg bg-[var(--color-primary)] px-6 py-3 font-semibold text-[var(--color-on-primary)] focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[var(--color-focus)] focus-visible:ring-offset-2"
-        >
-          송금 정보 입력하기
-        </Link>
-      </main>
+      </AppScreen>
     );
   }
 
   return (
-    <main className="mx-auto min-h-[70vh] w-full max-w-xl px-6 py-12">
-      <PageBackLink href="/transfer">송금 정보 수정하기</PageBackLink>
+    <AppScreen
+      className="gap-4 pt-6"
+      footer={
+        isConfirmed ? (
+          <Link
+            href="/transfer/evaluate"
+            className="flex h-14 items-center justify-center rounded-2xl bg-[var(--color-primary)] text-[15px] font-bold text-[var(--color-on-primary)] hover:bg-[var(--color-primary-hover)] focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[var(--color-focus)] focus-visible:ring-offset-2"
+          >
+            거래 안전 확인 시작
+          </Link>
+        ) : (
+          <div className="flex gap-2.5">
+            <button
+              type="button"
+              onClick={() => {
+                setIsVoiceDecisionActive(false);
+                clearTransferDraft();
+                router.push("/transfer");
+              }}
+              className="flex h-14 flex-1 items-center justify-center rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] text-[15px] font-semibold text-[var(--color-text)] focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[var(--color-focus)] focus-visible:ring-offset-2"
+            >
+              취소
+            </button>
+            <AccessibleButton
+              className="flex-[2]"
+              onClick={() => {
+                setIsVoiceDecisionActive(false);
+                setIsConfirmed(true);
+              }}
+            >
+              확인했어요
+            </AccessibleButton>
+          </div>
+        )
+      }
+    >
+      <nav aria-label="이전 단계">
+        <Link
+          href="/transfer"
+          aria-label="송금 정보 수정하기"
+          className="flex h-11 w-11 items-center justify-center rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] text-lg focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[var(--color-focus)] focus-visible:ring-offset-2"
+        >
+          <span aria-hidden="true">←</span>
+        </Link>
+      </nav>
 
-      <p className="font-bold text-[var(--color-primary)]">최종 확인</p>
-      <h1 className="mt-2 text-4xl font-bold tracking-tight">
-        이 내용이 맞는지 확인해 주세요
-      </h1>
-      <p className="mt-4 text-lg leading-8 text-[var(--color-text-muted)]">
-        아직 이체되지 않았습니다. 받는 사람과 금액을 천천히 확인해 주세요.
-      </p>
+      <div className="flex flex-col gap-1.5">
+        <h1 className="text-2xl font-extrabold tracking-tight">이체 확인</h1>
+        <p className="text-[15px] leading-relaxed text-[var(--color-text-muted)]">
+          아직 이체되지 않았습니다. 받는 사람과 금액을 천천히 확인해 주세요.
+        </p>
+      </div>
 
-      <section
-        className="mt-8 rounded-xl border-2 border-[var(--color-border)] bg-[var(--color-surface)] p-6"
-        aria-labelledby="transfer-review-title"
-      >
-        <h2 id="transfer-review-title" className="text-xl font-bold">
+      {/* 송금 정보 */}
+      <SurfaceCard as="section" className="p-5" aria-labelledby="transfer-review-title">
+        <h2 id="transfer-review-title" className="sr-only">
           송금 정보
         </h2>
-        <dl className="mt-6 grid gap-6">
-          <div>
-            <dt className="font-semibold text-[var(--color-text-muted)]">
-              받는 사람
-            </dt>
-            <dd className="mt-1 text-2xl font-bold">
-              {transferDraft.recipientName}
-            </dd>
-            <dd className="mt-1">
-              {transferDraft.recipientBankName &&
-              transferDraft.recipientMaskedAccountNumber
+        <dl className="flex flex-col">
+          <ReviewRow
+            label="받는 분"
+            value={transferDraft.recipientName}
+            sub={
+              transferDraft.recipientBankName && transferDraft.recipientMaskedAccountNumber
                 ? `${transferDraft.recipientBankName} · ${transferDraft.recipientMaskedAccountNumber}`
-                : "직접 입력한 받는 사람"}
-            </dd>
-          </div>
-          <div className="border-t-2 border-[var(--color-border)] pt-5">
-            <dt className="font-semibold text-[var(--color-text-muted)]">
-              보낼 금액
-            </dt>
-            <dd className="mt-1 text-4xl font-bold">
-              {currencyFormatter.format(transferDraft.amount)}
-            </dd>
-          </div>
-          <div className="border-t-2 border-[var(--color-border)] pt-5">
-            <dt className="font-semibold text-[var(--color-text-muted)]">
-              출금 계좌
-            </dt>
-            <dd className="mt-1 text-lg font-bold">
-              {sourceAccount
+                : "직접 입력한 받는 사람"
+            }
+          />
+          <ReviewRow
+            label="이체 금액"
+            value={
+              <span className="text-[22px] font-black text-[var(--color-accent)]">
+                <Amount value={transferDraft.amount} />
+              </span>
+            }
+          />
+          <ReviewRow
+            label="출금 계좌"
+            value={
+              sourceAccount
                 ? `${sourceAccount.accountName} · ${sourceAccount.bankName}`
-                : "기본 계좌를 확인하고 있어요"}
-            </dd>
-            {sourceAccount ? (
-              <dd className="mt-1 text-[var(--color-text-muted)]">
-                {sourceAccount.maskedAccountNumber}
-              </dd>
-            ) : null}
-          </div>
+                : "기본 계좌를 확인하고 있어요"
+            }
+            sub={sourceAccount ? sourceAccount.maskedAccountNumber : undefined}
+            isLast
+          />
         </dl>
-      </section>
+
+        <p className="mt-4 flex items-center gap-2 rounded-xl bg-[var(--color-surface-sunken)] px-3.5 py-2.5 text-[12px] text-[var(--color-text-muted)]">
+          <span aria-hidden="true">🛡️</span>
+          이상거래 위험도 평가 후 처리됩니다
+        </p>
+      </SurfaceCard>
 
       {sourceAccount ? (
         <TransferReviewVoiceGuide
@@ -136,46 +169,58 @@ export default function TransferReviewPage() {
       ) : null}
 
       {!isConfirmed ? (
-        <>
-          <VoiceTransferDecision
-            onActiveChange={setIsVoiceDecisionActive}
-            onConfirm={() => {
-              setIsVoiceDecisionActive(false);
-              setIsConfirmed(true);
-            }}
-            onCancel={() => {
-              setIsVoiceDecisionActive(false);
-              clearTransferDraft();
-              router.push("/transfer");
-            }}
-          />
-          <AccessibleButton
-            className="mt-6 w-full"
-            onClick={() => {
-              setIsVoiceDecisionActive(false);
-              setIsConfirmed(true);
-            }}
-          >
-            화면에서 이체 내용 확인 완료
-          </AccessibleButton>
-        </>
+        <VoiceTransferDecision
+          onActiveChange={setIsVoiceDecisionActive}
+          onConfirm={() => {
+            setIsVoiceDecisionActive(false);
+            setIsConfirmed(true);
+          }}
+          onCancel={() => {
+            setIsVoiceDecisionActive(false);
+            clearTransferDraft();
+            router.push("/transfer");
+          }}
+        />
       ) : (
-        <section
-          className="mt-6 rounded-xl border-2 border-[var(--color-success)] bg-[var(--color-surface)] p-5"
+        <SurfaceCard
+          as="section"
+          className="border-[var(--color-success-border)] bg-[var(--color-success-surface)] p-5"
           aria-live="polite"
         >
-          <h2 className="text-xl font-bold">송금 정보를 확인했습니다.</h2>
-          <p className="mt-2 leading-7">
+          <h2 className="text-[15px] font-bold">송금 정보를 확인했습니다.</h2>
+          <p className="mt-1.5 text-[13px] leading-relaxed text-[var(--color-text-muted)]">
             아직 이체는 실행되지 않았습니다. 다음 단계에서 다시 확인합니다.
           </p>
-          <Link
-            href="/transfer/evaluate"
-            className="mt-5 inline-flex min-h-11 w-full items-center justify-center rounded-lg border-2 border-transparent bg-[var(--color-primary)] px-6 py-3 font-semibold text-[var(--color-on-primary)] hover:bg-[var(--color-primary-hover)] focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[var(--color-focus)] focus-visible:ring-offset-2"
-          >
-            거래 안전 확인 시작
-          </Link>
-        </section>
+        </SurfaceCard>
       )}
-    </main>
+    </AppScreen>
+  );
+}
+
+function ReviewRow({
+  label,
+  value,
+  sub,
+  isLast = false,
+}: {
+  label: string;
+  value: React.ReactNode;
+  sub?: string;
+  isLast?: boolean;
+}) {
+  return (
+    <div
+      className={`flex items-start justify-between gap-4 py-3.5 ${
+        isLast ? "" : "border-b border-[var(--color-border)]"
+      }`}
+    >
+      <dt className="shrink-0 text-[13px] text-[var(--color-text-muted)]">{label}</dt>
+      <dd className="text-right">
+        <span className="block text-[15px] font-semibold">{value}</span>
+        {sub ? (
+          <span className="mt-0.5 block text-[11px] text-[var(--color-text-muted)]">{sub}</span>
+        ) : null}
+      </dd>
+    </div>
   );
 }
