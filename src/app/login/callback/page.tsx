@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useEffect } from "react";
 
+import { AppScreen } from "@/components/common/AppScreen";
 import { parseKakaoLoginResult } from "@/services/authService";
 import { useAuthStore } from "@/store/useAuthStore";
 
@@ -21,10 +22,7 @@ function KakaoLoginCallback() {
 
   if (!session) {
     return (
-      <main
-        id="main-content"
-        className="mx-auto flex min-h-[70vh] w-full max-w-xl flex-col justify-center px-6 py-12"
-      >
+      <AppScreen className="justify-center gap-3">
         <h1 className="text-2xl font-bold">카카오 로그인을 완료하지 못했습니다.</h1>
         <p className="mt-4 text-lg leading-8 text-[var(--color-text-muted)]">
           다시 시도해 주세요.
@@ -35,19 +33,16 @@ function KakaoLoginCallback() {
         >
           로그인 화면으로 돌아가기
         </Link>
-      </main>
+      </AppScreen>
     );
   }
 
   return (
-    <main
-      id="main-content"
-      className="mx-auto flex min-h-[70vh] w-full max-w-xl flex-col justify-center px-6 py-12"
-      aria-live="polite"
-      aria-busy="true"
-    >
-      <p className="text-lg font-semibold">카카오 로그인을 완료하고 있어요.</p>
-    </main>
+    <AppScreen className="justify-center">
+      <p className="text-lg font-semibold" aria-live="polite" aria-busy="true">
+        카카오 로그인을 완료하고 있어요.
+      </p>
+    </AppScreen>
   );
 }
 
