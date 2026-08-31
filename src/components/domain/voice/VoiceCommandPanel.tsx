@@ -374,7 +374,7 @@ export function VoiceCommandPanel() {
 
   return (
     <section
-      className="mt-8 rounded-2xl border-2 border-[var(--color-primary)] bg-[var(--color-surface)] p-6"
+      className="mt-8 rounded-2xl border-2 border-[var(--color-accent)] bg-[var(--color-surface)] p-6"
       aria-labelledby="voice-command-title"
     >
       <h2 id="voice-command-title" className="text-2xl font-bold">
@@ -448,7 +448,7 @@ export function VoiceCommandPanel() {
 
         {transferStatus ? (
           <section
-            className="mt-5 rounded-xl border-2 border-[var(--color-primary)] p-5"
+            className="mt-5 rounded-xl border-2 border-[var(--color-accent)] p-5"
             aria-labelledby="recovered-transfer-title"
           >
             <h3 id="recovered-transfer-title" className="text-xl font-bold">

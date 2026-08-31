@@ -118,7 +118,7 @@ export default function TransactionDetailPage() {
     <main className="mx-auto min-h-[70vh] w-full max-w-xl px-6 py-12">
       <PageBackLink href="/transactions">거래내역으로</PageBackLink>
 
-      <p className="text-base font-bold text-[var(--color-primary)]">
+      <p className="text-base font-bold text-[var(--color-accent)]">
         거래내역
       </p>
       <h1 className="mt-2 text-4xl font-bold tracking-tight">거래 상세</h1>
@@ -163,7 +163,7 @@ export default function TransactionDetailPage() {
             className="rounded-xl border-2 border-[var(--color-border)] bg-[var(--color-surface)] p-6"
             aria-labelledby="transaction-detail-description"
           >
-            <p className="font-bold text-[var(--color-primary)]">
+            <p className="font-bold text-[var(--color-accent)]">
               {typeLabels[transaction.type]}
             </p>
             <h2

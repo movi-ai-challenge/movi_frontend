@@ -95,7 +95,7 @@ export default function TransferInputPage() {
   return (
     <main className="mx-auto min-h-[70vh] w-full max-w-xl px-6 py-12">
       <PageBackLink href="/accounts">연결된 계좌로</PageBackLink>
-      <p className="font-bold text-[var(--color-primary)]">직접 송금</p>
+      <p className="font-bold text-[var(--color-accent)]">직접 송금</p>
       <h1 className="mt-2 text-4xl font-bold tracking-tight">받는 사람과 금액을 선택해 주세요</h1>
       <p className="mt-4 text-lg leading-8 text-[var(--color-text-muted)]">
         안전을 위해 등록된 받는 사람에게만 보낼 수 있습니다. 다음 화면에서 내용을 다시 확인하기 전에는 이체되지 않습니다.
@@ -134,7 +134,7 @@ export default function TransferInputPage() {
                       setSelectedRecipientId(recipient.id);
                       setErrorMessage("");
                     }}
-                    className="flex min-h-16 w-full items-center justify-between gap-4 rounded-xl border-2 border-[var(--color-border)] bg-[var(--color-surface)] p-4 text-left hover:border-[var(--color-primary)] focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[var(--color-focus)] focus-visible:ring-offset-2 aria-pressed:border-[var(--color-primary)]"
+                    className="flex min-h-16 w-full items-center justify-between gap-4 rounded-xl border-2 border-[var(--color-border)] bg-[var(--color-surface)] p-4 text-left hover:border-[var(--color-accent)] focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[var(--color-focus)] focus-visible:ring-offset-2 aria-pressed:border-[var(--color-accent)]"
                   >
                     <span>
                       <span className="block text-lg font-bold">{recipient.nickname}</span>
@@ -142,7 +142,7 @@ export default function TransferInputPage() {
                         예금주 {recipient.holderName} · 은행 코드 {recipient.bankCode} · {recipient.maskedAccountNumber}
                       </span>
                     </span>
-                    <span className="font-bold text-[var(--color-primary)]">
+                    <span className="font-bold text-[var(--color-accent)]">
                       {selectedRecipientId === recipient.id ? "선택됨" : "선택"}
                     </span>
                   </button>

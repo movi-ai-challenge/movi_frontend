@@ -50,7 +50,7 @@ export default function LoginPage() {
       <PageBackLink href="/">처음 화면으로</PageBackLink>
 
       <p
-        className="text-base font-bold text-[var(--color-primary)]"
+        className="text-base font-bold text-[var(--color-accent)]"
         data-secondary-content="true"
       >
         MOVI
@@ -64,11 +64,11 @@ export default function LoginPage() {
       </p>
 
       <section
-        className="mt-8 rounded-xl border-2 border-[var(--color-primary)] bg-[var(--color-surface)] p-6"
+        className="mt-8 rounded-xl border-2 border-[var(--color-accent)] bg-[var(--color-surface)] p-6"
         aria-labelledby="returning-user-login-title"
       >
         <p
-          className="font-bold text-[var(--color-primary)]"
+          className="font-bold text-[var(--color-accent)]"
           data-secondary-content="true"
         >
           기존 사용자

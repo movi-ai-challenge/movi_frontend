@@ -1,42 +1,117 @@
+@import url('https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700;900&family=JetBrains+Mono:wght@400;500;700&display=swap');
 @import "tailwindcss";
 
+/* ============================================================
+   MOVI 디자인 토큰
+
+   Figma 목업(Create user flow and mockups)의 다크 네이비 팔레트를
+   기본 테마로 사용한다.
+
+   목업의 색을 그대로 옮기지 않고 두 곳을 조정했다. 목업은 시각
+   기준이고, 이 서비스는 저시력 사용자가 주 대상이라 WCAG AA 가
+   기능 요구사항이기 때문이다. (AGENTS.md 접근성 완료 기준)
+
+   1. --color-primary
+      목업의 #4F7EFF 위에 흰 글씨는 대비 3.65:1 로 AA(4.5) 미달이다.
+      버튼 면은 #3B6AF0 으로 낮추고(흰 글씨 4.66:1), 다크 배경 위
+      강조 텍스트는 --color-accent(#93B4FF, 9.6:1)로 분리했다.
+      하나의 토큰으로는 두 조건을 동시에 만족시킬 수 없다.
+
+   2. --color-text-dim
+      목업의 #3A4A6A 는 배경 대비 2.2:1 로 크게 미달한다.
+      본문 muted 와 같은 값을 쓰고, 위계는 색이 아니라 크기와
+      굵기로 표현한다.
+   ============================================================ */
+
 :root {
-  --color-background: #ffffff;
-  --color-surface: #f2f4f6;
-  --color-text: #191f28;
-  --color-text-muted: #4e5968;
-  --color-border: #e5e8eb;
-  --color-primary: #3182f6;
-  --color-primary-hover: #2272eb;
+  /* 배경 계층 */
+  --color-background: #05091a;
+  --color-surface: #0c1228;
+  --color-surface-raised: #0c1e42;
+  --color-surface-sunken: #0d1929;
+
+  /* 텍스트 */
+  --color-text: #eef2ff;
+  --color-text-muted: #6b7ba4;
+  --color-text-dim: #6b7ba4;
+
+  /* 경계 */
+  --color-border: #1c2845;
+  --color-border-strong: #1c2d54;
+
+  /* 주색 */
+  --color-primary: #3b6af0;
+  --color-primary-hover: #2f5ad8;
+  --color-accent: #93b4ff;
   --color-on-primary: #ffffff;
-  --color-danger: #e42939;
-  --color-warning: #8a4b08;
-  --color-success: #167245;
-  --color-focus: #2563eb;
+
+  /* 상태 */
+  --color-danger: #fca5a5;
+  --color-danger-surface: #1a0808;
+  --color-danger-border: #2a1010;
+
+  --color-warning: #ffa533;
+  --color-warning-surface: #140c00;
+  --color-warning-border: #2a1a00;
+
+  --color-success: #34d399;
+  --color-success-surface: #082a16;
+  --color-success-border: #0a4a2c;
+
+  --color-focus: #93b4ff;
+
+  /* 금액·계좌번호처럼 자릿수가 맞아야 읽기 쉬운 값 */
+  --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
 }
 
+/* ------------------------------------------------------------
+   고대비 모드 (명세 11.1)
+
+   다크 테마가 기본이 되어도 이 모드는 그대로 유지된다.
+   순수 검정 배경 + 노랑 주색으로 최대 명도차를 만든다.
+   ------------------------------------------------------------ */
 :root[data-high-contrast="true"] {
   --color-background: #000000;
   --color-surface: #000000;
+  --color-surface-raised: #000000;
+  --color-surface-sunken: #000000;
+
   --color-text: #ffffff;
   --color-text-muted: #ffffff;
+  --color-text-dim: #ffffff;
+
   --color-border: #ffffff;
+  --color-border-strong: #ffffff;
+
   --color-primary: #ffdf00;
   --color-primary-hover: #ffe94d;
+  --color-accent: #ffdf00;
   --color-on-primary: #000000;
+
   --color-danger: #ff6b6b;
+  --color-danger-surface: #000000;
+  --color-danger-border: #ff6b6b;
+
   --color-warning: #ffdf00;
+  --color-warning-surface: #000000;
+  --color-warning-border: #ffdf00;
+
   --color-success: #62f5a8;
+  --color-success-surface: #000000;
+  --color-success-border: #62f5a8;
+
   --color-focus: #00e5ff;
 }
 
 * { box-sizing: border-box; }
-html { color-scheme: light; }
+html { color-scheme: dark; }
 
+/* 큰 글씨 모드 (명세 11.2) */
 :root[data-large-text="true"] {
   font-size: 125%;
 }
 
+/* 단순 화면 모드 (명세 11.6) — 한 화면에 하나의 주요 행동만 */
 :root[data-simple-mode="true"] [data-secondary-content="true"] {
   display: none;
 }
@@ -45,41 +120,17 @@ body {
   margin: 0;
   background: var(--color-background);
   color: var(--color-text);
-  font-family: "Toss Product Sans", "Apple SD Gothic Neo", "Malgun Gothic", -apple-system,
+  font-family: "Noto Sans KR", "Apple SD Gothic Neo", "Malgun Gothic", -apple-system,
     BlinkMacSystemFont, system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
 }
+
 button, input, select, textarea { font: inherit; }
 
-.accessibility-settings-shell {
-  width: 100%;
-  border-bottom: 1px solid var(--color-border);
-  background: var(--color-surface);
-  padding: 1rem 1.5rem;
-}
-
-.accessibility-settings-panel {
-  width: 100%;
-  max-width: 48rem;
-  margin: 0 auto;
-  padding: 0;
-  border: 0;
-}
-
-.accessibility-setting-option {
-  display: flex;
-  min-height: 4.5rem;
-  cursor: pointer;
-  align-items: center;
-  justify-content: space-between;
-  gap: 1rem;
-  border: 2px solid var(--color-border);
-  border-radius: 0.75rem;
-  background: var(--color-background);
-  padding: 0.75rem 1rem;
-}
-
-.accessibility-setting-option:hover {
-  border-color: var(--color-primary);
+/* 금액·계좌번호 */
+.tabular {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
 }
 
 :root[data-high-contrast="true"] button,
@@ -87,4 +138,32 @@ button, input, select, textarea { font: inherit; }
 :root[data-high-contrast="true"] select,
 :root[data-high-contrast="true"] textarea {
   forced-color-adjust: none;
+}
+
+/* ------------------------------------------------------------
+   목업 모션
+
+   reduced motion 에서는 전부 정지한다. 음성 입력 상태는 애니메이션
+   없이도 문구로 전달되므로 정보 손실이 없다.
+   ------------------------------------------------------------ */
+
+@keyframes movi-pulse-ring {
+  from { transform: scale(1); opacity: 0.6; }
+  to { transform: scale(1.6); opacity: 0; }
+}
+
+@keyframes movi-wave {
+  0%, 100% { transform: scaleY(0.4); }
+  50% { transform: scaleY(1); }
+}
+
+.movi-pulse-ring { animation: movi-pulse-ring 1s ease-out infinite; }
+.movi-wave-bar { animation: movi-wave 0.8s ease-in-out infinite; }
+
+@media (prefers-reduced-motion: reduce) {
+  .movi-pulse-ring,
+  .movi-wave-bar {
+    animation: none;
+  }
+  .movi-pulse-ring { opacity: 0.3; }
 }

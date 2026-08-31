@@ -165,7 +165,7 @@ export default function ConnectedAccountListPage() {
       <PageBackLink href="/">처음 화면으로</PageBackLink>
 
       <p
-        className="text-base font-bold text-[var(--color-primary)]"
+        className="text-base font-bold text-[var(--color-accent)]"
         data-secondary-content="true"
       >
         오픈뱅킹

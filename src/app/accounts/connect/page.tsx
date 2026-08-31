@@ -33,7 +33,7 @@ export default function AccountConnectionPage() {
       <PageBackLink href="/accounts">계좌 화면으로</PageBackLink>
 
       <p
-        className="text-base font-bold text-[var(--color-primary)]"
+        className="text-base font-bold text-[var(--color-accent)]"
         data-secondary-content="true"
       >
         오픈뱅킹 계좌 연결
