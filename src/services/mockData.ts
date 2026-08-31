@@ -86,4 +86,34 @@ export const mockRegisteredRecipients: RegisteredRecipient[] = [
     maskedAccountNumber: "789-****-5678",
   },
 ];
-export const mockFdsAlerts: FdsAlert[] = [];
+export const mockFdsAlerts: FdsAlert[] = [
+  {
+    id: "alert-demo-1",
+    accountId: "account-demo-1",
+    transactionId: "transaction-demo-4",
+    title: "긴급 위험 알림",
+    description: "고위험 거래가 감지되어 이체를 차단했습니다.",
+    severity: "critical",
+    status: "unread",
+    detectedAt: "2026-08-30T23:12:00+09:00",
+  },
+  {
+    id: "alert-demo-2",
+    accountId: "account-demo-1",
+    transactionId: "transaction-demo-3",
+    title: "이체 완료",
+    description: "김영희님께 50,000원 이체가 완료되었습니다.",
+    severity: "info",
+    status: "resolved",
+    detectedAt: "2026-08-30T14:23:00+09:00",
+  },
+  {
+    id: "alert-demo-3",
+    accountId: "account-demo-1",
+    title: "보호자 알림 발송",
+    description: "중위험 거래로 분류되어 연결된 보호자에게 알림을 보냈습니다.",
+    severity: "warning",
+    status: "reviewing",
+    detectedAt: "2026-08-29T09:40:00+09:00",
+  },
+];
