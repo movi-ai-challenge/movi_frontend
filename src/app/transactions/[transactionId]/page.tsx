@@ -3,6 +3,7 @@
 import { useParams } from "next/navigation";
 import { useEffect, useState } from "react";
 
+import { AppScreen } from "@/components/common/AppScreen";
 import { AccessibleButton } from "@/components/common/AccessibleButton";
 import { PageBackLink } from "@/components/common/PageBackLink";
 import { getConnectedAccounts } from "@/services/accountService";
@@ -97,20 +98,20 @@ export default function TransactionDetailPage() {
   const amountPrefix = isDeposit ? "+" : isBlocked ? "" : "-";
 
   return (
-    <main className="mx-auto min-h-[70vh] w-full max-w-xl px-6 py-12">
+    <AppScreen className="gap-5 pb-10 pt-6">
       <PageBackLink href="/transactions">거래내역으로</PageBackLink>
 
       <p
-        className="text-base font-bold text-[var(--color-primary)]"
+        className="text-base font-bold text-[var(--color-accent)]"
         data-secondary-content="true"
       >
         거래내역
       </p>
-      <h1 className="mt-2 text-4xl font-bold tracking-tight">거래 상세</h1>
+      <h1 className="mt-2 text-2xl font-extrabold tracking-tight">거래 상세</h1>
 
       <div className="mt-8" aria-live="polite" aria-busy={status === "loading"}>
         {status === "loading" ? (
-          <p className="rounded-xl border-2 border-[var(--color-border)] bg-[var(--color-surface)] p-6 text-lg font-semibold">
+          <p className="rounded-xl border-2 border-[var(--color-border)] bg-[var(--color-surface)] p-6 text-[15px] font-semibold">
             거래 정보를 불러오고 있어요.
           </p>
         ) : null}
@@ -120,8 +121,8 @@ export default function TransactionDetailPage() {
             className="rounded-xl border-2 border-[var(--color-danger)] bg-[var(--color-surface)] p-6"
             role="alert"
           >
-            <h2 className="text-xl font-bold">거래 정보를 불러오지 못했습니다.</h2>
-            <p className="mt-2 leading-7 text-[var(--color-text-muted)]">
+            <h2 className="text-[15px] font-bold">거래 정보를 불러오지 못했습니다.</h2>
+            <p className="mt-2 leading-relaxed text-[var(--color-text-muted)]">
               인터넷 연결을 확인하고 다시 시도해 주세요.
             </p>
             <AccessibleButton className="mt-5" onClick={() => void loadDetail()}>
@@ -132,8 +133,8 @@ export default function TransactionDetailPage() {
 
         {status === "not-found" ? (
           <section className="rounded-xl border-2 border-[var(--color-border)] bg-[var(--color-surface)] p-6">
-            <h2 className="text-xl font-bold">거래 정보를 찾지 못했습니다.</h2>
-            <p className="mt-2 leading-7 text-[var(--color-text-muted)]">
+            <h2 className="text-[15px] font-bold">거래 정보를 찾지 못했습니다.</h2>
+            <p className="mt-2 leading-relaxed text-[var(--color-text-muted)]">
               거래내역으로 돌아가 다시 선택해 주세요.
             </p>
           </section>
@@ -144,16 +145,16 @@ export default function TransactionDetailPage() {
             className="rounded-xl border-2 border-[var(--color-border)] bg-[var(--color-surface)] p-6"
             aria-labelledby="transaction-detail-description"
           >
-            <p className="font-bold text-[var(--color-primary)]">
+            <p className="font-bold text-[var(--color-accent)]">
               {typeLabels[transaction.type]}
             </p>
             <h2
               id="transaction-detail-description"
-              className="mt-2 text-2xl font-bold"
+              className="mt-2 text-[15px] font-bold"
             >
               {transaction.description}
             </h2>
-            <p className="mt-5 text-4xl font-bold">
+            <p className="mt-5 text-[28px] font-black">
               <span className="sr-only">
                 {isDeposit
                   ? "들어온 금액"
@@ -170,7 +171,7 @@ export default function TransactionDetailPage() {
                 <dt className="font-semibold text-[var(--color-text-muted)]">
                   거래 일시
                 </dt>
-                <dd className="mt-1 text-lg font-semibold">
+                <dd className="mt-1 text-[15px] font-semibold">
                   {dateFormatter.format(new Date(transaction.occurredAt))}
                 </dd>
               </div>
@@ -178,7 +179,7 @@ export default function TransactionDetailPage() {
                 <dt className="font-semibold text-[var(--color-text-muted)]">
                   거래 후 잔액
                 </dt>
-                <dd className="mt-1 text-lg font-semibold">
+                <dd className="mt-1 text-[15px] font-semibold">
                   {currencyFormatter.format(transaction.balanceAfter)}
                 </dd>
               </div>
@@ -186,7 +187,7 @@ export default function TransactionDetailPage() {
                 <dt className="font-semibold text-[var(--color-text-muted)]">
                   계좌
                 </dt>
-                <dd className="mt-1 text-lg font-semibold">
+                <dd className="mt-1 text-[15px] font-semibold">
                   {account
                     ? `${account.accountName} · ${account.bankName} · ${account.maskedAccountNumber}`
                     : "연결 계좌 정보 없음"}
@@ -196,6 +197,6 @@ export default function TransactionDetailPage() {
           </article>
         ) : null}
       </div>
-    </main>
+    </AppScreen>
   );
 }
