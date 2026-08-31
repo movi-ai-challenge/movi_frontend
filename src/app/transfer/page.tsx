@@ -3,6 +3,7 @@
 import { useRouter } from "next/navigation";
 import { FormEvent, useEffect, useRef, useState } from "react";
 
+import { AppScreen } from "@/components/common/AppScreen";
 import { AccessibleButton } from "@/components/common/AccessibleButton";
 import { PageBackLink } from "@/components/common/PageBackLink";
 import { getRegisteredRecipients } from "@/services/recipientService";
@@ -108,26 +109,26 @@ export default function TransferInputPage() {
   };
 
   return (
-    <main className="mx-auto min-h-[70vh] w-full max-w-xl px-6 py-12">
+    <AppScreen className="gap-5 pb-10 pt-6">
       <PageBackLink href="/accounts">연결된 계좌로</PageBackLink>
 
-      <p className="font-bold text-[var(--color-primary)]">송금</p>
-      <h1 className="mt-2 text-4xl font-bold tracking-tight">
+      <p className="font-bold text-[var(--color-accent)]">송금</p>
+      <h1 className="mt-2 text-2xl font-extrabold tracking-tight">
         누구에게 얼마를 보낼까요?
       </h1>
-      <p className="mt-4 text-lg leading-8 text-[var(--color-text-muted)]">
+      <p className="mt-4 text-[15px] leading-relaxed text-[var(--color-text-muted)]">
         말하거나 직접 입력할 수 있습니다. 이 화면에서는 송금 정보를 확인만
         하며, 바로 이체되지 않습니다.
       </p>
 
       <section
-        className="mt-8 rounded-xl border-2 border-[var(--color-primary)] bg-[var(--color-surface)] p-5"
+        className="mt-8 rounded-xl border-2 border-[var(--color-accent)] bg-[var(--color-surface)] p-5"
         aria-labelledby="transfer-voice-title"
       >
-        <h2 id="transfer-voice-title" className="text-xl font-bold">
+        <h2 id="transfer-voice-title" className="text-[15px] font-bold">
           음성으로 입력
         </h2>
-        <p className="mt-2 leading-7 text-[var(--color-text-muted)]">
+        <p className="mt-2 leading-relaxed text-[var(--color-text-muted)]">
           예: “김모비에게 5만원 보내줘”라고 말해 보세요.
         </p>
         <div className="mt-4" aria-live="polite" aria-atomic="true">
@@ -147,18 +148,18 @@ export default function TransferInputPage() {
           ) : null}
           {voiceStep === "listening" ? (
             <div>
-              <p className="text-lg font-bold">듣고 있어요.</p>
+              <p className="text-[15px] font-bold">듣고 있어요.</p>
               <AccessibleButton className="mt-4" onClick={finishVoiceInput}>
                 말하기 완료
               </AccessibleButton>
             </div>
           ) : null}
           {voiceStep === "processing" ? (
-            <p className="text-lg font-bold">말씀하신 내용을 확인하고 있어요.</p>
+            <p className="text-[15px] font-bold">말씀하신 내용을 확인하고 있어요.</p>
           ) : null}
           {voiceStep === "missing-amount" ? (
             <div>
-              <p className="text-lg font-bold">김모비님을 받는 사람으로 확인했어요.</p>
+              <p className="text-[15px] font-bold">김모비님을 받는 사람으로 확인했어요.</p>
               <p className="mt-2">얼마를 보낼까요? 아래 금액을 입력해 주세요.</p>
               <AccessibleButton
                 className="mt-4"
@@ -181,10 +182,10 @@ export default function TransferInputPage() {
         aria-live="polite"
         aria-busy={recipientStatus === "loading"}
       >
-        <h2 id="registered-recipient-title" className="text-xl font-bold">
+        <h2 id="registered-recipient-title" className="text-[15px] font-bold">
           등록된 받는 사람
         </h2>
-        <p className="mt-2 leading-7 text-[var(--color-text-muted)]">
+        <p className="mt-2 leading-relaxed text-[var(--color-text-muted)]">
           자주 보내는 사람을 선택하면 받는 사람 입력란에 바로 반영됩니다.
         </p>
 
@@ -227,17 +228,17 @@ export default function TransferInputPage() {
                     setRecipient(savedRecipient.name);
                     setSelectedRecipientId(savedRecipient.id);
                   }}
-                  className="flex min-h-16 w-full items-center justify-between gap-4 rounded-xl border-2 border-[var(--color-border)] bg-[var(--color-surface)] p-4 text-left hover:border-[var(--color-primary)] focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[var(--color-focus)] focus-visible:ring-offset-2 aria-pressed:border-[var(--color-primary)]"
+                  className="flex min-h-16 w-full items-center justify-between gap-4 rounded-xl border-2 border-[var(--color-border)] bg-[var(--color-surface)] p-4 text-left hover:border-[var(--color-accent)] focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[var(--color-focus)] focus-visible:ring-offset-2 aria-pressed:border-[var(--color-accent)]"
                 >
                   <span>
-                    <span className="block text-lg font-bold">
+                    <span className="block text-[15px] font-bold">
                       {savedRecipient.name}
                     </span>
                     <span className="mt-1 block text-[var(--color-text-muted)]">
                       {savedRecipient.bankName} · {savedRecipient.maskedAccountNumber}
                     </span>
                   </span>
-                  <span className="font-bold text-[var(--color-primary)]">
+                  <span className="font-bold text-[var(--color-accent)]">
                     선택
                   </span>
                 </button>
@@ -249,7 +250,7 @@ export default function TransferInputPage() {
 
       <form className="mt-8" onSubmit={submitTransferInput} noValidate>
         <div>
-          <label htmlFor="transfer-recipient" className="text-lg font-bold">
+          <label htmlFor="transfer-recipient" className="text-[15px] font-bold">
             받는 사람
           </label>
           <input
@@ -264,7 +265,7 @@ export default function TransferInputPage() {
           />
         </div>
         <div className="mt-5">
-          <label htmlFor="transfer-amount" className="text-lg font-bold">
+          <label htmlFor="transfer-amount" className="text-[15px] font-bold">
             보낼 금액
           </label>
           <div className="relative mt-2">
@@ -330,6 +331,6 @@ export default function TransferInputPage() {
         </AccessibleButton>
       </form>
 
-    </main>
+    </AppScreen>
   );
 }
