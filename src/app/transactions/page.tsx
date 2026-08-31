@@ -4,7 +4,9 @@ import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 
 import { AccessibleButton } from "@/components/common/AccessibleButton";
-import { PageBackLink } from "@/components/common/PageBackLink";
+import { Amount } from "@/components/common/Amount";
+import { AppScreen } from "@/components/common/AppScreen";
+import { RiskBadge } from "@/components/common/RiskBadge";
 import { VoiceTransactionQuery } from "@/components/domain/transactions/VoiceTransactionQuery";
 import { TransactionVoiceGuide } from "@/components/domain/transactions/TransactionVoiceGuide";
 import { getConnectedAccounts } from "@/services/accountService";
@@ -28,19 +30,41 @@ const filterTypes: TransactionType[] = [
   "blocked",
 ];
 
-const currencyFormatter = new Intl.NumberFormat("ko-KR", {
-  style: "currency",
-  currency: "KRW",
-  maximumFractionDigits: 0,
-});
 
-const dateFormatter = new Intl.DateTimeFormat("ko-KR", {
-  year: "numeric",
-  month: "long",
-  day: "numeric",
+/**
+ * 목록 행에 쓰는 짧은 날짜.
+ *
+ * 행 안에서 두 줄로 접히면 훑어보기 어렵다. 오늘·어제는 말로 쓰고
+ * 그 이전은 월/일만 남긴다. 전체 일시는 거래 상세에서 확인한다.
+ */
+const listTimeFormatter = new Intl.DateTimeFormat("ko-KR", {
   hour: "numeric",
   minute: "2-digit",
 });
+
+const listDateFormatter = new Intl.DateTimeFormat("ko-KR", {
+  month: "numeric",
+  day: "numeric",
+});
+
+function formatListDate(isoDate: string): string {
+  const date = new Date(isoDate);
+  if (Number.isNaN(date.getTime())) return "";
+
+  const startOfDay = (value: Date) =>
+    new Date(value.getFullYear(), value.getMonth(), value.getDate()).getTime();
+
+  const dayDifference = Math.round(
+    (startOfDay(new Date()) - startOfDay(date)) / 86_400_000,
+  );
+
+  const time = listTimeFormatter.format(date);
+
+  if (dayDifference === 0) return `오늘 ${time}`;
+  if (dayDifference === 1) return `어제 ${time}`;
+
+  return `${listDateFormatter.format(date)} ${time}`;
+}
 
 function toDateInputValue(date: Date) {
   const year = date.getFullYear();
@@ -204,25 +228,26 @@ export default function TransactionListPage() {
   }, [defaultAccountId, setAccounts]);
 
   return (
-    <main className="mx-auto min-h-[70vh] w-full max-w-3xl px-6 py-12">
-      <PageBackLink href="/accounts">연결된 계좌로</PageBackLink>
+    <AppScreen className="gap-5 pb-10 pt-6">
+      <header className="flex items-center gap-3">
+        <Link
+          href="/accounts"
+          aria-label="연결된 계좌로"
+          className="flex h-11 w-11 items-center justify-center rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] text-lg focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[var(--color-focus)] focus-visible:ring-offset-2"
+        >
+          <span aria-hidden="true">←</span>
+        </Link>
+        <div>
+          <h1 className="text-xl font-extrabold">거래 내역</h1>
+          {account ? (
+            <p className="text-xs text-[var(--color-text-muted)]">
+              {account.bankName} {account.maskedAccountNumber}
+            </p>
+          ) : null}
+        </div>
+      </header>
 
-      <p
-        className="text-base font-bold text-[var(--color-primary)]"
-        data-secondary-content="true"
-      >
-        거래내역
-      </p>
-      <h1 className="mt-2 text-4xl font-bold tracking-tight">
-        최근 거래내역
-      </h1>
-      {account ? (
-        <p className="mt-4 text-lg leading-8 text-[var(--color-text-muted)]">
-          {account.accountName} · {account.bankName} · {account.maskedAccountNumber}
-        </p>
-      ) : null}
-
-      <div className="mt-8" aria-live="polite" aria-busy={status === "loading"}>
+      <div className="flex flex-col gap-5" aria-live="polite" aria-busy={status === "loading"}>
         {status === "loading" ? (
           <p className="rounded-xl border-2 border-[var(--color-border)] bg-[var(--color-surface)] p-6 text-lg font-semibold">
             최근 거래를 불러오고 있어요.
@@ -368,31 +393,58 @@ export default function TransactionListPage() {
               조회 결과 {transactions.length}건
             </h2>
             <TransactionVoiceGuide transactions={transactions} />
-            <ol className="mt-4 grid list-none gap-3 p-0">
+            <ol className="mt-3 grid list-none gap-2 p-0">
               {transactions.map((transaction) => {
                 const isDeposit = transaction.type === "deposit";
                 const isBlocked = transaction.type === "blocked";
                 const amountPrefix = isDeposit ? "+" : isBlocked ? "" : "-";
 
                 return (
-                  <li
-                    key={transaction.id}
-                    className="rounded-xl border-2 border-[var(--color-border)] bg-[var(--color-surface)] p-5"
-                  >
-                    <article aria-labelledby={`${transaction.id}-description`}>
-                      <div className="flex flex-wrap items-start justify-between gap-4">
-                        <div>
-                          <p className="font-bold text-[var(--color-primary)]">
-                            {typeLabels[transaction.type]}
-                          </p>
-                          <h3
-                            id={`${transaction.id}-description`}
-                            className="mt-1 text-xl font-bold"
-                          >
-                            {transaction.description}
-                          </h3>
-                        </div>
-                        <p className="text-2xl font-bold">
+                  <li key={transaction.id}>
+                    <Link
+                      href={`/transactions/${transaction.id}`}
+                      aria-labelledby={`${transaction.id}-description`}
+                      className={`flex items-center gap-3 rounded-2xl border px-4 py-3 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[var(--color-focus)] focus-visible:ring-offset-2 ${
+                        isBlocked
+                          ? "border-[var(--color-danger-border)] bg-[var(--color-danger-surface)]"
+                          : "border-[var(--color-border)] bg-[var(--color-surface)]"
+                      }`}
+                    >
+                      <span
+                        aria-hidden="true"
+                        className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl text-lg ${
+                          isBlocked
+                            ? "bg-[var(--color-danger-surface)]"
+                            : isDeposit
+                              ? "bg-[var(--color-success-surface)]"
+                              : "bg-[var(--color-surface-sunken)]"
+                        }`}
+                      >
+                        {isBlocked ? "⚠️" : isDeposit ? "📥" : "📤"}
+                      </span>
+
+                      <span className="min-w-0 flex-1">
+                        <span
+                          id={`${transaction.id}-description`}
+                          className="block truncate text-[15px] font-semibold text-[var(--color-text)]"
+                        >
+                          {transaction.description}
+                        </span>
+                        <span className="block text-[12px] text-[var(--color-text-muted)]">
+                          {typeLabels[transaction.type]} · {formatListDate(transaction.occurredAt)}
+                        </span>
+                      </span>
+
+                      <span className="flex shrink-0 flex-col items-end gap-1">
+                        <span
+                          className={`text-[15px] font-bold ${
+                            isDeposit
+                              ? "text-[var(--color-success)]"
+                              : isBlocked
+                                ? "text-[var(--color-danger)]"
+                                : "text-[var(--color-text)]"
+                          }`}
+                        >
                           <span className="sr-only">
                             {isDeposit
                               ? "들어온 금액"
@@ -400,20 +452,12 @@ export default function TransactionListPage() {
                                 ? "차단되어 출금되지 않은 금액"
                                 : "나간 금액"}
                           </span>
-                          {amountPrefix}
-                          {currencyFormatter.format(transaction.amount)}
-                        </p>
-                      </div>
-                      <p className="mt-4 text-[var(--color-text-muted)]">
-                        {dateFormatter.format(new Date(transaction.occurredAt))}
-                      </p>
-                      <Link
-                        href={`/transactions/${transaction.id}`}
-                        className="mt-4 inline-flex min-h-11 items-center rounded-lg border-2 border-[var(--color-border)] bg-[var(--color-surface)] px-4 py-2 font-semibold text-[var(--color-text)] hover:border-[var(--color-primary)] focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[var(--color-focus)] focus-visible:ring-offset-2"
-                      >
-                        이 거래 자세히 보기
-                      </Link>
-                    </article>
+                          <span aria-hidden="true">{amountPrefix}</span>
+                          <Amount value={transaction.amount} />
+                        </span>
+                        {isBlocked ? <RiskBadge level="high" label="차단됨" /> : null}
+                      </span>
+                    </Link>
                   </li>
                 );
               })}
@@ -421,6 +465,6 @@ export default function TransactionListPage() {
           </section>
         ) : null}
       </div>
-    </main>
+    </AppScreen>
   );
 }
