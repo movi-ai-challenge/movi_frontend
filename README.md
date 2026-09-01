@@ -82,7 +82,7 @@ npm run dev
 
 ```env
 NEXT_PUBLIC_API_URL=http://localhost:8080
-NEXT_PUBLIC_USE_MOCK=true
+NEXT_PUBLIC_USE_MOCK=false
 ```
 
 환경변수 변경 후 개발 서버를 다시 시작합니다. `.env.local`, 토큰, 원문 계좌번호, 전화번호와 개인정보는 커밋하지 않습니다.
