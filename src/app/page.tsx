@@ -212,9 +212,16 @@ function SignedInHome({ displayName }: { displayName: string }) {
             type="button"
             aria-pressed={isListening}
             onClick={startListening}
-            className="relative flex h-32 w-32 items-center justify-center rounded-full bg-[var(--color-primary)] text-6xl transition-colors hover:bg-[var(--color-primary-hover)] focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[var(--color-focus)] focus-visible:ring-offset-2 motion-reduce:transition-none"
+            className="relative flex h-32 w-32 items-center justify-center rounded-full bg-[var(--color-primary)] transition-colors hover:bg-[var(--color-primary-hover)] focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[var(--color-focus)] focus-visible:ring-offset-2 motion-reduce:transition-none"
           >
-            <span aria-hidden="true">🎙️</span>
+            {/*
+              글자 크기는 버튼이 아니라 이 span 에 준다. globals.css 의
+              `button, input, select, textarea { font: inherit }` 가 레이어 밖에 있어
+              @layer utilities 안의 text-* 유틸리티를 항상 이긴다. 버튼에 붙이면 무시된다.
+            */}
+            <span aria-hidden="true" className="text-6xl leading-none">
+              🎙️
+            </span>
             <span className="sr-only">{isListening ? "음성 인식 중" : "음성으로 명령하기"}</span>
           </button>
         </div>
