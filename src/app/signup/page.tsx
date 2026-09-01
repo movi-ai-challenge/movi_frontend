@@ -100,7 +100,12 @@ export default function SignUpPage() {
       setBackendSession(session, refreshToken);
       setUser({ id: session.userId, name: name.trim() });
       setPassword("");
-      router.replace("/");
+      /*
+       * 가입 직후에는 홈이 아니라 계좌 연결로 보낸다. 방금 만든 계정에는 연결된
+       * 계좌가 없어 홈에서 할 수 있는 일이 "계좌 연결하기" 하나뿐이다. 카카오 신규
+       * 가입자도 PIN 등록을 마치면 같은 화면으로 간다.
+       */
+      router.replace("/accounts/connect");
     } catch (error: unknown) {
       const signUpError = toPinAuthenticationError(error);
       setErrorMessage(signUpError.message);
