@@ -199,11 +199,11 @@ function SignedInHome({ displayName }: { displayName: string }) {
             <>
               <span
                 aria-hidden="true"
-                className="movi-pulse-ring absolute h-48 w-48 rounded-full border-2 border-[var(--color-accent)]"
+                className="movi-pulse-ring absolute h-44 w-44 rounded-full border-2 border-[var(--color-accent)]"
               />
               <span
                 aria-hidden="true"
-                className="movi-pulse-ring absolute h-56 w-56 rounded-full border-2 border-[var(--color-accent)]"
+                className="movi-pulse-ring absolute h-52 w-52 rounded-full border-2 border-[var(--color-accent)]"
                 style={{ animationDelay: "0.3s" }}
               />
             </>
@@ -212,14 +212,14 @@ function SignedInHome({ displayName }: { displayName: string }) {
             type="button"
             aria-pressed={isListening}
             onClick={startListening}
-            className="relative flex h-40 w-40 items-center justify-center rounded-full bg-[var(--color-primary)] transition-colors hover:bg-[var(--color-primary-hover)] focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[var(--color-focus)] focus-visible:ring-offset-2 motion-reduce:transition-none"
+            className="relative flex h-36 w-36 items-center justify-center rounded-full bg-[var(--color-primary)] transition-colors hover:bg-[var(--color-primary-hover)] focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[var(--color-focus)] focus-visible:ring-offset-2 motion-reduce:transition-none"
           >
             {/*
               크기는 버튼이 아니라 이 span 에 준다. 이모지의 실제 그려지는 높이는
               글꼴마다 달라, 버튼 크기와 따로 조절할 수 있어야 비율을 맞추기 쉽다.
               leading-none 이 없으면 줄 높이만큼 아래로 밀려 원 중앙에서 벗어난다.
             */}
-            <span aria-hidden="true" className="text-[5.5rem] leading-none">
+            <span aria-hidden="true" className="text-[4.5rem] leading-none">
               🎙️
             </span>
             <span className="sr-only">{isListening ? "음성 인식 중" : "음성으로 명령하기"}</span>
