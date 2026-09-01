@@ -9,6 +9,7 @@ import { AccountApiError } from "@/components/domain/accounts/AccountApiError";
 import { VoiceCommandPanel } from "@/components/domain/voice/VoiceCommandPanel";
 import { validateAccountAlias } from "@/services/accountContract";
 import {
+  disconnectAccount,
   getConnectedAccounts,
   updateAccountAlias,
   updateDefaultAccount,
@@ -37,7 +38,11 @@ export default function ConnectedAccountListPage() {
   const [aliasDraft, setAliasDraft] = useState("");
   const [aliasError, setAliasError] = useState("");
   const [updateMessage, setUpdateMessage] = useState("");
+  const [confirmingDisconnectId, setConfirmingDisconnectId] = useState<
+    string | null
+  >(null);
   const aliasInputRef = useRef<HTMLInputElement>(null);
+  const disconnectNoticeRef = useRef<HTMLHeadingElement>(null);
   const loadErrorRef = useRef<HTMLElement>(null);
   const updateResultRef = useRef<HTMLParagraphElement>(null);
 
@@ -92,7 +97,7 @@ export default function ConnectedAccountListPage() {
   };
 
   const changeDefaultAccount = async (accountId: string) => {
-    if (updatingAccountId || editingAccountId) return;
+    if (updatingAccountId || editingAccountId || confirmingDisconnectId) return;
 
     setUpdatingAccountId(accountId);
     setUpdateMessage("");
@@ -111,7 +116,7 @@ export default function ConnectedAccountListPage() {
   };
 
   const startAliasEdit = (accountId: string, currentAlias: string) => {
-    if (updatingAccountId || editingAccountId) return;
+    if (updatingAccountId || editingAccountId || confirmingDisconnectId) return;
     setEditingAccountId(accountId);
     setAliasDraft(currentAlias);
     setAliasError("");
@@ -155,6 +160,55 @@ export default function ConnectedAccountListPage() {
     } catch (error: unknown) {
       setAliasError(toApiError(error).message);
       aliasInputRef.current?.focus();
+    } finally {
+      setUpdatingAccountId(null);
+    }
+  };
+
+  const startDisconnect = (accountId: string) => {
+    if (updatingAccountId || editingAccountId || confirmingDisconnectId) return;
+    setConfirmingDisconnectId(accountId);
+    setUpdateMessage("");
+    // 확인 버튼이 아니라 설명으로 포커스를 옮긴다. 파괴적인 동작을 곧바로
+    // 누를 수 있는 자리에 두면 화면을 보지 않는 사용자가 무엇을 지우는지
+    // 듣기 전에 확정할 수 있다.
+    window.setTimeout(() => disconnectNoticeRef.current?.focus(), 0);
+  };
+
+  const cancelDisconnect = () => {
+    const accountId = confirmingDisconnectId;
+    setConfirmingDisconnectId(null);
+    if (accountId) {
+      window.setTimeout(
+        () => document.getElementById(`disconnect-${accountId}`)?.focus(),
+        0,
+      );
+    }
+  };
+
+  const confirmDisconnect = async (accountId: string) => {
+    const disconnected = accounts.find((item) => item.id === accountId);
+    const disconnectedName = disconnected?.accountName ?? "선택한 계좌";
+
+    setUpdatingAccountId(accountId);
+    try {
+      // 서버가 해제 후 남은 계좌를 돌려준다. 기본 계좌가 바뀐 결과까지 함께 온다.
+      const remaining = await disconnectAccount(accountId);
+      setAccounts(remaining);
+      setConfirmingDisconnectId(null);
+
+      if (remaining.length === 0) {
+        announceUpdate(
+          `${disconnectedName} 연결을 해제했습니다. 연결된 계좌가 없습니다.`,
+        );
+        return;
+      }
+      const nextPrimary = remaining.find((item) => item.isPrimary);
+      announceUpdate(
+        `${disconnectedName} 연결을 해제했습니다. 남은 계좌 ${remaining.length}개이고, 기본 계좌는 ${nextPrimary?.accountName ?? "아직 정해지지 않았습니다"}입니다.`,
+      );
+    } catch (error: unknown) {
+      announceUpdate(toApiError(error).message);
     } finally {
       setUpdatingAccountId(null);
     }
@@ -225,6 +279,8 @@ export default function ConnectedAccountListPage() {
             <ul className="mt-4 grid list-none gap-4 p-0">
               {accounts.map((account) => {
                 const isEditing = editingAccountId === account.id;
+                const isConfirmingDisconnect =
+                  confirmingDisconnectId === account.id;
                 return (
                   <li
                     key={account.id}
@@ -304,8 +360,47 @@ export default function ConnectedAccountListPage() {
                             </AccessibleButton>
                           </div>
                         </div>
+                      ) : isConfirmingDisconnect ? (
+                        <div
+                          role="group"
+                          aria-labelledby={`disconnect-title-${account.id}`}
+                          className="mt-5 rounded-lg border-2 border-[var(--color-danger)] bg-[var(--color-background)] p-4"
+                        >
+                          <h4
+                            ref={disconnectNoticeRef}
+                            id={`disconnect-title-${account.id}`}
+                            tabIndex={-1}
+                            className="text-xl font-bold focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[var(--color-focus)]"
+                          >
+                            {account.bankName} {account.accountName} 연결을 해제할까요?
+                          </h4>
+                          <p className="mt-2 leading-7">
+                            {account.maskedAccountNumber} 계좌가 목록과 잔액조회,
+                            송금에서 모두 빠집니다.
+                          </p>
+                          <p className="mt-2 leading-7 text-[var(--color-text-muted)]">
+                            지난 거래내역은 그대로 남습니다. 다시 쓰려면 오픈뱅킹
+                            인증을 처음부터 다시 해야 합니다.
+                          </p>
+                          <div className="mt-4 flex flex-col gap-3 sm:flex-row">
+                            <AccessibleButton
+                              isLoading={updatingAccountId === account.id}
+                              loadingLabel="계좌 연결을 해제하고 있어요"
+                              onClick={() => void confirmDisconnect(account.id)}
+                            >
+                              연결 해제하기
+                            </AccessibleButton>
+                            <AccessibleButton
+                              variant="secondary"
+                              disabled={updatingAccountId !== null}
+                              onClick={cancelDisconnect}
+                            >
+                              취소
+                            </AccessibleButton>
+                          </div>
+                        </div>
                       ) : (
-                        <div className="mt-5 flex flex-col gap-3 sm:flex-row">
+                        <div className="mt-5 flex flex-col gap-3 sm:flex-row sm:flex-wrap">
                           {account.id !== defaultAccountId ? (
                             <AccessibleButton
                               variant="secondary"
@@ -326,6 +421,14 @@ export default function ConnectedAccountListPage() {
                             }
                           >
                             계좌 이름 변경
+                          </AccessibleButton>
+                          <AccessibleButton
+                            id={`disconnect-${account.id}`}
+                            variant="secondary"
+                            disabled={updatingAccountId !== null}
+                            onClick={() => startDisconnect(account.id)}
+                          >
+                            연결 해제
                           </AccessibleButton>
                         </div>
                       )}
