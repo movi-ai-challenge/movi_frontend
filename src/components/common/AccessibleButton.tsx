@@ -6,7 +6,7 @@ interface AccessibleButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> 
   isLoading?: boolean;
   loadingLabel?: string;
   onVoiceFeedback?: () => void;
-  variant?: "primary" | "secondary";
+  variant?: "primary" | "secondary" | "kakao";
 }
 
 const variantClassNames = {
@@ -14,6 +14,12 @@ const variantClassNames = {
     "border-transparent bg-[var(--color-primary)] text-[var(--color-on-primary)] hover:bg-[var(--color-primary-hover)]",
   secondary:
     "border-[var(--color-border)] bg-[var(--color-surface)] text-[var(--color-text)] hover:border-[var(--color-accent)]",
+  /*
+   * 카카오 브랜드 색은 테마 토큰이 아니라 고정값이다. 다크·라이트 어느 테마에서도
+   * 같은 노랑이어야 사용자가 "카카오 버튼"으로 알아본다. #191600 대비는 15:1 이상이라
+   * 명암비 기준을 넘는다.
+   */
+  kakao: "border-transparent bg-[#fee500] text-[#191600] hover:bg-[#f5dc00]",
 } as const;
 
 export function AccessibleButton({

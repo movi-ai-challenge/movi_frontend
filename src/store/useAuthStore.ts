@@ -40,6 +40,7 @@ function isMockAuthSession(value: unknown): value is AuthSession {
     typeof value.displayName === "string" &&
     (value.method === "PASS" ||
       value.method === "카카오" ||
+      value.method === "일반" ||
       value.method === "PIN" ||
       value.method === "생체인증") &&
     typeof value.authenticatedAt === "string"

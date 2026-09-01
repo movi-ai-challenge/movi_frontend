@@ -1,6 +1,11 @@
 export interface User { id: string; name: string; }
 
-export type MockAuthenticationMethod = "PASS" | "카카오" | "PIN" | "생체인증";
+export type MockAuthenticationMethod =
+  | "PASS"
+  | "카카오"
+  | "일반"
+  | "PIN"
+  | "생체인증";
 
 export interface KakaoBackendSession {
   accessToken: string;

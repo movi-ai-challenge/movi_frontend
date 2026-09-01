@@ -18,6 +18,8 @@ const MOCK_AUTHENTICATION_DELAY_MS = 700;
 const MOCK_LOGOUT_DELAY_MS = 300;
 const KAKAO_AUTHORIZE_PATH = "/api/v1/auth/kakao/authorize";
 const KAKAO_TOKEN_PATH = "/api/v1/auth/kakao/token";
+const SIGN_UP_PATH = "/api/v1/auth/signup";
+const PASSWORD_LOGIN_PATH = "/api/v1/auth/login";
 const PIN_LOGIN_PATH = "/api/v1/auth/pin/login";
 const PIN_REGISTER_PATH = "/api/v1/auth/pin/register";
 const LOGOUT_PATH = "/api/v1/auth/logout";
@@ -28,6 +30,10 @@ interface KakaoLoginExchangeResult {
 }
 
 export type PinAuthenticationErrorKind =
+  | "password_mismatch"
+  | "password_locked"
+  | "password_not_registered"
+  | "login_id_already_registered"
   | "pin_mismatch"
   | "pin_locked"
   | "pin_not_registered"
@@ -105,17 +111,20 @@ function isKakaoLoginData(value: unknown): value is KakaoLoginData {
   );
 }
 
+const displayNameByMethod: Record<"카카오" | "PIN" | "일반", string> = {
+  카카오: "카카오로 로그인한 사용자",
+  PIN: "PIN으로 로그인한 사용자",
+  일반: "아이디로 로그인한 사용자",
+};
+
 function toKakaoLoginExchangeResult(
   data: KakaoLoginData,
-  method: "카카오" | "PIN" = "카카오",
+  method: "카카오" | "PIN" | "일반" = "카카오",
 ): KakaoLoginExchangeResult {
   return {
     session: {
       userId: String(data.userId),
-      displayName:
-        method === "카카오"
-          ? "카카오로 로그인한 사용자"
-          : "PIN으로 로그인한 사용자",
+      displayName: displayNameByMethod[method],
       method,
       authenticatedAt: new Date().toISOString(),
       backend: {
@@ -147,6 +156,10 @@ export function toPinAuthenticationError(
   const message = failure?.voiceMessage ?? failure?.message;
   const kindByCode: Record<string, PinAuthenticationErrorKind> = {
     AUTH_4020: "pin_mismatch",
+    AUTH_4024: "password_mismatch",
+    AUTH_4025: "password_locked",
+    AUTH_4026: "password_not_registered",
+    AUTH_4092: "login_id_already_registered",
     AUTH_4021: "pin_locked",
     AUTH_4022: "pin_not_registered",
     AUTH_4090: "pin_already_registered",
@@ -183,6 +196,48 @@ export async function loginWithPin(
   });
   const data = parseApiData(response.data, isKakaoLoginData);
   return toKakaoLoginExchangeResult(data, "PIN");
+}
+
+export interface SignUpInput {
+  loginId: string;
+  password: string;
+  name: string;
+  phoneNumber?: string;
+}
+
+/**
+ * 일반 회원가입. 백엔드가 가입 직후 토큰을 함께 내려 주므로 별도 로그인 요청이 없다.
+ * 화면을 보지 않는 사용자에게 입력 단계를 한 번 더 요구하지 않기 위한 계약이다.
+ */
+export async function signUp(
+  input: SignUpInput,
+): Promise<KakaoLoginExchangeResult> {
+  const response = await api.post<unknown>(SIGN_UP_PATH, {
+    loginId: input.loginId,
+    password: input.password,
+    name: input.name,
+    phoneNumber: input.phoneNumber,
+    deviceUuid: readDeviceUuid(),
+  });
+  return toKakaoLoginExchangeResult(
+    parseApiData(response.data, isKakaoLoginData),
+    "일반",
+  );
+}
+
+export async function loginWithPassword(
+  loginId: string,
+  password: string,
+): Promise<KakaoLoginExchangeResult> {
+  const response = await api.post<unknown>(PASSWORD_LOGIN_PATH, {
+    loginId,
+    password,
+    deviceUuid: readDeviceUuid(),
+  });
+  return toKakaoLoginExchangeResult(
+    parseApiData(response.data, isKakaoLoginData),
+    "일반",
+  );
 }
 
 export async function registerPin(
