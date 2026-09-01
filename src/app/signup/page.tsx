@@ -100,7 +100,7 @@ export default function SignUpPage() {
       setBackendSession(session, refreshToken);
       setUser({ id: session.userId, name: name.trim() });
       setPassword("");
-      router.replace("/accounts");
+      router.replace("/");
     } catch (error: unknown) {
       const signUpError = toPinAuthenticationError(error);
       setErrorMessage(signUpError.message);

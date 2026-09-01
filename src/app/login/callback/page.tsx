@@ -9,7 +9,9 @@ import { useAuthStore } from "@/store/useAuthStore";
 import { useBankStore } from "@/store/useBankStore";
 
 const NEW_USER_RETURN_PATH = "/pin/register";
-const RETURNING_USER_RETURN_PATH = "/accounts";
+/* 로그인 후 기본 화면은 홈이다. 음성 버튼이 있는 화면이 이 서비스의 시작점이고,
+   계좌 목록은 거기서 들어가는 하위 화면이다. */
+const RETURNING_USER_RETURN_PATH = "/";
 
 function getCallbackValidationError(
   code: string | null,

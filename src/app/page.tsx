@@ -199,11 +199,11 @@ function SignedInHome({ displayName }: { displayName: string }) {
             <>
               <span
                 aria-hidden="true"
-                className="movi-pulse-ring absolute h-[6.5rem] w-[6.5rem] rounded-full border-2 border-[var(--color-accent)]"
+                className="movi-pulse-ring absolute h-40 w-40 rounded-full border-2 border-[var(--color-accent)]"
               />
               <span
                 aria-hidden="true"
-                className="movi-pulse-ring absolute h-32 w-32 rounded-full border-2 border-[var(--color-accent)]"
+                className="movi-pulse-ring absolute h-48 w-48 rounded-full border-2 border-[var(--color-accent)]"
                 style={{ animationDelay: "0.3s" }}
               />
             </>
@@ -212,7 +212,7 @@ function SignedInHome({ displayName }: { displayName: string }) {
             type="button"
             aria-pressed={isListening}
             onClick={startListening}
-            className="relative flex h-20 w-20 items-center justify-center rounded-full bg-[var(--color-primary)] text-3xl transition-colors hover:bg-[var(--color-primary-hover)] focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[var(--color-focus)] focus-visible:ring-offset-2 motion-reduce:transition-none"
+            className="relative flex h-32 w-32 items-center justify-center rounded-full bg-[var(--color-primary)] text-6xl transition-colors hover:bg-[var(--color-primary-hover)] focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[var(--color-focus)] focus-visible:ring-offset-2 motion-reduce:transition-none"
           >
             <span aria-hidden="true">🎙️</span>
             <span className="sr-only">{isListening ? "음성 인식 중" : "음성으로 명령하기"}</span>

@@ -8,6 +8,10 @@ import {
   readApiFailureResponse,
 } from "@/services/apiResponse";
 import { readDeviceUuid } from "@/services/deviceIdentity";
+import {
+  type BackendLoginMethod,
+  resolveDisplayName,
+} from "@/services/displayName";
 import type {
   AuthSession,
   AuthTokenPair,
@@ -51,6 +55,7 @@ export interface PinAuthenticationError {
 
 interface KakaoLoginData extends AuthTokenPair {
   userId: number | string;
+  name?: string;
   newUser: boolean;
 }
 
@@ -98,6 +103,9 @@ function isKakaoLoginData(value: unknown): value is KakaoLoginData {
 
   return (
     (typeof value.userId === "number" || typeof value.userId === "string") &&
+    (value.name === undefined ||
+      value.name === null ||
+      typeof value.name === "string") &&
     typeof value.newUser === "boolean" &&
     typeof value.accessToken === "string" &&
     value.accessToken.length > 0 &&
@@ -111,20 +119,14 @@ function isKakaoLoginData(value: unknown): value is KakaoLoginData {
   );
 }
 
-const displayNameByMethod: Record<"카카오" | "PIN" | "일반", string> = {
-  카카오: "카카오로 로그인한 사용자",
-  PIN: "PIN으로 로그인한 사용자",
-  일반: "아이디로 로그인한 사용자",
-};
-
 function toKakaoLoginExchangeResult(
   data: KakaoLoginData,
-  method: "카카오" | "PIN" | "일반" = "카카오",
+  method: BackendLoginMethod = "카카오",
 ): KakaoLoginExchangeResult {
   return {
     session: {
       userId: String(data.userId),
-      displayName: displayNameByMethod[method],
+      displayName: resolveDisplayName(data.name, method),
       method,
       authenticatedAt: new Date().toISOString(),
       backend: {

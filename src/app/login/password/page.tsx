@@ -28,7 +28,7 @@ function getSafeReturnPath(): string {
     requestedPath.startsWith("//") ||
     requestedPath.startsWith("/login")
   ) {
-    return "/accounts";
+    return "/";
   }
   return requestedPath;
 }
