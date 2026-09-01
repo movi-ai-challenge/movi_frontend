@@ -9,7 +9,7 @@ const BACKEND_SESSION_METADATA_STORAGE_KEY = "movi.auth-session-metadata";
 interface BackendSessionMetadata {
   userId: string;
   displayName: string;
-  method: "카카오" | "PIN";
+  method: "카카오" | "PIN" | "일반";
   authenticatedAt: string;
   isNewUser: boolean;
 }
@@ -55,7 +55,9 @@ function isBackendSessionMetadata(
   return (
     typeof value.userId === "string" &&
     typeof value.displayName === "string" &&
-    (value.method === "카카오" || value.method === "PIN") &&
+    (value.method === "카카오" ||
+      value.method === "PIN" ||
+      value.method === "일반") &&
     typeof value.authenticatedAt === "string" &&
     typeof value.isNewUser === "boolean"
   );
@@ -94,9 +96,16 @@ function readBackendSessionMetadata(): BackendSessionMetadata | null {
 function toBackendSessionMetadata(
   session: AuthSession,
 ): BackendSessionMetadata | null {
+  /*
+   * 실제 백엔드 로그인 수단만 통과시킨다. Mock 수단(PASS·생체인증)이 여기로 오면
+   * 저장하지 않는다. 새 로그인 수단을 추가할 때 이 목록을 빠뜨리면, 서버는 가입에
+   * 성공했는데 화면에는 실패로 보인다 — setBackendSession 이 예외를 던지기 때문이다.
+   */
   if (
     !session.backend ||
-    (session.method !== "카카오" && session.method !== "PIN")
+    (session.method !== "카카오" &&
+      session.method !== "PIN" &&
+      session.method !== "일반")
   ) {
     return null;
   }

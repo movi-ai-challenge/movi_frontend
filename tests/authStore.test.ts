@@ -150,3 +150,52 @@ test("PIN 등록 완료 상태를 메모리와 복구 메타데이터에 함께 
     /"isNewUser":true/,
   );
 });
+
+test("일반 로그인 세션도 백엔드 세션으로 저장한다", () => {
+  // 서버는 가입에 성공했는데 화면에는 실패로 보이던 결함을 막는다.
+  // 저장 가능한 수단 목록에서 빠지면 setBackendSession 이 예외를 던진다.
+  const session: AuthSession = {
+    userId: "18",
+    displayName: "아이디로 로그인한 사용자",
+    method: "일반",
+    authenticatedAt: "2026-09-01T00:00:00.000Z",
+    backend: {
+      accessToken: "access-secret",
+      tokenType: "Bearer",
+      accessTokenExpiresIn: 1800,
+      isNewUser: true,
+    },
+  };
+
+  assert.doesNotThrow(() => {
+    useAuthStore.getState().setBackendSession(session, "refresh-secret");
+  });
+
+  const stored = JSON.parse(
+    sessionStorage.getItem(BACKEND_SESSION_METADATA_STORAGE_KEY) ?? "null",
+  );
+  assert.equal(stored.method, "일반");
+  assert.equal(stored.userId, "18");
+  assert.equal(useAuthStore.getState().session?.method, "일반");
+});
+
+test("저장된 일반 로그인 메타데이터를 복원한다", () => {
+  sessionStorage.setItem(
+    BACKEND_SESSION_METADATA_STORAGE_KEY,
+    JSON.stringify({
+      userId: "18",
+      displayName: "아이디로 로그인한 사용자",
+      method: "일반",
+      authenticatedAt: "2026-09-01T00:00:00.000Z",
+      isNewUser: false,
+    }),
+  );
+  sessionStorage.setItem(REFRESH_TOKEN_STORAGE_KEY, "refresh-secret");
+
+  useAuthStore.getState().hydrateSession();
+
+  assert.equal(
+    useAuthStore.getState().pendingBackendSession?.method,
+    "일반",
+  );
+});
