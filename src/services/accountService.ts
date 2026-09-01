@@ -63,3 +63,26 @@ export async function updateAccountAlias(
     parseApiData(response.data, isAccountResponseData),
   );
 }
+
+/**
+ * 계좌 연결을 해제한다 (명세서 1.5).
+ *
+ * 서버는 계좌를 지우지 않고 비활성으로 내린 뒤 **남은 계좌 목록**을 돌려준다.
+ * 목록을 다시 조회하지 않아도 되고, 기본 계좌가 바뀐 결과까지 한 번에 받는다.
+ * 기본 계좌를 해제하면 서버가 남은 계좌 중 하나를 기본으로 올린다.
+ *
+ * 보내는 중인 이체가 걸린 계좌는 `ACCOUNT_4005`로 거절된다.
+ */
+export async function disconnectAccount(accountId: string): Promise<Account[]> {
+  if (isMockMode) {
+    await waitForMockResponse();
+    return mockAccounts.filter((account) => account.id !== accountId);
+  }
+
+  const response = await api.delete<unknown>(
+    `${ACCOUNTS_PATH}/${encodeURIComponent(accountId)}`,
+  );
+  return mapAccountListResponse(
+    parseApiData(response.data, isAccountListResponseData),
+  );
+}
