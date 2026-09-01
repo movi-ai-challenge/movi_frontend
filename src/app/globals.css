@@ -125,7 +125,17 @@ body {
   -webkit-font-smoothing: antialiased;
 }
 
-button, input, select, textarea { font: inherit; }
+/*
+ * 폼 요소가 브라우저 기본 글꼴 대신 본문 글꼴을 쓰게 한다.
+ *
+ * @layer base 안에 두는 것이 중요하다. 레이어 밖에 두면 레이어 없는 규칙이
+ * @layer utilities 안의 규칙을 항상 이겨, 버튼에 붙인 text-* 유틸리티가
+ * 선택자 우선순위와 무관하게 전부 무시된다. 그 상태에서는 지정한 글자 크기가
+ * 조용히 죽어 화면에 늘 16px 로 나온다.
+ */
+@layer base {
+  button, input, select, textarea { font: inherit; }
+}
 
 /* 금액·계좌번호 */
 .tabular {
