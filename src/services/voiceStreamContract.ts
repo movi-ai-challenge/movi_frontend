@@ -22,6 +22,8 @@ export interface VoiceStreamResult {
 export interface VoiceStreamCommand {
   type: "command";
   data: unknown;
+  /** 낭독할 안내 문구. 백엔드가 만든 값이라 금액이 한국어로 바뀌어 온다. */
+  voiceMessage: string;
 }
 
 /** 명령 처리 중 거부됐을 때. 인식 자체는 성공한 상태다. */
@@ -62,7 +64,11 @@ export function parseVoiceStreamMessage(raw: string): VoiceStreamMessage | null 
   if (!isRecord(parsed)) return null;
 
   if (parsed.type === "command") {
-    return { type: "command", data: parsed.data };
+    return {
+      type: "command",
+      data: parsed.data,
+      voiceMessage: readString(parsed.voiceMessage),
+    };
   }
 
   if (parsed.type === "commandError") {

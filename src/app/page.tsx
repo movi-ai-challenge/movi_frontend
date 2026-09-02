@@ -18,6 +18,7 @@ import {
   mapVoiceCommandResponse,
 } from "@/services/voiceContract";
 import { startVoiceSession } from "@/services/voiceService";
+import { primeSpeech, speak, stopSpeaking } from "@/services/speech";
 import { useAuthStore } from "@/store/useAuthStore";
 import { useBankStore } from "@/store/useBankStore";
 
@@ -108,31 +109,6 @@ const QUICK_MENU = [
  * 상태 이름을 그대로 보여주면 화면을 보지 않는 사용자에게는 아무 뜻이 없다.
  * 다음에 무엇을 하면 되는지를 말해 준다.
  */
-const SLOT_QUESTIONS: Record<string, string> = {
-  AMOUNT: "얼마를 보낼까요?",
-  RECIPIENT: "누구에게 보낼까요?",
-  SOURCE_ACCOUNT: "어느 계좌에서 보낼까요?",
-};
-
-function describeCommandState(
-  state: string | null | undefined,
-  missingSlots?: readonly string[] | null,
-): string {
-  if (state === "CLARIFYING") {
-    // 무엇이 빠졌는지 말해 준다. "조금 더 알려주세요"만으로는 화면을 보지 않는
-    // 사용자가 무엇을 답해야 할지 알 수 없다.
-    const question = (missingSlots ?? [])
-      .map((slot) => SLOT_QUESTIONS[slot])
-      .find((value) => Boolean(value));
-    return question ?? "조금 더 알려주세요.";
-  }
-  if (state === "AWAITING_CONFIRMATION") return "내용을 확인하고 이체를 진행해 주세요.";
-  if (state === "COMPLETED") return "요청을 처리했어요.";
-  if (state === "CANCELED") return "취소했어요.";
-  if (state === "EXPIRED") return "시간이 지나 다시 말씀해 주셔야 해요.";
-  return "";
-}
-
 function SignedInHome({ displayName }: { displayName: string }) {
   const session = useAuthStore((state) => state.session);
   const accounts = useBankStore((state) => state.accounts);
@@ -184,6 +160,7 @@ function SignedInHome({ displayName }: { displayName: string }) {
 
   const startListening = async () => {
     if (isListening) {
+      stopSpeaking();
       stopStream();
       return;
     }
@@ -191,6 +168,11 @@ function SignedInHome({ displayName }: { displayName: string }) {
       setVoiceError("이 브라우저는 실시간 음성 인식을 지원하지 않아요.");
       return;
     }
+    /*
+     * 낭독을 지금 준비한다. iOS 는 사용자 조작과 이어진 흐름에서만 첫 발화를
+     * 허용해, 나중에 도착하는 안내를 그때 읽으려 하면 조용히 막힌다.
+     */
+    primeSpeech();
     const accessToken = session?.backend?.accessToken;
     if (!accessToken) {
       setVoiceError("로그인이 필요해요.");
@@ -222,11 +204,14 @@ function SignedInHome({ displayName }: { displayName: string }) {
           setIsActivated(result.activated);
           setCommandText(result.command);
         },
-        onCommand: (data) => {
+        onCommand: (data, voiceMessage) => {
           if (!isVoiceCommandResponseData(data)) return;
           const result = mapVoiceCommandResponse(data, null);
           setCommandState(result.state ?? null);
-          setCommandGuide(describeCommandState(result.state, result.missingSlots));
+          // 화면과 낭독이 같은 문장을 쓴다. 백엔드가 만든 값이라 금액도
+          // 한국어로 바뀌어 온다.
+          setCommandGuide(voiceMessage);
+          speak(voiceMessage);
 
           /*
            * 대화가 끝난 상태에서만 세션을 놓는다. 재질문 중이면 세션을 유지해야
@@ -238,16 +223,18 @@ function SignedInHome({ displayName }: { displayName: string }) {
           stopStream();
         },
         onCommandError: (error) => {
-          setVoiceError(error.voiceMessage || "명령을 처리하지 못했어요.");
+          const message = error.voiceMessage || "명령을 처리하지 못했어요.";
+          setVoiceError(message);
+          speak(message);
           voiceSessionIdRef.current = null;
           stopStream();
         },
         onError: (error) => {
-          setVoiceError(
-            error.retryable
-              ? "잘 못 알아들었어요. 다시 말씀해 주세요."
-              : "음성 인식에 문제가 생겼어요.",
-          );
+          const message = error.retryable
+            ? "잘 못 알아들었어요. 다시 말씀해 주세요."
+            : "음성 인식에 문제가 생겼어요.";
+          setVoiceError(message);
+          speak(message);
         },
         onClose: () => {
           sessionRef.current = null;

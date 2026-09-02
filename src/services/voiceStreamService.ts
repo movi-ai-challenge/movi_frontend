@@ -24,7 +24,7 @@ const WORKLET_NAME = "pcm-worklet";
 export interface VoiceStreamHandlers {
   onResult: (result: VoiceStreamResult) => void;
   /** 백엔드 검증까지 마친 명령 결과. 잔액·거래내역·확인 대기가 여기로 온다. */
-  onCommand: (data: unknown) => void;
+  onCommand: (data: unknown, voiceMessage: string) => void;
   onCommandError: (error: VoiceStreamCommandError) => void;
   onError: (error: VoiceStreamError) => void;
   onClose: () => void;
@@ -113,7 +113,7 @@ export async function startVoiceStream(
       return;
     }
     if (isVoiceStreamCommand(message)) {
-      handlers.onCommand(message.data);
+      handlers.onCommand(message.data, message.voiceMessage);
       return;
     }
     if (isVoiceStreamCommandError(message)) {
