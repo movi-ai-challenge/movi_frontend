@@ -1,12 +1,17 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 import { AccessibleButton } from "@/components/common/AccessibleButton";
 import { toApiError } from "@/services/api";
 import { clearTransferRecoveryKey } from "@/services/transferRecoveryStorage";
 import { getTransferStatus } from "@/services/transferService";
+import { getNotifications } from "@/services/notificationService";
+import {
+  findNotificationForTransfer,
+  type NotificationData,
+} from "@/services/notificationContract";
 import { useBankStore } from "@/store/useBankStore";
 import type { TransferExecutionStatus, TransferFdsRiskLevel } from "@/types";
 
@@ -30,6 +35,20 @@ const riskLabels: Record<TransferFdsRiskLevel, string> = {
   MEDIUM: "주의 필요",
   HIGH: "높음",
 };
+
+/**
+ * 보호자 알림 상태를 사람이 읽을 말로 바꾼다.
+ *
+ * QUEUED 를 "대기"로만 적으면 사용자는 갔는지 안 갔는지 알 수 없다. 재시도가
+ * 도는 중인지도 함께 알려 줘야 "실패했으니 직접 연락해야 하나"를 판단할 수 있다.
+ */
+function describeGuardianAlert(alert: NotificationData): string {
+  if (alert.status === "SENT") return "전송 완료";
+  if (alert.status === "QUEUED") return "전송 중";
+  if (alert.retryCount > 0) return `전송 실패 · ${alert.retryCount}회 재시도함`;
+
+  return "전송 실패";
+}
 
 /**
  * 거래 일시 표기.
@@ -60,6 +79,35 @@ export default function TransferResultPage() {
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
 
+  /*
+   * 보호자 알림은 송금과 별도 트랜잭션에서 지연 발송된다. 이체 응답에 담아 오면
+   * 그 시점 값이 최종이 아니라, "전송 완료"라고 띄운 뒤 실제로는 실패할 수 있다.
+   * 그래서 결과 화면에서 따로 조회한다. 못 찾으면 아무것도 주장하지 않는다 --
+   * 나가지 않은 알림을 전송됐다고 보여 주면 사용자가 잘못 안심한다.
+   */
+  const [guardianAlert, setGuardianAlert] = useState<NotificationData | null>(null);
+
+  useEffect(() => {
+    if (!result?.riskLevel || result.riskLevel === "LOW") return;
+    let isActive = true;
+
+    getNotifications()
+      .then((notifications) => {
+        if (!isActive) return;
+        setGuardianAlert(
+          findNotificationForTransfer(notifications, result.transferId),
+        );
+      })
+      .catch(() => {
+        // 조회 실패는 화면에 드러내지 않는다. 알림 확인은 곁가지이고,
+        // 송금 결과를 읽는 것이 이 화면의 본래 일이다.
+      });
+
+    return () => {
+      isActive = false;
+    };
+  }, [result?.riskLevel, result?.transferId]);
+
   if (!result) {
     return (
       <main className="mx-auto min-h-[70vh] w-full max-w-xl px-6 py-12">
@@ -77,6 +125,8 @@ export default function TransferResultPage() {
   const isTerminal = terminalStatuses.has(result.status);
   const isBlocked = result.status === "BLOCKED";
   const isCompleted = result.status === "COMPLETED";
+
+
   const refreshStatus = async () => {
     setIsRefreshing(true);
     setErrorMessage("");
@@ -161,6 +211,23 @@ export default function TransferResultPage() {
             <div className="border-t-2 border-[var(--color-border)] pt-4">
               <dt className="font-semibold text-[var(--color-text-muted)]">거래 일시</dt>
               <dd className="mt-1 font-bold">{formatTransactedAt(result.completedAt)}</dd>
+            </div>
+          ) : null}
+          {guardianAlert ? (
+            <div className="border-t-2 border-[var(--color-border)] pt-4">
+              <dt className="font-semibold text-[var(--color-text-muted)]">보호자 알림</dt>
+              <dd
+                className={`mt-1 font-bold ${
+                  guardianAlert.status === "SENT"
+                    ? "text-[var(--color-success)]"
+                    : guardianAlert.status === "FAILED"
+                      ? "text-[var(--color-danger)]"
+                      : ""
+                }`}
+              >
+                {describeGuardianAlert(guardianAlert)}
+                {guardianAlert.guardianName ? ` · ${guardianAlert.guardianName}` : ""}
+              </dd>
             </div>
           ) : null}
           {result.riskReasons.length > 0 ? (
