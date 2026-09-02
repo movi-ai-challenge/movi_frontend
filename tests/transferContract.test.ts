@@ -93,6 +93,7 @@ test("직접 송금 실행 결과의 상태와 FDS 위험도를 그대로 매핑
     amount: 50_000,
     recipientName: "김영희",
     completedAt: "2026-08-27T12:00:02",
+    riskReasons: ["처음 보내는 계좌예요"],
   };
   assert.equal(isTransferResultResponseData(result), true);
   if (!isTransferResultResponseData(result)) assert.fail("유효한 fixture");
@@ -145,4 +146,39 @@ test("완료 시각이 없거나 음성 안내가 없는 완료 응답을 거부
     false,
   );
   assert.throws(() => mapTransferStatusResponse(completed, null));
+});
+
+test("위험 근거가 없어도 결과를 받는다", () => {
+  // FDS 가 아무 신호도 잡지 않은 거래가 있다. 근거가 비어 있다고 결과를
+  // 버리면 정상 송금이 화면에 뜨지 않는다.
+  const result = {
+    transferId: 92,
+    status: "COMPLETED" as const,
+    riskLevel: "LOW" as const,
+    amount: 10_000,
+    recipientName: "김영희",
+    completedAt: "2026-08-27T12:00:02",
+  };
+
+  assert.equal(isTransferResultResponseData(result), true);
+  if (!isTransferResultResponseData(result)) assert.fail("유효한 fixture");
+  assert.deepEqual(
+    mapTransferResultResponse(result, "보냈어요.", idempotencyKey).riskReasons,
+    [],
+  );
+});
+
+test("근거에 문자열이 아닌 값이 섞이면 거부한다", () => {
+  // 화면이 그대로 그리는 값이라 형태가 어긋나면 렌더링이 깨진다.
+  const result = {
+    transferId: 93,
+    status: "COMPLETED" as const,
+    riskLevel: "LOW" as const,
+    amount: 10_000,
+    recipientName: "김영희",
+    completedAt: "2026-08-27T12:00:02",
+    riskReasons: ["정상", 42],
+  };
+
+  assert.equal(isTransferResultResponseData(result), false);
 });

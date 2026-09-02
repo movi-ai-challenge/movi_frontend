@@ -31,6 +31,22 @@ const riskLabels: Record<TransferFdsRiskLevel, string> = {
   HIGH: "높음",
 };
 
+/**
+ * 거래 일시 표기.
+ *
+ * 초까지 보여 주지 않는다. 사용자가 확인하려는 것은 "언제 나갔는지"이지 정확한
+ * 초가 아니다. 낭독기가 읽을 때도 짧을수록 알아듣기 쉽다.
+ */
+function formatTransactedAt(value: string): string {
+  const parsed = new Date(value);
+  if (Number.isNaN(parsed.getTime())) return value;
+
+  return new Intl.DateTimeFormat("ko-KR", {
+    dateStyle: "long",
+    timeStyle: "short",
+  }).format(parsed);
+}
+
 const terminalStatuses = new Set<TransferExecutionStatus>([
   "COMPLETED",
   "BLOCKED",
@@ -59,6 +75,8 @@ export default function TransferResultPage() {
   }
 
   const isTerminal = terminalStatuses.has(result.status);
+  const isBlocked = result.status === "BLOCKED";
+  const isCompleted = result.status === "COMPLETED";
   const refreshStatus = async () => {
     setIsRefreshing(true);
     setErrorMessage("");
@@ -73,6 +91,9 @@ export default function TransferResultPage() {
         recipientName: status.recipientName,
         completedAt: status.completedAt,
         voiceMessage: status.voiceMessage,
+        // 상태 재조회는 근거를 내려주지 않는다. 처음 받은 값을 유지해야
+        // 새로고침했다고 "왜 막혔는지"가 사라지지 않는다.
+        riskReasons: result.riskReasons,
       });
       if (terminalStatuses.has(status.status)) clearTransferRecoveryKey();
     } catch (error: unknown) {
@@ -84,8 +105,37 @@ export default function TransferResultPage() {
 
   return (
     <main className="mx-auto min-h-[70vh] w-full max-w-xl px-6 py-12">
+      {/*
+        성공과 차단을 색과 기호로도 구분한다. 제목 글자만 다르면 눈으로 훑을 때
+        결과가 즉시 들어오지 않는다. 기호는 aria-hidden 으로 두어 낭독기가
+        의미 없는 문자를 읽지 않게 하고, 뜻은 제목 문구가 담는다.
+      */}
       <p className="font-bold text-[var(--color-accent)]">송금 결과</p>
-      <h1 className="mt-2 text-4xl font-bold tracking-tight">{statusLabels[result.status]}</h1>
+      <div className="mt-2 flex items-center gap-3">
+        <span
+          aria-hidden="true"
+          className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-full text-2xl ${
+            isBlocked
+              ? "bg-[var(--color-danger-surface)] text-[var(--color-danger)]"
+              : isCompleted
+                ? "bg-[var(--color-success-surface)] text-[var(--color-success)]"
+                : "bg-[var(--color-surface)] text-[var(--color-text-muted)]"
+          }`}
+        >
+          {isBlocked ? "!" : isCompleted ? "✓" : "…"}
+        </span>
+        <h1
+          className={`text-4xl font-bold tracking-tight ${
+            isBlocked
+              ? "text-[var(--color-danger)]"
+              : isCompleted
+                ? "text-[var(--color-success)]"
+                : ""
+          }`}
+        >
+          {statusLabels[result.status]}
+        </h1>
+      </div>
       <p className="mt-4 text-lg leading-8" aria-live="polite">{result.voiceMessage}</p>
 
       <section className="mt-8 rounded-xl border-2 border-[var(--color-border)] bg-[var(--color-surface)] p-6" aria-labelledby="transfer-result-title">
@@ -107,6 +157,28 @@ export default function TransferResultPage() {
             <dt className="font-semibold text-[var(--color-text-muted)]">FDS 위험도</dt>
             <dd className="mt-1 font-bold">{result.riskLevel ? riskLabels[result.riskLevel] : "확인 중"}</dd>
           </div>
+          {result.completedAt ? (
+            <div className="border-t-2 border-[var(--color-border)] pt-4">
+              <dt className="font-semibold text-[var(--color-text-muted)]">거래 일시</dt>
+              <dd className="mt-1 font-bold">{formatTransactedAt(result.completedAt)}</dd>
+            </div>
+          ) : null}
+          {result.riskReasons.length > 0 ? (
+            <div className="border-t-2 border-[var(--color-border)] pt-4">
+              <dt className="font-semibold text-[var(--color-text-muted)]">
+                {isBlocked ? "차단 사유" : "확인된 사항"}
+              </dt>
+              <dd className="mt-1">
+                <ul className="flex flex-col gap-1">
+                  {result.riskReasons.map((reason) => (
+                    <li key={reason} className="font-bold">
+                      {reason}
+                    </li>
+                  ))}
+                </ul>
+              </dd>
+            </div>
+          ) : null}
         </dl>
       </section>
 

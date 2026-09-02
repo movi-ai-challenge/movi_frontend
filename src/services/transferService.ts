@@ -129,6 +129,7 @@ export async function executeDirectTransfer(
         amount: review.amount,
         recipientName: review.recipient.holderName,
         completedAt: new Date().toISOString(),
+        riskReasons: [],
       },
       `${review.recipient.holderName} 님에게 송금을 완료했습니다.`,
       review.idempotencyKey,

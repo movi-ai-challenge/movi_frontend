@@ -46,6 +46,13 @@ export interface TransferResultResponseData {
   amount: number;
   recipientName: string;
   completedAt: string | null;
+  /**
+   * FDS 가 짚은 근거를 사람이 읽을 말로 바꾼 것.
+   *
+   * 위험도만으로는 "왜 막혔는지" 알 수 없다. 화면을 보지 않는 사용자에게는
+   * 백엔드가 만든 이 문구가 유일한 설명이라 프런트가 따로 짓지 않는다.
+   */
+  riskReasons: string[];
 }
 
 export interface TransferStatusResponseData {
@@ -56,6 +63,19 @@ export interface TransferStatusResponseData {
   recipientName: string;
   requestedAt: string;
   completedAt: string | null;
+}
+
+/**
+ * 근거 목록 검증.
+ *
+ * 없거나 비어 있어도 정상이다 -- FDS 가 아무 신호도 잡지 않은 거래가 그렇다.
+ * 값이 오면 문자열만 담겨 있어야 화면에 그대로 그릴 수 있다.
+ */
+function isStringList(value: unknown): boolean {
+  if (value === undefined || value === null) return true;
+  if (!Array.isArray(value)) return false;
+
+  return value.every((item) => typeof item === "string");
 }
 
 const transferStatuses = new Set<TransferExecutionStatus>([
@@ -224,7 +244,8 @@ export function isTransferResultResponseData(
     !Number.isSafeInteger(value.amount) ||
     value.amount <= 0 ||
     !isNonBlankString(value.recipientName) ||
-    !(value.completedAt === null || isDateTime(value.completedAt))
+    !(value.completedAt === null || isDateTime(value.completedAt)) ||
+    !isStringList(value.riskReasons)
   ) {
     return false;
   }
@@ -249,6 +270,7 @@ export function mapTransferResultResponse(
     idempotencyKey,
     recipientName: data.recipientName.trim(),
     voiceMessage: voiceMessage.trim(),
+    riskReasons: data.riskReasons ?? [],
   };
 }
 

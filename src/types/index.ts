@@ -240,6 +240,8 @@ export interface DirectTransferResult {
   recipientName: string;
   completedAt: string | null;
   voiceMessage: string;
+  /** FDS 가 짚은 근거. 백엔드가 만든 문구를 그대로 쓴다. */
+  riskReasons: string[];
 }
 
 export interface AccessibilityPreferences {
