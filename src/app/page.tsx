@@ -108,8 +108,24 @@ const QUICK_MENU = [
  * 상태 이름을 그대로 보여주면 화면을 보지 않는 사용자에게는 아무 뜻이 없다.
  * 다음에 무엇을 하면 되는지를 말해 준다.
  */
-function describeCommandState(state: string | null | undefined): string {
-  if (state === "CLARIFYING") return "조금 더 알려주세요.";
+const SLOT_QUESTIONS: Record<string, string> = {
+  AMOUNT: "얼마를 보낼까요?",
+  RECIPIENT: "누구에게 보낼까요?",
+  SOURCE_ACCOUNT: "어느 계좌에서 보낼까요?",
+};
+
+function describeCommandState(
+  state: string | null | undefined,
+  missingSlots?: readonly string[] | null,
+): string {
+  if (state === "CLARIFYING") {
+    // 무엇이 빠졌는지 말해 준다. "조금 더 알려주세요"만으로는 화면을 보지 않는
+    // 사용자가 무엇을 답해야 할지 알 수 없다.
+    const question = (missingSlots ?? [])
+      .map((slot) => SLOT_QUESTIONS[slot])
+      .find((value) => Boolean(value));
+    return question ?? "조금 더 알려주세요.";
+  }
   if (state === "AWAITING_CONFIRMATION") return "내용을 확인하고 이체를 진행해 주세요.";
   if (state === "COMPLETED") return "요청을 처리했어요.";
   if (state === "CANCELED") return "취소했어요.";
@@ -131,6 +147,12 @@ function SignedInHome({ displayName }: { displayName: string }) {
   const [commandState, setCommandState] = useState<string | null>(null);
   const [commandGuide, setCommandGuide] = useState("");
   const sessionRef = useRef<VoiceStreamSession | null>(null);
+  /*
+   * 대화가 이어지는 동안 같은 음성 세션을 쓴다. 재질문마다 새 세션을 만들면
+   * 앞선 발화의 금액·수취인이 사라져, "누구에게 보낼까요?"에 답해도 백엔드가
+   * 새 명령으로 읽는다. 슬롯은 백엔드가 세션에 들고 있다.
+   */
+  const voiceSessionIdRef = useRef<number | string | null>(null);
 
   useEffect(() => {
     let isActive = true;
@@ -189,7 +211,10 @@ function SignedInHome({ displayName }: { displayName: string }) {
        * 명령으로 처리하지 않는다 -- 어느 대화에 속한 말인지 모르면 이전 발화의
        * 금액·수취인과 이어 붙일 수 없다.
        */
-      const voiceSession = await startVoiceSession();
+      if (voiceSessionIdRef.current === null) {
+        const voiceSession = await startVoiceSession();
+        voiceSessionIdRef.current = voiceSession.voiceSessionId;
+      }
 
       sessionRef.current = await startVoiceStream(accessToken, {
         onResult: (result) => {
@@ -201,11 +226,20 @@ function SignedInHome({ displayName }: { displayName: string }) {
           if (!isVoiceCommandResponseData(data)) return;
           const result = mapVoiceCommandResponse(data, null);
           setCommandState(result.state ?? null);
-          setCommandGuide(describeCommandState(result.state));
+          setCommandGuide(describeCommandState(result.state, result.missingSlots));
+
+          /*
+           * 대화가 끝난 상태에서만 세션을 놓는다. 재질문 중이면 세션을 유지해야
+           * 다음 발화가 앞선 금액·수취인과 이어 붙는다.
+           */
+          if (result.state !== "CLARIFYING") {
+            voiceSessionIdRef.current = null;
+          }
           stopStream();
         },
         onCommandError: (error) => {
           setVoiceError(error.voiceMessage || "명령을 처리하지 못했어요.");
+          voiceSessionIdRef.current = null;
           stopStream();
         },
         onError: (error) => {
@@ -219,7 +253,7 @@ function SignedInHome({ displayName }: { displayName: string }) {
           sessionRef.current = null;
           setIsListening(false);
         },
-      }, voiceSession.voiceSessionId);
+      }, voiceSessionIdRef.current ?? undefined);
     } catch {
       setIsListening(false);
       setVoiceError("마이크를 사용할 수 없어요. 권한을 확인해 주세요.");
@@ -292,7 +326,12 @@ function SignedInHome({ displayName }: { displayName: string }) {
         className="flex flex-1 flex-col items-center justify-center gap-4"
       >
         <h2 id="voice-heading" role="status" className="text-[15px] text-[var(--color-text-muted)]">
-          {!isListening ? "무엇을 도와드릴까요?" : null}
+          {!isListening && commandState === "CLARIFYING"
+            ? "마이크를 눌러 이어서 말씀해 주세요"
+            : null}
+          {!isListening && commandState !== "CLARIFYING"
+            ? "무엇을 도와드릴까요?"
+            : null}
           {isListening && !isActivated ? "듣고 있어요. \"모비야\"라고 불러 주세요" : null}
           {isListening && isActivated ? "말씀하세요" : null}
         </h2>
