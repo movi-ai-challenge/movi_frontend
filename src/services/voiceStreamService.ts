@@ -1,9 +1,12 @@
 "use client";
 
 import {
+  isVoiceStreamCommand,
+  isVoiceStreamCommandError,
   isVoiceStreamError,
   parseVoiceStreamMessage,
   toVoiceStreamUrl,
+  type VoiceStreamCommandError,
   type VoiceStreamError,
   type VoiceStreamResult,
 } from "@/services/voiceStreamContract";
@@ -20,6 +23,9 @@ const WORKLET_NAME = "pcm-worklet";
 
 export interface VoiceStreamHandlers {
   onResult: (result: VoiceStreamResult) => void;
+  /** 백엔드 검증까지 마친 명령 결과. 잔액·거래내역·확인 대기가 여기로 온다. */
+  onCommand: (data: unknown) => void;
+  onCommandError: (error: VoiceStreamCommandError) => void;
   onError: (error: VoiceStreamError) => void;
   onClose: () => void;
 }
@@ -51,6 +57,7 @@ export function isVoiceStreamSupported(): boolean {
 export async function startVoiceStream(
   accessToken: string,
   handlers: VoiceStreamHandlers,
+  voiceSessionId?: number | string,
 ): Promise<VoiceStreamSession> {
   const apiBaseUrl = process.env.NEXT_PUBLIC_API_URL;
   if (!apiBaseUrl) {
@@ -83,7 +90,9 @@ export async function startVoiceStream(
       noiseSuppression: true,
     },
   });
-  const socket = new WebSocket(toVoiceStreamUrl(apiBaseUrl, accessToken));
+  const socket = new WebSocket(
+    toVoiceStreamUrl(apiBaseUrl, accessToken, voiceSessionId),
+  );
   socket.binaryType = "arraybuffer";
 
   let closed = false;
@@ -101,6 +110,14 @@ export async function startVoiceStream(
     if (!message) return;
     if (isVoiceStreamError(message)) {
       handlers.onError(message);
+      return;
+    }
+    if (isVoiceStreamCommand(message)) {
+      handlers.onCommand(message.data);
+      return;
+    }
+    if (isVoiceStreamCommandError(message)) {
+      handlers.onCommandError(message);
       return;
     }
     handlers.onResult(message);

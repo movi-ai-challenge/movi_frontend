@@ -2,6 +2,8 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 
 import {
+  isVoiceStreamCommand,
+  isVoiceStreamCommandError,
   isVoiceStreamError,
   parseVoiceStreamMessage,
   toVoiceStreamUrl,
@@ -77,4 +79,44 @@ test("끝의 슬래시를 중복시키지 않는다", () => {
   const url = toVoiceStreamUrl("https://moviback.duckdns.org/", "t");
 
   assert.ok(url.startsWith("wss://moviback.duckdns.org/ws/v1/voice/stream"));
+});
+
+test("명령 처리 결과를 구분한다", () => {
+  const parsed = parseVoiceStreamMessage(
+    JSON.stringify({ type: "command", data: { state: "AWAITING_CONFIRMATION" } }),
+  );
+
+  assert.ok(parsed);
+  assert.equal(isVoiceStreamCommand(parsed), true);
+});
+
+test("명령 거부도 구분한다", () => {
+  const parsed = parseVoiceStreamMessage(
+    JSON.stringify({
+      type: "commandError",
+      code: "VOICE_4003",
+      voiceMessage: "그 명령은 아직 못 알아들어요.",
+    }),
+  );
+
+  assert.ok(parsed);
+  assert.equal(isVoiceStreamCommandError(parsed), true);
+});
+
+test("분석 메시지는 화면이 쓰지 않는다", () => {
+  // 백엔드가 받아 검증하고 command 로 돌려준다. 프론트가 직접 해석하면
+  // 검증을 건너뛴 값이 화면에 뜬다.
+  assert.equal(parseVoiceStreamMessage(JSON.stringify({ type: "analysis" })), null);
+});
+
+test("세션 번호를 주소에 싣는다", () => {
+  const url = toVoiceStreamUrl("https://moviback.duckdns.org", "t", 42);
+
+  assert.ok(url.includes("voiceSessionId=42"));
+});
+
+test("세션 번호가 없으면 붙이지 않는다", () => {
+  const url = toVoiceStreamUrl("https://moviback.duckdns.org", "t");
+
+  assert.equal(url.includes("voiceSessionId"), false);
 });

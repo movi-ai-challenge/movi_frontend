@@ -18,6 +18,19 @@ export interface VoiceStreamResult {
   fullText: string;
 }
 
+/** 백엔드가 기존 검증 흐름을 거쳐 돌려준 명령 처리 결과. */
+export interface VoiceStreamCommand {
+  type: "command";
+  data: unknown;
+}
+
+/** 명령 처리 중 거부됐을 때. 인식 자체는 성공한 상태다. */
+export interface VoiceStreamCommandError {
+  type: "commandError";
+  code: string;
+  voiceMessage: string;
+}
+
 export interface VoiceStreamError {
   type: "error";
   code: string;
@@ -33,9 +46,13 @@ function readString(value: unknown): string {
   return typeof value === "string" ? value : "";
 }
 
-export function parseVoiceStreamMessage(
-  raw: string,
-): VoiceStreamResult | VoiceStreamError | null {
+export type VoiceStreamMessage =
+  | VoiceStreamResult
+  | VoiceStreamCommand
+  | VoiceStreamCommandError
+  | VoiceStreamError;
+
+export function parseVoiceStreamMessage(raw: string): VoiceStreamMessage | null {
   let parsed: unknown;
   try {
     parsed = JSON.parse(raw);
@@ -43,6 +60,21 @@ export function parseVoiceStreamMessage(
     return null;
   }
   if (!isRecord(parsed)) return null;
+
+  if (parsed.type === "command") {
+    return { type: "command", data: parsed.data };
+  }
+
+  if (parsed.type === "commandError") {
+    return {
+      type: "commandError",
+      code: readString(parsed.code) || "UNKNOWN",
+      voiceMessage: readString(parsed.voiceMessage),
+    };
+  }
+
+  // 분석 결과는 백엔드가 처리해 command 로 돌려준다. 화면은 쓰지 않는다.
+  if (parsed.type === "analysis") return null;
 
   if (parsed.type === "error") {
     return {
@@ -65,16 +97,36 @@ export function parseVoiceStreamMessage(
 }
 
 export function isVoiceStreamError(
-  value: VoiceStreamResult | VoiceStreamError,
+  value: VoiceStreamMessage,
 ): value is VoiceStreamError {
   return value.type === "error";
+}
+
+export function isVoiceStreamCommand(
+  value: VoiceStreamMessage,
+): value is VoiceStreamCommand {
+  return value.type === "command";
+}
+
+export function isVoiceStreamCommandError(
+  value: VoiceStreamMessage,
+): value is VoiceStreamCommandError {
+  return value.type === "commandError";
 }
 
 /**
  * API 주소에서 WebSocket 주소를 만든다. https 는 wss 로 바꿔야 한다 --
  * https 페이지에서 ws:// 로 붙으면 브라우저가 혼합 콘텐츠로 차단한다.
  */
-export function toVoiceStreamUrl(apiBaseUrl: string, accessToken: string): string {
+export function toVoiceStreamUrl(
+  apiBaseUrl: string,
+  accessToken: string,
+  voiceSessionId?: number | string,
+): string {
   const base = apiBaseUrl.replace(/\/$/, "").replace(/^http/, "ws");
-  return `${base}/ws/v1/voice/stream?accessToken=${encodeURIComponent(accessToken)}`;
+  const session =
+    voiceSessionId === undefined
+      ? ""
+      : `&voiceSessionId=${encodeURIComponent(String(voiceSessionId))}`;
+  return `${base}/ws/v1/voice/stream?accessToken=${encodeURIComponent(accessToken)}${session}`;
 }

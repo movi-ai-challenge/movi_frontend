@@ -13,6 +13,11 @@ import {
   startVoiceStream,
   type VoiceStreamSession,
 } from "@/services/voiceStreamService";
+import {
+  isVoiceCommandResponseData,
+  mapVoiceCommandResponse,
+} from "@/services/voiceContract";
+import { startVoiceSession } from "@/services/voiceService";
 import { useAuthStore } from "@/store/useAuthStore";
 import { useBankStore } from "@/store/useBankStore";
 
@@ -97,6 +102,21 @@ const QUICK_MENU = [
   { href: "/transactions", label: "내역", symbol: "📋" },
 ] as const;
 
+/**
+ * 명령 처리 결과를 화면·낭독용 한 문장으로 바꾼다.
+ *
+ * 상태 이름을 그대로 보여주면 화면을 보지 않는 사용자에게는 아무 뜻이 없다.
+ * 다음에 무엇을 하면 되는지를 말해 준다.
+ */
+function describeCommandState(state: string | null | undefined): string {
+  if (state === "CLARIFYING") return "조금 더 알려주세요.";
+  if (state === "AWAITING_CONFIRMATION") return "내용을 확인하고 이체를 진행해 주세요.";
+  if (state === "COMPLETED") return "요청을 처리했어요.";
+  if (state === "CANCELED") return "취소했어요.";
+  if (state === "EXPIRED") return "시간이 지나 다시 말씀해 주셔야 해요.";
+  return "";
+}
+
 function SignedInHome({ displayName }: { displayName: string }) {
   const session = useAuthStore((state) => state.session);
   const accounts = useBankStore((state) => state.accounts);
@@ -108,6 +128,8 @@ function SignedInHome({ displayName }: { displayName: string }) {
   const [commandText, setCommandText] = useState("");
   const [isActivated, setIsActivated] = useState(false);
   const [voiceError, setVoiceError] = useState("");
+  const [commandState, setCommandState] = useState<string | null>(null);
+  const [commandGuide, setCommandGuide] = useState("");
   const sessionRef = useRef<VoiceStreamSession | null>(null);
 
   useEffect(() => {
@@ -156,15 +178,35 @@ function SignedInHome({ displayName }: { displayName: string }) {
     setVoiceError("");
     setHeardText("");
     setCommandText("");
+    setCommandState(null);
+    setCommandGuide("");
     setIsActivated(false);
     setIsListening(true);
 
     try {
+      /*
+       * 음성 세션을 먼저 연다. 세션 없이 연결하면 백엔드가 인식 결과만 흘려보내고
+       * 명령으로 처리하지 않는다 -- 어느 대화에 속한 말인지 모르면 이전 발화의
+       * 금액·수취인과 이어 붙일 수 없다.
+       */
+      const voiceSession = await startVoiceSession();
+
       sessionRef.current = await startVoiceStream(accessToken, {
         onResult: (result) => {
           setHeardText(result.fullText);
           setIsActivated(result.activated);
           setCommandText(result.command);
+        },
+        onCommand: (data) => {
+          if (!isVoiceCommandResponseData(data)) return;
+          const result = mapVoiceCommandResponse(data, null);
+          setCommandState(result.state ?? null);
+          setCommandGuide(describeCommandState(result.state));
+          stopStream();
+        },
+        onCommandError: (error) => {
+          setVoiceError(error.voiceMessage || "명령을 처리하지 못했어요.");
+          stopStream();
         },
         onError: (error) => {
           setVoiceError(
@@ -177,7 +219,7 @@ function SignedInHome({ displayName }: { displayName: string }) {
           sessionRef.current = null;
           setIsListening(false);
         },
-      });
+      }, voiceSession.voiceSessionId);
     } catch {
       setIsListening(false);
       setVoiceError("마이크를 사용할 수 없어요. 권한을 확인해 주세요.");
@@ -277,6 +319,19 @@ function SignedInHome({ displayName }: { displayName: string }) {
             <p className="mt-2 text-sm text-[var(--color-accent)]">
               명령: {commandText}
             </p>
+          ) : null}
+          {commandGuide ? (
+            <p className="mt-3 text-lg font-bold text-[var(--color-accent)]">
+              {commandGuide}
+            </p>
+          ) : null}
+          {commandState === "AWAITING_CONFIRMATION" ? (
+            <Link
+              href="/transfer"
+              className="mt-3 inline-block min-h-11 text-lg font-semibold text-[var(--color-accent)] underline"
+            >
+              이체 화면에서 확인하기
+            </Link>
           ) : null}
         </div>
 
