@@ -1,0 +1,80 @@
+/**
+ * 실시간 음성 인식 서버 메시지 계약.
+ *
+ * 백엔드가 AI 의 결과를 그대로 흘려 주므로 형태는 AI 가 정한 것과 같다.
+ * 서버가 보내는 값을 그대로 믿지 않고 여기서 한 번 걸러 화면으로 넘긴다.
+ */
+
+export interface VoiceStreamResult {
+  /** interim: 확정 전 추정치. final: 확정된 문장. */
+  type: "interim" | "final";
+  /** 이번 조각에서 인식된 말. */
+  text: string;
+  /** '모비야'를 만났는지. 만나기 전 발화는 명령이 아니다. */
+  activated: boolean;
+  /** 호출어를 뗀 실제 명령. 활성화 전에는 빈 문자열이다. */
+  command: string;
+  /** 확정분 + 진행분. 화면에 그대로 보여줄 값이다. */
+  fullText: string;
+}
+
+export interface VoiceStreamError {
+  type: "error";
+  code: string;
+  message: string;
+  retryable: boolean;
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null;
+}
+
+function readString(value: unknown): string {
+  return typeof value === "string" ? value : "";
+}
+
+export function parseVoiceStreamMessage(
+  raw: string,
+): VoiceStreamResult | VoiceStreamError | null {
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(raw);
+  } catch {
+    return null;
+  }
+  if (!isRecord(parsed)) return null;
+
+  if (parsed.type === "error") {
+    return {
+      type: "error",
+      code: readString(parsed.code) || "UNKNOWN",
+      message: readString(parsed.message),
+      retryable: parsed.retryable === true,
+    };
+  }
+
+  if (parsed.type !== "interim" && parsed.type !== "final") return null;
+
+  return {
+    type: parsed.type,
+    text: readString(parsed.text),
+    activated: parsed.activated === true,
+    command: readString(parsed.command),
+    fullText: readString(parsed.fullText),
+  };
+}
+
+export function isVoiceStreamError(
+  value: VoiceStreamResult | VoiceStreamError,
+): value is VoiceStreamError {
+  return value.type === "error";
+}
+
+/**
+ * API 주소에서 WebSocket 주소를 만든다. https 는 wss 로 바꿔야 한다 --
+ * https 페이지에서 ws:// 로 붙으면 브라우저가 혼합 콘텐츠로 차단한다.
+ */
+export function toVoiceStreamUrl(apiBaseUrl: string, accessToken: string): string {
+  const base = apiBaseUrl.replace(/\/$/, "").replace(/^http/, "ws");
+  return `${base}/ws/v1/voice/stream?accessToken=${encodeURIComponent(accessToken)}`;
+}

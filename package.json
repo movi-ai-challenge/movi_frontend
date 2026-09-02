@@ -9,7 +9,7 @@
     "dev": "next dev",
     "build": "next build --webpack",
     "start": "next start",
-    "test": "node --test --experimental-strip-types tests/accountContract.test.ts tests/apiResponse.test.ts tests/authenticatedClientState.test.ts tests/authRefreshCoordinator.test.ts tests/authStore.test.ts tests/balanceContract.test.ts tests/credentialValidation.test.ts tests/bankStore.test.ts tests/deviceIdentity.test.ts tests/displayName.test.ts tests/openBankingContract.test.ts tests/pinValidation.test.ts tests/transactionContract.test.ts tests/transferContract.test.ts tests/transferDraftValidation.test.ts tests/transferRecoveryStorage.test.ts tests/voiceAudioContract.test.ts tests/voiceContract.test.ts tests/voiceErrorRecovery.test.ts",
+    "test": "node --test --experimental-strip-types tests/accountContract.test.ts tests/apiResponse.test.ts tests/authenticatedClientState.test.ts tests/authRefreshCoordinator.test.ts tests/authStore.test.ts tests/balanceContract.test.ts tests/credentialValidation.test.ts tests/bankStore.test.ts tests/deviceIdentity.test.ts tests/displayName.test.ts tests/openBankingContract.test.ts tests/pinValidation.test.ts tests/transactionContract.test.ts tests/transferContract.test.ts tests/transferDraftValidation.test.ts tests/transferRecoveryStorage.test.ts tests/voiceAudioContract.test.ts tests/voiceContract.test.ts tests/voiceStreamContract.test.ts tests/voiceErrorRecovery.test.ts",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit"
   },
