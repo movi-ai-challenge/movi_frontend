@@ -12,6 +12,10 @@ export interface TransactionResponseData {
   transactedAt: string;
   memo: string | null;
   source: "OPENBANKING" | "INTERNAL";
+  /**
+   * FDS 판정. 우리 서비스를 거치지 않은 거래(은행에서 내려받은 입출금)는 null 이다.
+   */
+  riskLevel?: "LOW" | "MEDIUM" | "HIGH" | null;
 }
 
 export interface TransactionPageResponseData {
@@ -113,6 +117,7 @@ export function mapTransactionResponse(
     occurredAt: data.transactedAt,
     memo: data.memo?.trim() || null,
     source: data.source,
+    riskLevel: data.riskLevel ?? null,
   };
 }
 

@@ -31,14 +31,6 @@ const currencyFormatter = new Intl.NumberFormat("ko-KR", {
   maximumFractionDigits: 0,
 });
 
-const dateFormatter = new Intl.DateTimeFormat("ko-KR", {
-  year: "numeric",
-  month: "long",
-  day: "numeric",
-  hour: "numeric",
-  minute: "2-digit",
-});
-
 function toDateInputValue(date: Date): string {
   const year = date.getFullYear();
   const month = String(date.getMonth() + 1).padStart(2, "0");
@@ -54,6 +46,44 @@ function getInitialDateRange(): { startDate: string; endDate: string } {
     startDate: toDateInputValue(start),
     endDate: toDateInputValue(end),
   };
+}
+
+/**
+ * 상대 시간 표기.
+ *
+ * "2026년 9월 2일 오후 2:45"보다 "오늘 14:45"가 훑기 쉽다. 거래내역에서 사용자가
+ * 찾는 것은 대개 최근 거래라, 오늘·어제부터 먼저 눈에 들어와야 한다. 오래된 것은
+ * 날짜를 그대로 보여 준다.
+ */
+function formatRelativeDate(value: string): string {
+  const occurred = new Date(value);
+  if (Number.isNaN(occurred.getTime())) return value;
+
+  const time = new Intl.DateTimeFormat("ko-KR", {
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+  }).format(occurred);
+
+  const startOfDay = (date: Date) =>
+    new Date(date.getFullYear(), date.getMonth(), date.getDate()).getTime();
+  const days = Math.round(
+    (startOfDay(new Date()) - startOfDay(occurred)) / 86_400_000,
+  );
+
+  if (days === 0) return `오늘 ${time}`;
+  if (days === 1) return `어제 ${time}`;
+  if (days > 1 && days < 7) return `${days}일 전 ${time}`;
+
+  return `${new Intl.DateTimeFormat("ko-KR", {
+    month: "long",
+    day: "numeric",
+  }).format(occurred)} ${time}`;
+}
+
+/** FDS 가 위험 신호를 잡은 거래인지. LOW 는 표시하지 않는다 -- 모든 거래에 붙어 의미를 잃는다. */
+function isFlagged(riskLevel: string | null): boolean {
+  return riskLevel === "MEDIUM" || riskLevel === "HIGH";
 }
 
 export default function TransactionListPage() {
@@ -362,18 +392,33 @@ export default function TransactionListPage() {
                             >
                               {transaction.description}
                             </h3>
+                            <p className="mt-1 text-[var(--color-text-muted)]">
+                              {formatRelativeDate(transaction.occurredAt)}
+                            </p>
                           </div>
-                          <p className="text-2xl font-bold">
-                            <span className="sr-only">
-                              {isDeposit ? "들어온 금액" : "나간 금액"}
-                            </span>
-                            {isDeposit ? "+" : "-"}
-                            {currencyFormatter.format(transaction.amount)}
-                          </p>
+                          <div className="text-right">
+                            {/*
+                              입금과 출금을 색으로도 구분한다. 부호만으로는 목록을
+                              훑을 때 방향이 즉시 들어오지 않는다.
+                            */}
+                            <p
+                              className={`text-2xl font-bold ${
+                                isDeposit ? "text-[var(--color-success)]" : ""
+                              }`}
+                            >
+                              <span className="sr-only">
+                                {isDeposit ? "들어온 금액" : "나간 금액"}
+                              </span>
+                              {isDeposit ? "+" : "-"}
+                              {currencyFormatter.format(transaction.amount)}
+                            </p>
+                            {isFlagged(transaction.riskLevel) ? (
+                              <p className="mt-1 font-bold text-[var(--color-danger)]">
+                                FDS 감지
+                              </p>
+                            ) : null}
+                          </div>
                         </div>
-                        <p className="mt-4 text-[var(--color-text-muted)]">
-                          {dateFormatter.format(new Date(transaction.occurredAt))}
-                        </p>
                         <Link
                           href={`/transactions/${transaction.id}`}
                           className="mt-4 inline-flex min-h-11 items-center rounded-lg border-2 border-[var(--color-border)] px-4 py-2 font-semibold focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[var(--color-focus)]"

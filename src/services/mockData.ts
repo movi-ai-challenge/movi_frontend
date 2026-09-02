@@ -37,6 +37,7 @@ export const mockTransactions: Transaction[] = [
     occurredAt: "2026-08-12T09:00:00+09:00",
     memo: null,
     source: "OPENBANKING",
+    riskLevel: null,
   },
   {
     id: "transaction-demo-2",
@@ -50,6 +51,7 @@ export const mockTransactions: Transaction[] = [
     occurredAt: "2026-08-12T12:30:00+09:00",
     memo: null,
     source: "OPENBANKING",
+    riskLevel: null,
   },
   {
     id: "transaction-demo-3",
@@ -63,6 +65,7 @@ export const mockTransactions: Transaction[] = [
     occurredAt: "2026-08-12T18:20:00+09:00",
     memo: "등록 수취인",
     source: "INTERNAL",
+    riskLevel: null,
   },
   {
     id: "transaction-demo-4",
@@ -76,6 +79,7 @@ export const mockTransactions: Transaction[] = [
     occurredAt: "2026-08-11T10:10:00+09:00",
     memo: null,
     source: "OPENBANKING",
+    riskLevel: null,
   },
 ];
 export const mockRegisteredRecipients: RegisteredRecipient[] = [

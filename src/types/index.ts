@@ -91,6 +91,8 @@ export interface Transaction {
   occurredAt: string;
   memo: string | null;
   source: TransactionSource;
+  /** FDS 판정. 이체를 거치지 않은 거래는 null 이다. */
+  riskLevel: "LOW" | "MEDIUM" | "HIGH" | null;
 }
 
 export interface TransactionPage {
