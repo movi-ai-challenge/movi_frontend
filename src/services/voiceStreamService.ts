@@ -29,10 +29,20 @@ export interface VoiceStreamSession {
   stop: () => void;
 }
 
+/** iOS 14 이전 Safari 는 접두사가 붙은 이름만 갖는다. */
+function resolveAudioContext(): typeof AudioContext | undefined {
+  if (typeof window === "undefined") return undefined;
+  return (
+    window.AudioContext ??
+    (window as unknown as { webkitAudioContext?: typeof AudioContext })
+      .webkitAudioContext
+  );
+}
+
 export function isVoiceStreamSupported(): boolean {
   return (
     typeof window !== "undefined" &&
-    typeof window.AudioContext !== "undefined" &&
+    resolveAudioContext() !== undefined &&
     typeof window.WebSocket !== "undefined" &&
     Boolean(navigator.mediaDevices?.getUserMedia)
   );
@@ -47,6 +57,25 @@ export async function startVoiceStream(
     throw new Error("NEXT_PUBLIC_API_URL이 설정되지 않아 음성 인식을 시작할 수 없습니다.");
   }
 
+  const AudioContextClass = resolveAudioContext();
+  if (!AudioContextClass) {
+    throw new Error("이 브라우저는 오디오 처리를 지원하지 않습니다.");
+  }
+
+  /*
+   * 오디오 컨텍스트를 마이크 요청보다 먼저 만들고 깨운다.
+   *
+   * iOS 는 새로 만든 컨텍스트를 suspended 로 두고, 사용자 제스처와 이어진
+   * 흐름에서만 재개를 허용한다. getUserMedia 를 먼저 await 하면 그 사이 제스처
+   * 문맥이 끊겨 재개가 거부된다. suspended 인 채로 두면 워클릿의 process 가
+   * 돌지 않아 오디오가 한 조각도 나가지 않는다 -- 화면에는 "듣고 있어요"만
+   * 뜨고 글자가 영영 붙지 않는다.
+   */
+  const context = new AudioContextClass();
+  if (context.state === "suspended") {
+    await context.resume();
+  }
+
   const stream = await navigator.mediaDevices.getUserMedia({
     audio: {
       channelCount: 1,
@@ -54,8 +83,6 @@ export async function startVoiceStream(
       noiseSuppression: true,
     },
   });
-
-  const context = new AudioContext();
   const socket = new WebSocket(toVoiceStreamUrl(apiBaseUrl, accessToken));
   socket.binaryType = "arraybuffer";
 
@@ -94,6 +121,11 @@ export async function startVoiceStream(
   };
 
   await context.audioWorklet.addModule(WORKLET_URL);
+
+  // 마이크 권한을 받는 사이 다시 잠겼을 수 있다.
+  if (context.state === "suspended") {
+    await context.resume();
+  }
   const source = context.createMediaStreamSource(stream);
   const worklet = new AudioWorkletNode(context, WORKLET_NAME);
 
