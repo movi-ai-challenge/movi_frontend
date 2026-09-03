@@ -112,3 +112,37 @@ test("근거가 없는 응답도 빈 배열로 만든다 - 화면이 length 를 
     [],
   );
 });
+
+test("나노초까지 적힌 시각도 읽는다", () => {
+  // 사파리는 소수점 세 자리를 넘으면 Date.parse 가 NaN 이다. 그 때문에 아이폰에서
+  // 확인 질문이 통째로 버려졌다.
+  const base = {
+    voiceSessionId: 66,
+    state: "AWAITING_CONFIRMATION" as const,
+    intent: "TRANSFER" as const,
+    missingSlots: [],
+    confirmationId: "f28c5d60-ea3d-4eea-b77f-3961c83e4721",
+    fromAccount: { accountId: 1961, alias: "생활비 통장", bankName: "국민은행" },
+    recipient: { recipientId: 2941, holderName: "주혁", bankCode: "012" },
+    amount: 10_000,
+    transferId: null,
+    status: null,
+    riskLevel: null,
+    completedAt: null,
+    history: null,
+    balance: null,
+  };
+
+  assert.equal(
+    isVoiceCommandResponseData({ ...base, expiresAt: "2026-09-03T16:42:49.704198072" }),
+    true,
+  );
+  assert.equal(
+    isVoiceCommandResponseData({ ...base, expiresAt: "2026-09-03T16:42:49.704" }),
+    true,
+  );
+  assert.equal(
+    isVoiceCommandResponseData({ ...base, expiresAt: "언제인지 모름" }),
+    false,
+  );
+});

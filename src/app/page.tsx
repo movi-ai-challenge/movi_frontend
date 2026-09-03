@@ -269,7 +269,20 @@ function SignedInHome({ displayName }: { displayName: string }) {
           setCommandText(result.command);
         },
         onCommand: (data, voiceMessage) => {
-          if (!isVoiceCommandResponseData(data)) return;
+          /*
+           * 형태를 못 읽어도 조용히 버리지 않는다. 예전에는 여기서 그냥 돌아갔고,
+           * 사용자는 "잠시 문제가 생겼어요"만 듣고 무엇이 잘못됐는지 알 수 없었다.
+           * 안내 문구는 서버가 이미 만들어 보냈으니 그것만이라도 읽어 준다.
+           */
+          if (!isVoiceCommandResponseData(data)) {
+            const fallback =
+              voiceMessage || "응답을 이해하지 못했어요. 다시 말씀해 주세요.";
+            markProcessing(false);
+            setVoiceError(fallback);
+            announce(fallback);
+            stopStream();
+            return;
+          }
           const result = mapVoiceCommandResponse(data, null);
           setCommandState(result.state ?? null);
           // 화면과 낭독이 같은 문장을 쓴다. 백엔드가 만든 값이라 금액도

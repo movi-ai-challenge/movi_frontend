@@ -103,8 +103,19 @@ function isNullableId(value: unknown): value is number | string | null {
   return value === null || isId(value);
 }
 
+/**
+ * 날짜·시각 문자열.
+ *
+ * <p>ECMAScript 가 정한 형식은 소수점 이하 세 자리까지다. 서버가 나노초까지 적어 보내면
+ * 표준 밖이라 {@code Date.parse} 의 동작이 엔진마다 갈린다 -- 크롬은 읽어 주지만 사파리는
+ * NaN 을 돌려준다. 실제로 이 때문에 아이폰에서 음성 송금 응답이 통째로 버려졌다.
+ *
+ * <p>서버도 세 자리로 맞췄지만, 읽는 쪽에서도 줄여 둔다. 응답 하나를 못 읽어 금융 흐름이
+ * 멈추는 것보다 관대하게 읽는 편이 낫다.
+ */
 function isDateTime(value: unknown): value is string {
-  return typeof value === "string" && !Number.isNaN(Date.parse(value));
+  if (typeof value !== "string") return false;
+  return !Number.isNaN(Date.parse(value.replace(/(\.\d{3})\d+/, "$1")));
 }
 
 function isNullableDateTime(value: unknown): value is string | null {
