@@ -10,6 +10,7 @@ import {
   type VoiceStreamError,
   type VoiceStreamResult,
 } from "@/services/voiceStreamContract";
+import { VOICE_STREAM_FINALIZATION_DELAY_MS } from "@/services/voiceAudioContract";
 
 /**
  * 실시간 음성 인식 세션.
@@ -96,10 +97,31 @@ export async function startVoiceStream(
   socket.binaryType = "arraybuffer";
 
   let closed = false;
+  let stopRequested = false;
+  let finalizationTimer: ReturnType<typeof setTimeout> | null = null;
+  let source: MediaStreamAudioSourceNode | null = null;
+  let worklet: AudioWorkletNode | null = null;
+
+  const stopAudioGraph = () => {
+    if (worklet) {
+      worklet.port.onmessage = null;
+      worklet.disconnect();
+      worklet = null;
+    }
+    if (source) {
+      source.disconnect();
+      source = null;
+    }
+  };
 
   const release = () => {
     if (closed) return;
     closed = true;
+    if (finalizationTimer !== null) {
+      clearTimeout(finalizationTimer);
+      finalizationTimer = null;
+    }
+    stopAudioGraph();
     stream.getTracks().forEach((track) => track.stop());
     void context.close().catch(() => undefined);
   };
@@ -143,8 +165,8 @@ export async function startVoiceStream(
   if (context.state === "suspended") {
     await context.resume();
   }
-  const source = context.createMediaStreamSource(stream);
-  const worklet = new AudioWorkletNode(context, WORKLET_NAME);
+  source = context.createMediaStreamSource(stream);
+  worklet = new AudioWorkletNode(context, WORKLET_NAME);
 
   worklet.port.onmessage = (event: MessageEvent<ArrayBuffer>) => {
     // 연결이 아직 열리는 중이거나 이미 닫혔으면 버린다. 쌓아 두었다가
@@ -161,13 +183,21 @@ export async function startVoiceStream(
 
   return {
     stop: () => {
-      if (socket.readyState === WebSocket.OPEN) {
-        socket.send("EOS");
-      }
-      worklet.port.onmessage = null;
-      source.disconnect();
-      worklet.disconnect();
-      release();
+      if (stopRequested || closed) return;
+      stopRequested = true;
+
+      /*
+       * iPhone Safari에서 사용자가 말하자마자 버튼을 누르면 마지막 음절 뒤의
+       * 오디오가 잘려 Google STT가 interim만 남기고 final 없이 끝날 수 있다.
+       * 짧은 후행 오디오를 더 보낸 뒤 EOS를 보내 최종 확정 시간을 확보한다.
+       */
+      finalizationTimer = setTimeout(() => {
+        finalizationTimer = null;
+        if (socket.readyState === WebSocket.OPEN) {
+          socket.send("EOS");
+        }
+        release();
+      }, VOICE_STREAM_FINALIZATION_DELAY_MS);
     },
   };
 }

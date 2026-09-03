@@ -1,7 +1,10 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { selectVoiceErrorRecoveryAction } from "../src/services/voiceErrorRecovery.ts";
+import {
+  selectVoiceErrorRecoveryAction,
+  selectVoiceStreamErrorMessage,
+} from "../src/services/voiceErrorRecovery.ts";
 
 test("서버 재질문 한도 초과 코드는 직접 입력으로 전환한다", () => {
   assert.equal(
@@ -20,4 +23,11 @@ test("만료된 세션은 새 세션으로 시작하고 일반 오류는 현재 
     "retry_current_session",
   );
   assert.equal(selectVoiceErrorRecoveryAction(null), "retry_current_session");
+});
+
+test("final 없는 종료는 사용자가 이해할 수 있는 재시도 안내를 한다", () => {
+  assert.equal(
+    selectVoiceStreamErrorMessage("NO_FINAL_RESULT", true),
+    "말씀을 끝까지 확인하지 못했어요. 마이크를 눌러 다시 말씀해 주세요.",
+  );
 });

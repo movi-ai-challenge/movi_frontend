@@ -13,6 +13,7 @@ import {
   startVoiceStream,
   type VoiceStreamSession,
 } from "@/services/voiceStreamService";
+import { selectVoiceStreamErrorMessage } from "@/services/voiceErrorRecovery";
 import {
   isVoiceCommandResponseData,
   mapVoiceCommandResponse,
@@ -315,9 +316,10 @@ function SignedInHome({ displayName }: { displayName: string }) {
           stopStream();
         },
         onError: (error) => {
-          const message = error.retryable
-            ? "잘 못 알아들었어요. 다시 말씀해 주세요."
-            : "음성 인식에 문제가 생겼어요.";
+          const message = selectVoiceStreamErrorMessage(
+            error.code,
+            error.retryable,
+          );
           setVoiceError(message);
           markProcessing(false);
           announce(message);
