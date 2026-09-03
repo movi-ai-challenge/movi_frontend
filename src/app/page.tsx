@@ -18,6 +18,7 @@ import {
   mapVoiceCommandResponse,
 } from "@/services/voiceContract";
 import { startVoiceSession } from "@/services/voiceService";
+import { VoiceConfirmation } from "@/components/domain/voice/VoiceConfirmation";
 import { primeSpeech, speak, stopSpeaking } from "@/services/speech";
 import { useAuthStore } from "@/store/useAuthStore";
 import { useBankStore } from "@/store/useBankStore";
@@ -122,6 +123,14 @@ function SignedInHome({ displayName }: { displayName: string }) {
   const [voiceError, setVoiceError] = useState("");
   const [commandState, setCommandState] = useState<string | null>(null);
   const [commandGuide, setCommandGuide] = useState("");
+  /*
+   * 확인 단계에 필요한 값. 스트리밍은 확인을 다루지 않으므로 여기서 들고 있다가
+   * VoiceConfirmation 이 REST 로 마무리한다.
+   */
+  const [pendingConfirmation, setPendingConfirmation] = useState<{
+    voiceSessionId: number | string;
+    confirmationId: string;
+  } | null>(null);
   const sessionRef = useRef<VoiceStreamSession | null>(null);
   /*
    * 대화가 이어지는 동안 같은 음성 세션을 쓴다. 재질문마다 새 세션을 만들면
@@ -184,6 +193,7 @@ function SignedInHome({ displayName }: { displayName: string }) {
     setCommandText("");
     setCommandState(null);
     setCommandGuide("");
+    setPendingConfirmation(null);
     setIsActivated(false);
     setIsListening(true);
 
@@ -214,10 +224,30 @@ function SignedInHome({ displayName }: { displayName: string }) {
           speak(voiceMessage);
 
           /*
-           * 대화가 끝난 상태에서만 세션을 놓는다. 재질문 중이면 세션을 유지해야
-           * 다음 발화가 앞선 금액·수취인과 이어 붙는다.
+           * 확인을 기다리는 중이면 값을 넘겨 음성으로 마무리하게 한다. 예전에는
+           * 이체 화면 링크만 띄웠는데, 화면을 볼 수 없는 사용자에게는 거기서
+           * 흐름이 끊긴다.
            */
-          if (result.state !== "CLARIFYING") {
+          if (
+            result.state === "AWAITING_CONFIRMATION"
+            && result.confirmationId
+            && voiceSessionIdRef.current !== null
+          ) {
+            setPendingConfirmation({
+              voiceSessionId: voiceSessionIdRef.current,
+              confirmationId: result.confirmationId,
+            });
+          }
+
+          /*
+           * 대화가 끝난 상태에서만 세션을 놓는다. 재질문이나 확인 대기 중이면
+           * 세션을 유지해야 다음 발화가 앞선 금액·수취인과 이어 붙는다.
+           * 확인은 같은 음성 세션으로 보내야 서버가 대기 중인 이체를 찾는다.
+           */
+          if (
+            result.state !== "CLARIFYING"
+            && result.state !== "AWAITING_CONFIRMATION"
+          ) {
             voiceSessionIdRef.current = null;
           }
           stopStream();
@@ -351,7 +381,29 @@ function SignedInHome({ displayName }: { displayName: string }) {
               {commandGuide}
             </p>
           ) : null}
-          {commandState === "AWAITING_CONFIRMATION" ? (
+          {commandState === "AWAITING_CONFIRMATION" && pendingConfirmation ? (
+            <VoiceConfirmation
+              voiceSessionId={pendingConfirmation.voiceSessionId}
+              confirmationId={pendingConfirmation.confirmationId}
+              question={commandGuide}
+              onSettled={(result) => {
+                setCommandState(result.state);
+                setCommandGuide(result.voiceMessage);
+                speak(result.voiceMessage);
+                setPendingConfirmation(null);
+                voiceSessionIdRef.current = null;
+              }}
+              onFailed={(failureMessage) => {
+                setVoiceError(failureMessage);
+                speak(failureMessage);
+                setPendingConfirmation(null);
+                voiceSessionIdRef.current = null;
+              }}
+            />
+          ) : null}
+
+          {/* 확인 값을 못 받았을 때만 화면으로 넘긴다. 음성으로 끝낼 수 없기 때문이다. */}
+          {commandState === "AWAITING_CONFIRMATION" && !pendingConfirmation ? (
             <Link
               href="/transfer"
               className="mt-3 inline-block min-h-11 text-lg font-semibold text-[var(--color-accent)] underline"
