@@ -1,5 +1,7 @@
 export const MAX_VOICE_AUDIO_BYTES = 5 * 1024 * 1024;
 export const MAX_VOICE_DURATION_SECONDS = 15;
+/** iOS STT가 마지막 발화를 final로 확정할 수 있도록 남기는 후행 오디오 시간. */
+export const VOICE_STREAM_FINALIZATION_DELAY_MS = 500;
 
 export const SUPPORTED_VOICE_MIME_TYPES = [
   "audio/webm;codecs=opus",

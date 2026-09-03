@@ -6,6 +6,7 @@ import {
   isSupportedVoiceMimeType,
   normalizeVoiceMimeType,
   selectSupportedVoiceMimeType,
+  VOICE_STREAM_FINALIZATION_DELAY_MS,
 } from "../src/services/voiceAudioContract.ts";
 
 const originalMediaRecorder = globalThis.MediaRecorder;
@@ -62,4 +63,9 @@ test("업로드 파일 확장자를 MIME에 맞게 선택한다", () => {
   assert.equal(getVoiceAudioFileExtension("audio/mp4"), "m4a");
   assert.equal(getVoiceAudioFileExtension("audio/x-m4a"), "m4a");
   assert.equal(getVoiceAudioFileExtension("audio/x-wav"), "wav");
+});
+
+test("스트리밍 종료는 iPhone final 확정을 위한 후행 오디오를 남긴다", () => {
+  assert.ok(VOICE_STREAM_FINALIZATION_DELAY_MS >= 300);
+  assert.ok(VOICE_STREAM_FINALIZATION_DELAY_MS <= 700);
 });
