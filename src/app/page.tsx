@@ -136,10 +136,10 @@ function selectVoiceStatusText({
 }): string {
   if (isConfirmationBusy) return "확인하고 있어요. 잠시만 기다려 주세요";
   if (isConfirmationRecording) {
-    return "듣고 있어요. \"네\" 또는 \"아니요\"라고 말씀해 주세요";
+    return "듣고 있어요. \"네 맞아요\" 또는 \"아니요 취소할게요\"라고 말씀해 주세요";
   }
   if (isAwaitingConfirmation) {
-    return "마이크를 눌러 \"네\" 또는 \"아니요\"로 답해 주세요";
+    return "마이크를 눌러 \"네 맞아요\" 또는 \"아니요 취소할게요\"라고 답해 주세요";
   }
   if (isProcessing) return "확인하고 있어요. 잠시만 기다려 주세요";
   if (!isListening && commandState === "CLARIFYING") {
@@ -338,7 +338,7 @@ function SignedInHome({ displayName }: { displayName: string }) {
      */
     onRetryable: (retryMessage) => {
       setVoiceError("");
-      announce(`${retryMessage} 마이크를 눌러 "네" 또는 "아니요"로 다시 답해 주세요.`);
+      announce(`${retryMessage} 마이크를 눌러 "네 맞아요" 또는 "아니요 취소할게요"라고 다시 답해 주세요.`);
     },
   });
 
@@ -664,7 +664,7 @@ function SignedInHome({ displayName }: { displayName: string }) {
             <span className="sr-only">
               {isMicActive ? "듣는 중입니다. 누르면 멈춥니다" : null}
               {!isMicActive && isAwaitingConfirmation
-                ? "\"네\" 또는 \"아니요\"로 대답하기"
+                ? "\"네 맞아요\" 또는 \"아니요 취소할게요\"라고 대답하기"
                 : null}
               {!isMicActive && !isAwaitingConfirmation ? "음성으로 명령하기" : null}
             </span>
