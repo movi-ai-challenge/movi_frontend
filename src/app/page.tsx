@@ -591,7 +591,7 @@ function SignedInHome({ displayName }: { displayName: string }) {
             </div>
           ) : null}
 
-          {transferResult && transferResult.state === "COMPLETED" ? (
+          {transferResult && transferResult.status !== null ? (
             <TransferResultCard result={transferResult} />
           ) : null}
           {commandState === "AWAITING_CONFIRMATION" && pendingConfirmation ? (
@@ -724,12 +724,34 @@ function QuickPill({ href, children }: { href: string; children: string }) {
   );
 }
 
+/*
+ * 음성 확인이 끝났다는 것과 송금이 성공했다는 것은 다른 사실이다. 확인 발화("네
+ * 맞아요")를 처리하고 나면 대화는 항상 끝나지만, 그 결과가 완료(COMPLETED)일 수도
+ * 있고 FDS가 막은 차단(BLOCKED)일 수도, 실패(FAILED)·취소(CANCELED)일 수도 있다.
+ * 이 표는 [/transfer/result](../transfer/result/page.tsx)와 같은 문구를 쓴다 —
+ * 같은 결과가 화면마다 다른 말로 불리면 안 된다.
+ */
+const transferResultStatusLabels: Record<
+  Exclude<VoiceCommandResult["status"], null>,
+  string
+> = {
+  PENDING: "송금 접수",
+  RISK_REVIEW: "위험도 확인 중",
+  COMPLETED: "송금 완료",
+  BLOCKED: "고위험 송금 차단",
+  FAILED: "송금 실패",
+  CANCELED: "송금 취소",
+};
+
 /**
  * 송금 결과 카드.
  *
  * <p>낭독은 한 번 지나가면 끝이다. 금액과 받는 분, FDS 가 짚은 근거는 화면에 남겨
  * 사용자가 다시 확인할 수 있게 한다. 특히 위험 근거는 왜 이 이체가 주의 대상이었는지를
  * 말해 주는 값이라 흘려보내면 안 된다.
+ *
+ * <p><b>제목을 결과 상태에서 뽑아낸다.</b> 이전에는 "송금 완료"로 고정돼 있어서,
+ * FDS가 차단한 송금도 완료로 보였다 — 고위험 차단 시연에서 그대로 드러나는 문제였다.
  */
 function TransferResultCard({ result }: { result: VoiceCommandResult }) {
   const amountText =
@@ -739,11 +761,29 @@ function TransferResultCard({ result }: { result: VoiceCommandResult }) {
     MEDIUM: "주의 필요",
     HIGH: "높은 위험",
   };
+  const isBlockedOrFailed = result.status === "BLOCKED" || result.status === "FAILED";
+  const isCompleted = result.status === "COMPLETED";
+  const title = result.status
+    ? (transferResultStatusLabels[result.status] ?? result.status)
+    : "처리 결과";
 
   return (
     <div className="mt-4 w-full rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] p-4 text-left">
-      <p className="text-[15px] font-semibold text-[var(--color-text-muted)]">
-        송금 완료
+      {/*
+        완료와 차단을 글자색으로도 구분한다 — 눈으로 훑을 때 제목 글자만으로는
+        결과가 바로 들어오지 않는다. 색만으로 전달하지 않도록 문구 자체가 이미
+        결과를 담고 있다.
+      */}
+      <p
+        className={`text-[15px] font-semibold ${
+          isBlockedOrFailed
+            ? "text-[var(--color-danger)]"
+            : isCompleted
+              ? "text-[var(--color-success)]"
+              : "text-[var(--color-text-muted)]"
+        }`}
+      >
+        {title}
       </p>
       <p className="mt-1 text-2xl font-bold text-[var(--color-text)]">
         {amountText}
@@ -764,6 +804,11 @@ function TransferResultCard({ result }: { result: VoiceCommandResult }) {
             <li key={reason}>{reason}</li>
           ))}
         </ul>
+      ) : null}
+      {result.status === "BLOCKED" || result.status === "FAILED" || result.status === "CANCELED" ? (
+        <p className="mt-2 text-[15px] font-semibold text-[var(--color-danger)]">
+          이 송금으로 돈이 나가지 않았습니다.
+        </p>
       ) : null}
     </div>
   );
