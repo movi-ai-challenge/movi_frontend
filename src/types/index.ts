@@ -190,6 +190,8 @@ export interface VoiceCommandResult {
     availableAmount: number;
     fetchedAt: string;
   } | null;
+  /** FDS 가 짚은 근거. 위험도가 LOW 여도 알려 줄 값어치가 있다. */
+  riskReasons: string[];
   voiceMessage: string;
 }
 

@@ -20,6 +20,7 @@ import {
 import { startVoiceSession } from "@/services/voiceService";
 import { VoiceConfirmation } from "@/components/domain/voice/VoiceConfirmation";
 import { primeSpeech, speak, stopSpeaking } from "@/services/speech";
+import type { VoiceCommandResult } from "@/types";
 import { useAuthStore } from "@/store/useAuthStore";
 import { useBankStore } from "@/store/useBankStore";
 
@@ -127,6 +128,14 @@ function SignedInHome({ displayName }: { displayName: string }) {
    * 확인 단계에 필요한 값. 스트리밍은 확인을 다루지 않으므로 여기서 들고 있다가
    * VoiceConfirmation 이 REST 로 마무리한다.
    */
+  /*
+   * 낭독한 문구를 그대로 화면에도 남긴다. 소리를 못 듣는 상황(무음·이어폰 없음)이나
+   * 안내를 놓친 경우에 다시 읽을 수 있어야 한다. speak() 와 이 값을 같이 다뤄
+   * 한쪽만 갱신되는 일이 없게 한다.
+   */
+  const [spokenText, setSpokenText] = useState("");
+  /** 송금이 끝났을 때 화면에 남길 결과. 낭독은 지나가지만 이건 남는다. */
+  const [transferResult, setTransferResult] = useState<VoiceCommandResult | null>(null);
   const [pendingConfirmation, setPendingConfirmation] = useState<{
     voiceSessionId: number | string;
     confirmationId: string;
@@ -161,6 +170,13 @@ function SignedInHome({ displayName }: { displayName: string }) {
    * 말하는 도중에 인식 결과가 계속 올라와 화면에 그대로 붙는다. '모비야'를
    * 만나기 전 발화는 명령으로 치지 않으므로 activated 로 화면을 나눈다.
    */
+  /** 낭독과 화면 표시를 한 번에. 둘이 갈라지지 않게 항상 이 함수를 쓴다. */
+  const announce = useCallback((text: string) => {
+    if (!text) return;
+    setSpokenText(text);
+    speak(text);
+  }, []);
+
   const stopStream = useCallback(() => {
     sessionRef.current?.stop();
     sessionRef.current = null;
@@ -193,6 +209,8 @@ function SignedInHome({ displayName }: { displayName: string }) {
     setCommandText("");
     setCommandState(null);
     setCommandGuide("");
+    setSpokenText("");
+    setTransferResult(null);
     setPendingConfirmation(null);
     setIsActivated(false);
     setIsListening(true);
@@ -221,7 +239,7 @@ function SignedInHome({ displayName }: { displayName: string }) {
           // 화면과 낭독이 같은 문장을 쓴다. 백엔드가 만든 값이라 금액도
           // 한국어로 바뀌어 온다.
           setCommandGuide(voiceMessage);
-          speak(voiceMessage);
+          announce(voiceMessage);
 
           /*
            * 확인을 기다리는 중이면 값을 넘겨 음성으로 마무리하게 한다. 예전에는
@@ -255,7 +273,7 @@ function SignedInHome({ displayName }: { displayName: string }) {
         onCommandError: (error) => {
           const message = error.voiceMessage || "명령을 처리하지 못했어요.";
           setVoiceError(message);
-          speak(message);
+          announce(message);
           voiceSessionIdRef.current = null;
           stopStream();
         },
@@ -264,7 +282,7 @@ function SignedInHome({ displayName }: { displayName: string }) {
             ? "잘 못 알아들었어요. 다시 말씀해 주세요."
             : "음성 인식에 문제가 생겼어요.";
           setVoiceError(message);
-          speak(message);
+          announce(message);
         },
         onClose: () => {
           sessionRef.current = null;
@@ -376,10 +394,19 @@ function SignedInHome({ displayName }: { displayName: string }) {
               명령: {commandText}
             </p>
           ) : null}
-          {commandGuide ? (
-            <p className="mt-3 text-lg font-bold text-[var(--color-accent)]">
-              {commandGuide}
+          {/*
+            낭독한 문구를 그대로 남긴다. 소리를 못 듣는 상황이거나 안내를 놓쳤을 때
+            다시 읽을 수 있어야 한다. aria-live 는 두지 않는다 — 낭독기가 이미
+            읽은 문장을 한 번 더 읽게 된다.
+          */}
+          {spokenText ? (
+            <p className="mt-3 text-lg font-bold leading-7 text-[var(--color-accent)]">
+              {spokenText}
             </p>
+          ) : null}
+
+          {transferResult && transferResult.state === "COMPLETED" ? (
+            <TransferResultCard result={transferResult} />
           ) : null}
           {commandState === "AWAITING_CONFIRMATION" && pendingConfirmation ? (
             <VoiceConfirmation
@@ -389,13 +416,14 @@ function SignedInHome({ displayName }: { displayName: string }) {
               onSettled={(result) => {
                 setCommandState(result.state);
                 setCommandGuide(result.voiceMessage);
-                speak(result.voiceMessage);
+                setTransferResult(result);
+                announce(result.voiceMessage);
                 setPendingConfirmation(null);
                 voiceSessionIdRef.current = null;
               }}
               onFailed={(failureMessage) => {
                 setVoiceError(failureMessage);
-                speak(failureMessage);
+                announce(failureMessage);
                 setPendingConfirmation(null);
                 voiceSessionIdRef.current = null;
               }}
@@ -497,5 +525,50 @@ function QuickPill({ href, children }: { href: string; children: string }) {
     >
       {children}
     </Link>
+  );
+}
+
+/**
+ * 송금 결과 카드.
+ *
+ * <p>낭독은 한 번 지나가면 끝이다. 금액과 받는 분, FDS 가 짚은 근거는 화면에 남겨
+ * 사용자가 다시 확인할 수 있게 한다. 특히 위험 근거는 왜 이 이체가 주의 대상이었는지를
+ * 말해 주는 값이라 흘려보내면 안 된다.
+ */
+function TransferResultCard({ result }: { result: VoiceCommandResult }) {
+  const amountText =
+    result.amount === null ? "" : `${result.amount.toLocaleString("ko-KR")}원`;
+  const riskLabels: Record<string, string> = {
+    LOW: "낮은 위험",
+    MEDIUM: "주의 필요",
+    HIGH: "높은 위험",
+  };
+
+  return (
+    <div className="mt-4 w-full rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] p-4 text-left">
+      <p className="text-[15px] font-semibold text-[var(--color-text-muted)]">
+        송금 완료
+      </p>
+      <p className="mt-1 text-2xl font-bold text-[var(--color-text)]">
+        {amountText}
+      </p>
+      {result.recipient ? (
+        <p className="mt-1 text-base text-[var(--color-text)]">
+          받는 분 {result.recipient.holderName}
+        </p>
+      ) : null}
+      {result.riskLevel ? (
+        <p className="mt-1 text-[15px] text-[var(--color-text-muted)]">
+          안전 확인 {riskLabels[result.riskLevel] ?? result.riskLevel}
+        </p>
+      ) : null}
+      {result.riskReasons && result.riskReasons.length > 0 ? (
+        <ul className="mt-2 list-disc space-y-1 pl-5 text-[15px] text-[var(--color-text-muted)]">
+          {result.riskReasons.map((reason) => (
+            <li key={reason}>{reason}</li>
+          ))}
+        </ul>
+      ) : null}
+    </div>
   );
 }

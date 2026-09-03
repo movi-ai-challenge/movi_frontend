@@ -83,3 +83,32 @@ test("예약 intent와 음성 문구 없는 응답을 거부한다", () => {
   );
   assert.throws(() => mapVoiceCommandResponse(awaitingConfirmation, null));
 });
+
+test("FDS 근거를 화면 모델로 옮긴다 - 낭독은 지나가지만 화면에는 남아야 한다", () => {
+  if (!isVoiceCommandResponseData(awaitingConfirmation)) {
+    assert.fail("유효한 확인 대기 fixture");
+  }
+  const result = mapVoiceCommandResponse(
+    { ...awaitingConfirmation, riskReasons: ["처음 보내는 계좌예요", "다른 은행으로 보내요"] },
+    "보낼까요?",
+  );
+  assert.deepEqual(result.riskReasons, ["처음 보내는 계좌예요", "다른 은행으로 보내요"]);
+});
+
+test("근거가 없는 응답도 빈 배열로 만든다 - 화면이 length 를 그대로 본다", () => {
+  if (!isVoiceCommandResponseData(awaitingConfirmation)) {
+    assert.fail("유효한 확인 대기 fixture");
+  }
+  assert.deepEqual(
+    mapVoiceCommandResponse({ ...awaitingConfirmation, riskReasons: null }, "보낼까요?")
+      .riskReasons,
+    [],
+  );
+  // 필드 자체가 없는 옛 응답도 같은 결과여야 한다.
+  const withoutReasons = { ...awaitingConfirmation };
+  delete (withoutReasons as { riskReasons?: unknown }).riskReasons;
+  assert.deepEqual(
+    mapVoiceCommandResponse(withoutReasons, "보낼까요?").riskReasons,
+    [],
+  );
+});
