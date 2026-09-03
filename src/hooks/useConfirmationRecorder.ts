@@ -8,7 +8,7 @@ import {
   saveTransferRecoveryKey,
 } from "@/services/transferRecoveryStorage";
 import { stopSpeaking } from "@/services/speech";
-import { getTransferStatus } from "@/services/transferService";
+import { waitForTransferStatus } from "@/services/transferService";
 import { canRetryConfirmation } from "@/services/voiceErrorRecovery";
 import {
   MAX_VOICE_AUDIO_BYTES,
@@ -182,7 +182,11 @@ export function useConfirmationRecorder({
         setPhase("recovering");
         setMessage("송금 결과를 확인하고 있어요.");
         try {
-          const recovered = await getTransferStatus(idempotencyKey);
+          /*
+           * 방금 답이 없었다고 아직 커밋되지 않은 것은 아니다. 한 번만 물으면 그
+           * 틈에 걸려 "확인 못 함"으로 끝나고, 몇 초 뒤 실제로는 성공한 채로 남는다.
+           */
+          const recovered = await waitForTransferStatus(idempotencyKey);
           clearTransferRecoveryKey();
           setPhase("idle");
           setMessage("");
