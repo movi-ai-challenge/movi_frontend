@@ -134,6 +134,11 @@ function SignedInHome({ displayName }: { displayName: string }) {
    * 한쪽만 갱신되는 일이 없게 한다.
    */
   const [spokenText, setSpokenText] = useState("");
+  /*
+   * 말을 마친 뒤 분석이 끝나기까지 15~20초가 걸린다. 그동안 화면이 조용하면
+   * 사용자는 먹통이 된 줄 안다 — 무엇을 하고 있는지 계속 보여 준다.
+   */
+  const [isProcessing, setIsProcessing] = useState(false);
   /** 송금이 끝났을 때 화면에 남길 결과. 낭독은 지나가지만 이건 남는다. */
   const [transferResult, setTransferResult] = useState<VoiceCommandResult | null>(null);
   const [pendingConfirmation, setPendingConfirmation] = useState<{
@@ -183,10 +188,28 @@ function SignedInHome({ displayName }: { displayName: string }) {
     setIsListening(false);
   }, []);
 
+  /**
+   * 사용자가 마이크를 끈 경우.
+   *
+   * <p>호출어를 부르지 않았으면 AI 가 명령으로 처리하지 않아 응답이 영영 오지 않는다.
+   * 기다리게 두지 말고 그 자리에서 알려 준다.
+   */
+  const finishListening = useCallback(() => {
+    stopSpeaking();
+    stopStream();
+    if (isActivated) {
+      setIsProcessing(true);
+      return;
+    }
+    setIsProcessing(false);
+    if (heardText) {
+      announce("\"모비야\"로 시작해 주세요. 방금 말씀은 명령으로 처리하지 않았어요.");
+    }
+  }, [announce, heardText, isActivated, stopStream]);
+
   const startListening = async () => {
     if (isListening) {
-      stopSpeaking();
-      stopStream();
+      finishListening();
       return;
     }
     if (!isVoiceStreamSupported()) {
@@ -210,6 +233,7 @@ function SignedInHome({ displayName }: { displayName: string }) {
     setCommandState(null);
     setCommandGuide("");
     setSpokenText("");
+    setIsProcessing(false);
     setTransferResult(null);
     setPendingConfirmation(null);
     setIsActivated(false);
@@ -239,6 +263,7 @@ function SignedInHome({ displayName }: { displayName: string }) {
           // 화면과 낭독이 같은 문장을 쓴다. 백엔드가 만든 값이라 금액도
           // 한국어로 바뀌어 온다.
           setCommandGuide(voiceMessage);
+          setIsProcessing(false);
           announce(voiceMessage);
 
           /*
@@ -273,6 +298,7 @@ function SignedInHome({ displayName }: { displayName: string }) {
         onCommandError: (error) => {
           const message = error.voiceMessage || "명령을 처리하지 못했어요.";
           setVoiceError(message);
+          setIsProcessing(false);
           announce(message);
           voiceSessionIdRef.current = null;
           stopStream();
@@ -282,6 +308,7 @@ function SignedInHome({ displayName }: { displayName: string }) {
             ? "잘 못 알아들었어요. 다시 말씀해 주세요."
             : "음성 인식에 문제가 생겼어요.";
           setVoiceError(message);
+          setIsProcessing(false);
           announce(message);
         },
         onClose: () => {
@@ -361,14 +388,17 @@ function SignedInHome({ displayName }: { displayName: string }) {
         className="flex flex-1 flex-col items-center justify-center gap-4"
       >
         <h2 id="voice-heading" role="status" className="text-[15px] text-[var(--color-text-muted)]">
-          {!isListening && commandState === "CLARIFYING"
+          {isProcessing ? "확인하고 있어요. 잠시만 기다려 주세요" : null}
+          {!isProcessing && !isListening && commandState === "CLARIFYING"
             ? "마이크를 눌러 이어서 말씀해 주세요"
             : null}
-          {!isListening && commandState !== "CLARIFYING"
+          {!isProcessing && !isListening && commandState !== "CLARIFYING"
             ? "무엇을 도와드릴까요?"
             : null}
-          {isListening && !isActivated ? "듣고 있어요. \"모비야\"라고 불러 주세요" : null}
-          {isListening && isActivated ? "말씀하세요" : null}
+          {!isProcessing && isListening && !isActivated
+            ? "듣고 있어요. \"모비야\"라고 불러 주세요"
+            : null}
+          {!isProcessing && isListening && isActivated ? "말씀하세요" : null}
         </h2>
 
         {/*
@@ -394,15 +424,26 @@ function SignedInHome({ displayName }: { displayName: string }) {
               명령: {commandText}
             </p>
           ) : null}
+          {isProcessing ? (
+            <p className="mt-3 text-lg font-bold text-[var(--color-text-muted)]">
+              확인하고 있어요…
+            </p>
+          ) : null}
+
           {/*
             낭독한 문구를 그대로 남긴다. 소리를 못 듣는 상황이거나 안내를 놓쳤을 때
             다시 읽을 수 있어야 한다. aria-live 는 두지 않는다 — 낭독기가 이미
             읽은 문장을 한 번 더 읽게 된다.
           */}
-          {spokenText ? (
-            <p className="mt-3 text-lg font-bold leading-7 text-[var(--color-accent)]">
-              {spokenText}
-            </p>
+          {!isProcessing && spokenText ? (
+            <div className="mt-3 rounded-2xl bg-[var(--color-surface)] px-4 py-3 text-left">
+              <p className="text-[13px] font-semibold text-[var(--color-text-muted)]">
+                안내
+              </p>
+              <p className="mt-1 text-lg font-bold leading-7 text-[var(--color-accent)]">
+                {spokenText}
+              </p>
+            </div>
           ) : null}
 
           {transferResult && transferResult.state === "COMPLETED" ? (
