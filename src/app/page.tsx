@@ -22,6 +22,7 @@ import { startVoiceSession,
   waitForLastVoiceResult,
 } from "@/services/voiceService";
 import { VoiceConfirmation } from "@/components/domain/voice/VoiceConfirmation";
+import { useConfirmationRecorder } from "@/hooks/useConfirmationRecorder";
 import { primeSpeech, speak, stopSpeaking } from "@/services/speech";
 import type { VoiceCommandResult } from "@/types";
 import { useAuthStore } from "@/store/useAuthStore";
@@ -107,6 +108,47 @@ const QUICK_MENU = [
   { href: "/transfer", label: "이체", symbol: "📤" },
   { href: "/transactions", label: "내역", symbol: "📋" },
 ] as const;
+
+/**
+ * 지금 마이크가 어떤 상태인지 한 문장으로 알려 준다.
+ *
+ * <p>화면을 보지 않는 사용자에게는 이 문장이 유일한 안내다. 말해도 되는지, 기다려야
+ * 하는지, 무엇을 답해야 하는지가 여기서 갈린다. 확인 단계를 먼저 보는 이유는 그때
+ * 마이크가 새 명령이 아니라 "네/아니요" 를 받기 때문이다 -- 같은 버튼이 다른 일을
+ * 하는 순간이라 안내가 어긋나면 사용자는 무엇을 말해야 할지 알 수 없다.
+ */
+function selectVoiceStatusText({
+  isConfirmationBusy,
+  isConfirmationRecording,
+  isAwaitingConfirmation,
+  isProcessing,
+  isListening,
+  isActivated,
+  commandState,
+}: {
+  isConfirmationBusy: boolean;
+  isConfirmationRecording: boolean;
+  isAwaitingConfirmation: boolean;
+  isProcessing: boolean;
+  isListening: boolean;
+  isActivated: boolean;
+  commandState: string | null;
+}): string {
+  if (isConfirmationBusy) return "확인하고 있어요. 잠시만 기다려 주세요";
+  if (isConfirmationRecording) {
+    return "듣고 있어요. \"네\" 또는 \"아니요\"라고 말씀해 주세요";
+  }
+  if (isAwaitingConfirmation) {
+    return "마이크를 눌러 \"네\" 또는 \"아니요\"로 답해 주세요";
+  }
+  if (isProcessing) return "확인하고 있어요. 잠시만 기다려 주세요";
+  if (!isListening && commandState === "CLARIFYING") {
+    return "마이크를 눌러 이어서 말씀해 주세요";
+  }
+  if (!isListening) return "무엇을 도와드릴까요?";
+  if (!isActivated) return "듣고 있어요. \"모비야\"라고 불러 주세요";
+  return "말씀하세요";
+}
 
 /**
  * 명령 처리 결과를 화면·낭독용 한 문장으로 바꾼다.
@@ -266,6 +308,40 @@ function SignedInHome({ displayName }: { displayName: string }) {
     [announce, markProcessing, stopStream],
   );
 
+  /*
+   * 확인 발화는 스트리밍으로 보낼 수 없다 -- confirmationId 와 멱등키를 실을 자리가
+   * 없어 백엔드가 거절한다. 그래서 확인 한 마디만 REST 로 올린다. 이 훅을 화면이
+   * 아니라 여기에 두는 이유는 아래 큰 마이크 버튼도 같은 녹음을 시작해야 하기
+   * 때문이다 -- 화면을 보지 않는 사용자는 늘 누르던 마이크를 누른다.
+   */
+  const confirmationRecorder = useConfirmationRecorder({
+    voiceSessionId: pendingConfirmation?.voiceSessionId ?? null,
+    confirmationId: pendingConfirmation?.confirmationId ?? null,
+    onSettled: (result) => {
+      setCommandState(result.state);
+      setCommandGuide(result.voiceMessage);
+      setTransferResult(result);
+      setVoiceError("");
+      announce(result.voiceMessage);
+      setPendingConfirmation(null);
+      voiceSessionIdRef.current = null;
+    },
+    onFailed: (failureMessage) => {
+      setVoiceError(failureMessage);
+      announce(failureMessage);
+      setPendingConfirmation(null);
+      voiceSessionIdRef.current = null;
+    },
+    /*
+     * 못 알아들었을 뿐이라 이체는 아직 나가지 않았다. 확인 상태를 그대로 두고 한 번
+     * 더 답하게 한다 -- 여기서 흐름을 접으면 송금을 처음부터 다시 말해야 한다.
+     */
+    onRetryable: (retryMessage) => {
+      setVoiceError("");
+      announce(`${retryMessage} 마이크를 눌러 "네" 또는 "아니요"로 다시 답해 주세요.`);
+    },
+  });
+
   const startListening = async () => {
     if (isListening) {
       finishListening();
@@ -390,6 +466,23 @@ function SignedInHome({ displayName }: { displayName: string }) {
   const mainAccount =
     accounts.find((account) => account.id === defaultAccountId) ?? accounts[0] ?? null;
 
+  /** 확인 대기 중이면 마이크는 새 명령이 아니라 확인 대답을 받는다. */
+  const isAwaitingConfirmation =
+    commandState === "AWAITING_CONFIRMATION" && pendingConfirmation !== null;
+  /* 스트리밍이든 확인 녹음이든 마이크가 열려 있는 것은 마찬가지다. 화면 표시는
+     둘을 구분하지 않아야 사용자가 지금 말해도 되는지 알 수 있다. */
+  const isMicActive = isListening || confirmationRecorder.isRecording;
+
+  const voiceStatusText = selectVoiceStatusText({
+    isConfirmationBusy: confirmationRecorder.isBusy,
+    isConfirmationRecording: confirmationRecorder.isRecording,
+    isAwaitingConfirmation,
+    isProcessing,
+    isListening,
+    isActivated,
+    commandState,
+  });
+
   return (
     <AppScreen className="gap-5 pb-8 pt-6">
       <header className="flex items-start justify-between gap-3">
@@ -450,17 +543,7 @@ function SignedInHome({ displayName }: { displayName: string }) {
         className="flex flex-1 flex-col items-center justify-center gap-4"
       >
         <h2 id="voice-heading" role="status" className="text-[15px] text-[var(--color-text-muted)]">
-          {isProcessing ? "확인하고 있어요. 잠시만 기다려 주세요" : null}
-          {!isProcessing && !isListening && commandState === "CLARIFYING"
-            ? "마이크를 눌러 이어서 말씀해 주세요"
-            : null}
-          {!isProcessing && !isListening && commandState !== "CLARIFYING"
-            ? "무엇을 도와드릴까요?"
-            : null}
-          {!isProcessing && isListening && !isActivated
-            ? "듣고 있어요. \"모비야\"라고 불러 주세요"
-            : null}
-          {!isProcessing && isListening && isActivated ? "말씀하세요" : null}
+          {voiceStatusText}
         </h2>
 
         {/*
@@ -513,23 +596,8 @@ function SignedInHome({ displayName }: { displayName: string }) {
           ) : null}
           {commandState === "AWAITING_CONFIRMATION" && pendingConfirmation ? (
             <VoiceConfirmation
-              voiceSessionId={pendingConfirmation.voiceSessionId}
-              confirmationId={pendingConfirmation.confirmationId}
               question={commandGuide}
-              onSettled={(result) => {
-                setCommandState(result.state);
-                setCommandGuide(result.voiceMessage);
-                setTransferResult(result);
-                announce(result.voiceMessage);
-                setPendingConfirmation(null);
-                voiceSessionIdRef.current = null;
-              }}
-              onFailed={(failureMessage) => {
-                setVoiceError(failureMessage);
-                announce(failureMessage);
-                setPendingConfirmation(null);
-                voiceSessionIdRef.current = null;
-              }}
+              recorder={confirmationRecorder}
             />
           ) : null}
 
@@ -545,7 +613,7 @@ function SignedInHome({ displayName }: { displayName: string }) {
         </div>
 
         <div className="relative flex items-center justify-center">
-          {isListening ? (
+          {isMicActive ? (
             <>
               <span
                 aria-hidden="true"
@@ -560,8 +628,29 @@ function SignedInHome({ displayName }: { displayName: string }) {
           ) : null}
           <button
             type="button"
-            aria-pressed={isListening}
-            onClick={startListening}
+            aria-pressed={isMicActive}
+            onClick={() => {
+              /*
+               * 확인 대기 중에는 같은 버튼이 확인 대답을 받는다. 여기서 스트리밍을
+               * 새로 열면 확인에 필요한 confirmationId 와 멱등키가 빠진 채로 "네" 가
+               * 올라가 백엔드가 거절하고, 사용자는 무슨 말을 해도 오류만 듣는다.
+               */
+              if (commandState === "AWAITING_CONFIRMATION") {
+                /*
+                 * 확인 값을 못 받은 경우다. 여기서 스트리밍을 열면 확인이 될 리 없는
+                 * 발화를 또 올려 같은 오류를 반복한다. 갈 수 있는 곳을 알려 준다.
+                 */
+                if (pendingConfirmation === null) {
+                  announce(
+                    "송금 확인 정보를 찾지 못했어요. 이체 화면에서 확인해 주세요.",
+                  );
+                  return;
+                }
+                confirmationRecorder.toggle();
+                return;
+              }
+              void startListening();
+            }}
             className="relative flex h-36 w-36 items-center justify-center rounded-full bg-[var(--color-primary)] transition-colors hover:bg-[var(--color-primary-hover)] focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[var(--color-focus)] focus-visible:ring-offset-2 motion-reduce:transition-none"
           >
             {/*
@@ -573,12 +662,16 @@ function SignedInHome({ displayName }: { displayName: string }) {
               🎙️
             </span>
             <span className="sr-only">
-              {isListening ? "듣는 중입니다. 누르면 멈춥니다" : "음성으로 명령하기"}
+              {isMicActive ? "듣는 중입니다. 누르면 멈춥니다" : null}
+              {!isMicActive && isAwaitingConfirmation
+                ? "\"네\" 또는 \"아니요\"로 대답하기"
+                : null}
+              {!isMicActive && !isAwaitingConfirmation ? "음성으로 명령하기" : null}
             </span>
           </button>
         </div>
 
-        <VoiceWave size={32} className={isListening ? "" : "invisible"} />
+        <VoiceWave size={32} className={isMicActive ? "" : "invisible"} />
 
         <div className="min-h-10" aria-live="assertive" aria-atomic="true">
           {voiceError ? (
