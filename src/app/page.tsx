@@ -139,6 +139,11 @@ function SignedInHome({ displayName }: { displayName: string }) {
    * 사용자는 먹통이 된 줄 안다 — 무엇을 하고 있는지 계속 보여 준다.
    */
   const [isProcessing, setIsProcessing] = useState(false);
+  /*
+   * 소켓 콜백은 만들어질 때의 state 를 그대로 들고 있어 나중 값을 못 본다.
+   * 연결이 끊겼을 때 "아직 기다리는 중이었나" 를 판단하려면 ref 가 필요하다.
+   */
+  const processingRef = useRef(false);
   /** 송금이 끝났을 때 화면에 남길 결과. 낭독은 지나가지만 이건 남는다. */
   const [transferResult, setTransferResult] = useState<VoiceCommandResult | null>(null);
   const [pendingConfirmation, setPendingConfirmation] = useState<{
@@ -175,6 +180,12 @@ function SignedInHome({ displayName }: { displayName: string }) {
    * 말하는 도중에 인식 결과가 계속 올라와 화면에 그대로 붙는다. '모비야'를
    * 만나기 전 발화는 명령으로 치지 않으므로 activated 로 화면을 나눈다.
    */
+  /** 처리 중 표시를 state 와 ref 에 함께 반영한다. 한쪽만 바뀌면 판단이 어긋난다. */
+  const markProcessing = useCallback((processing: boolean) => {
+    processingRef.current = processing;
+    setIsProcessing(processing);
+  }, []);
+
   /** 낭독과 화면 표시를 한 번에. 둘이 갈라지지 않게 항상 이 함수를 쓴다. */
   const announce = useCallback((text: string) => {
     if (!text) return;
@@ -198,14 +209,14 @@ function SignedInHome({ displayName }: { displayName: string }) {
     stopSpeaking();
     stopStream();
     if (isActivated) {
-      setIsProcessing(true);
+      markProcessing(true);
       return;
     }
-    setIsProcessing(false);
+    markProcessing(false);
     if (heardText) {
       announce("\"모비야\"로 시작해 주세요. 방금 말씀은 명령으로 처리하지 않았어요.");
     }
-  }, [announce, heardText, isActivated, stopStream]);
+  }, [announce, heardText, isActivated, markProcessing, stopStream]);
 
   const startListening = async () => {
     if (isListening) {
@@ -233,7 +244,7 @@ function SignedInHome({ displayName }: { displayName: string }) {
     setCommandState(null);
     setCommandGuide("");
     setSpokenText("");
-    setIsProcessing(false);
+    markProcessing(false);
     setTransferResult(null);
     setPendingConfirmation(null);
     setIsActivated(false);
@@ -263,7 +274,7 @@ function SignedInHome({ displayName }: { displayName: string }) {
           // 화면과 낭독이 같은 문장을 쓴다. 백엔드가 만든 값이라 금액도
           // 한국어로 바뀌어 온다.
           setCommandGuide(voiceMessage);
-          setIsProcessing(false);
+          markProcessing(false);
           announce(voiceMessage);
 
           /*
@@ -298,7 +309,7 @@ function SignedInHome({ displayName }: { displayName: string }) {
         onCommandError: (error) => {
           const message = error.voiceMessage || "명령을 처리하지 못했어요.";
           setVoiceError(message);
-          setIsProcessing(false);
+          markProcessing(false);
           announce(message);
           voiceSessionIdRef.current = null;
           stopStream();
@@ -308,16 +319,25 @@ function SignedInHome({ displayName }: { displayName: string }) {
             ? "잘 못 알아들었어요. 다시 말씀해 주세요."
             : "음성 인식에 문제가 생겼어요.";
           setVoiceError(message);
-          setIsProcessing(false);
+          markProcessing(false);
           announce(message);
         },
         onClose: () => {
           sessionRef.current = null;
           setIsListening(false);
+          /*
+           * 결과를 받기 전에 연결이 끊겼다. 그대로 두면 "확인하고 있어요" 에서
+           * 영영 멈춘다 — 사용자는 언제까지 기다려야 하는지 알 수 없다.
+           */
+          if (processingRef.current) {
+            markProcessing(false);
+            announce("잠시 문제가 생겼어요. 마이크를 눌러 다시 말씀해 주세요.");
+          }
         },
       }, voiceSessionIdRef.current ?? undefined);
     } catch {
       setIsListening(false);
+      markProcessing(false);
       setVoiceError("마이크를 사용할 수 없어요. 권한을 확인해 주세요.");
     }
   };
