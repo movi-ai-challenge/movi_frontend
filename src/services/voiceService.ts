@@ -91,3 +91,37 @@ export async function sendVoiceCommand(
   const parsed = parseApiResponse(response.data, isVoiceCommandResponseData);
   return mapVoiceCommandResponse(parsed.data, parsed.voiceMessage);
 }
+
+/**
+ * 세션의 마지막 응답을 다시 가져온다.
+ *
+ * <p>스트리밍 응답은 마지막 한 프레임이 도착해야만 성공한다. 그 프레임을 놓치면 답이
+ * 서버에 있어도 사용자는 알 방법이 없다. 연결이 끊겼을 때 이걸로 이어붙인다.
+ *
+ * @returns 남아 있는 답이 없으면 null. 실패는 예외로 올리지 않는다 -- 복구 시도일 뿐이라
+ *          여기서 또 오류를 띄우면 원래 사정이 가려진다
+ */
+export async function getLastVoiceResult(
+  voiceSessionId: number | string,
+): Promise<{ result: VoiceCommandResult; voiceMessage: string } | null> {
+  if (isMockMode) return null;
+
+  try {
+    const response = await api.get<unknown>(
+      `${VOICE_SESSIONS_PATH}/${encodeURIComponent(voiceSessionId)}/result`,
+    );
+    const body = response.data as { data?: unknown; voiceMessage?: unknown };
+    if (!isVoiceCommandResponseData(body?.data)) return null;
+
+    const voiceMessage =
+      typeof body.voiceMessage === "string" ? body.voiceMessage : "";
+    if (!voiceMessage) return null;
+
+    return {
+      result: mapVoiceCommandResponse(body.data, voiceMessage),
+      voiceMessage,
+    };
+  } catch {
+    return null;
+  }
+}

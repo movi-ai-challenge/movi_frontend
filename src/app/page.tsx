@@ -18,7 +18,9 @@ import {
   isVoiceCommandResponseData,
   mapVoiceCommandResponse,
 } from "@/services/voiceContract";
-import { startVoiceSession } from "@/services/voiceService";
+import { startVoiceSession,
+  getLastVoiceResult,
+} from "@/services/voiceService";
 import { VoiceConfirmation } from "@/components/domain/voice/VoiceConfirmation";
 import { primeSpeech, speak, stopSpeaking } from "@/services/speech";
 import type { VoiceCommandResult } from "@/types";
@@ -219,6 +221,51 @@ function SignedInHome({ displayName }: { displayName: string }) {
     }
   }, [announce, heardText, isActivated, markProcessing, stopStream]);
 
+  /**
+   * 명령 결과를 화면과 낭독에 반영한다.
+   *
+   * <p>스트리밍으로 받든, 끊긴 뒤 조회해서 받든 같은 흐름을 타야 한다. 두 경로가 갈리면
+   * 한쪽에서만 확인이 되는 이체가 생긴다.
+   */
+  const applyCommandResult = useCallback(
+    (result: VoiceCommandResult, voiceMessage: string) => {
+      setCommandState(result.state ?? null);
+      // 화면과 낭독이 같은 문장을 쓴다. 백엔드가 만든 값이라 금액도 한국어로 온다.
+      setCommandGuide(voiceMessage);
+      setVoiceError("");
+      markProcessing(false);
+      announce(voiceMessage);
+
+      /*
+       * 확인을 기다리는 중이면 값을 넘겨 음성으로 마무리하게 한다. 화면을 볼 수 없는
+       * 사용자에게 이체 화면 링크만 띄우면 거기서 흐름이 끊긴다.
+       */
+      if (
+        result.state === "AWAITING_CONFIRMATION"
+        && result.confirmationId
+        && voiceSessionIdRef.current !== null
+      ) {
+        setPendingConfirmation({
+          voiceSessionId: voiceSessionIdRef.current,
+          confirmationId: result.confirmationId,
+        });
+      }
+
+      /*
+       * 대화가 끝난 상태에서만 세션을 놓는다. 재질문이나 확인 대기 중이면 세션을
+       *유지해야 다음 발화가 앞선 금액·수취인과 이어 붙는다.
+       */
+      if (
+        result.state !== "CLARIFYING"
+        && result.state !== "AWAITING_CONFIRMATION"
+      ) {
+        voiceSessionIdRef.current = null;
+      }
+      stopStream();
+    },
+    [announce, markProcessing, stopStream],
+  );
+
   const startListening = async () => {
     if (isListening) {
       finishListening();
@@ -283,42 +330,7 @@ function SignedInHome({ displayName }: { displayName: string }) {
             stopStream();
             return;
           }
-          const result = mapVoiceCommandResponse(data, null);
-          setCommandState(result.state ?? null);
-          // 화면과 낭독이 같은 문장을 쓴다. 백엔드가 만든 값이라 금액도
-          // 한국어로 바뀌어 온다.
-          setCommandGuide(voiceMessage);
-          markProcessing(false);
-          announce(voiceMessage);
-
-          /*
-           * 확인을 기다리는 중이면 값을 넘겨 음성으로 마무리하게 한다. 예전에는
-           * 이체 화면 링크만 띄웠는데, 화면을 볼 수 없는 사용자에게는 거기서
-           * 흐름이 끊긴다.
-           */
-          if (
-            result.state === "AWAITING_CONFIRMATION"
-            && result.confirmationId
-            && voiceSessionIdRef.current !== null
-          ) {
-            setPendingConfirmation({
-              voiceSessionId: voiceSessionIdRef.current,
-              confirmationId: result.confirmationId,
-            });
-          }
-
-          /*
-           * 대화가 끝난 상태에서만 세션을 놓는다. 재질문이나 확인 대기 중이면
-           * 세션을 유지해야 다음 발화가 앞선 금액·수취인과 이어 붙는다.
-           * 확인은 같은 음성 세션으로 보내야 서버가 대기 중인 이체를 찾는다.
-           */
-          if (
-            result.state !== "CLARIFYING"
-            && result.state !== "AWAITING_CONFIRMATION"
-          ) {
-            voiceSessionIdRef.current = null;
-          }
-          stopStream();
+          applyCommandResult(mapVoiceCommandResponse(data, null), voiceMessage);
         },
         onCommandError: (error) => {
           const message = error.voiceMessage || "명령을 처리하지 못했어요.";
@@ -340,14 +352,29 @@ function SignedInHome({ displayName }: { displayName: string }) {
         onClose: () => {
           sessionRef.current = null;
           setIsListening(false);
+          if (!processingRef.current) return;
+
           /*
-           * 결과를 받기 전에 연결이 끊겼다. 그대로 두면 "확인하고 있어요" 에서
-           * 영영 멈춘다 — 사용자는 언제까지 기다려야 하는지 알 수 없다.
+           * 결과를 받기 전에 연결이 끊겼다. 그래도 답은 서버에 만들어져 있을 수 있다 --
+           * 마지막 프레임 하나를 놓쳤다고 이체를 처음부터 다시 말하게 하지 않는다.
+           * 화면을 보지 않는 사용자에게 "다시 말씀해 주세요" 는 같은 지점에서 또 막힌다.
            */
-          if (processingRef.current) {
+          const sessionId = voiceSessionIdRef.current;
+          if (sessionId === null) {
             markProcessing(false);
             announce("잠시 문제가 생겼어요. 마이크를 눌러 다시 말씀해 주세요.");
+            return;
           }
+
+          void (async () => {
+            const recovered = await getLastVoiceResult(sessionId);
+            if (!recovered) {
+              markProcessing(false);
+              announce("잠시 문제가 생겼어요. 마이크를 눌러 다시 말씀해 주세요.");
+              return;
+            }
+            applyCommandResult(recovered.result, recovered.voiceMessage);
+          })();
         },
       }, voiceSessionIdRef.current ?? undefined);
     } catch {
