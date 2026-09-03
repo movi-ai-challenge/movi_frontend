@@ -58,32 +58,59 @@ export default function SettingsPage() {
       <AccessibilitySettingsPanel />
 
       {session ? (
-        <section aria-labelledby="account-settings-title">
-          <h2
-            id="account-settings-title"
-            className="mb-2 text-xs font-bold uppercase tracking-wider text-[var(--color-text-muted)]"
-          >
-            계좌 관리
-          </h2>
-          {loadError ? (
-            <p
-              role="alert"
-              className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] px-4 py-4 text-[15px] text-[var(--color-danger)]"
+        <>
+          <section aria-labelledby="login-settings-title">
+            <h2
+              id="login-settings-title"
+              className="mb-2 text-xs font-bold uppercase tracking-wider text-[var(--color-text-muted)]"
             >
-              {loadError}
-            </p>
-          ) : (
+              로그인 수단
+            </h2>
+            {/*
+              가입 수단과 상관없이 여기서 PIN을 등록할 수 있어야 한다. 카카오로 가입하며
+              PIN 단계를 건너뛴 사용자, 아이디로 가입한 사용자, 이미 예전에 가입한
+              사용자에게는 이 화면이 유일한 PIN 등록 진입점이다.
+
+              이미 등록했는지는 서버에 물어볼 방법이 없어 화면에서 미리 가려낼 수 없다.
+              등록된 계정이면 등록 화면이 서버 응답으로 안내한다.
+            */}
             <div className="overflow-hidden rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)]">
-              <SettingLink href="/accounts" label="연결 계좌 조회" value={`${accounts.length}개`} />
               <SettingLink
-                href="/accounts"
-                label="기본 계좌 설정"
-                value={defaultAccount ? defaultAccount.bankName : "미설정"}
+                href="/pin/register"
+                label="PIN 등록"
+                value="전화번호 + 6자리"
                 isLast
               />
             </div>
-          )}
-        </section>
+          </section>
+
+          <section aria-labelledby="account-settings-title">
+            <h2
+              id="account-settings-title"
+              className="mb-2 text-xs font-bold uppercase tracking-wider text-[var(--color-text-muted)]"
+            >
+              계좌 관리
+            </h2>
+            {loadError ? (
+              <p
+                role="alert"
+                className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] px-4 py-4 text-[15px] text-[var(--color-danger)]"
+              >
+                {loadError}
+              </p>
+            ) : (
+              <div className="overflow-hidden rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)]">
+                <SettingLink href="/accounts" label="연결 계좌 조회" value={`${accounts.length}개`} />
+                <SettingLink
+                  href="/accounts"
+                  label="기본 계좌 설정"
+                  value={defaultAccount ? defaultAccount.bankName : "미설정"}
+                  isLast
+                />
+              </div>
+            )}
+          </section>
+        </>
       ) : null}
     </AppScreen>
   );

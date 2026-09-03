@@ -56,6 +56,62 @@ OpenBanking callback 공개 ┘
 - 보호자는 위험 거래 알림만 받으며 금융 정보 조회나 송금 승인 권한을 갖지 않는다.
 - 확정되지 않은 API와 동작은 Mock으로 발명하지 않는다.
 
+## 회원가입·로그인 흐름
+
+가입 수단과 무관하게 누구나 PIN을 등록할 수 있습니다. PIN은 다음 접속 때 아이디·비밀번호나
+카카오 인증 없이, 전화번호와 숫자 6자리만으로 들어오는 수단입니다.
+
+### 진입점 — [/login](src/app/login/page.tsx)
+
+| 선택 | 이동 | 비고 |
+|---|---|---|
+| 카카오 로그인 | 백엔드 `/api/v1/auth/kakao/authorize`로 전체 페이지 이동 | 신규·기존 사용자 모두 |
+| 일반 로그인 | [/login/password](src/app/login/password/page.tsx) | 아이디 + 비밀번호 |
+| 아이디로 회원가입 | [/signup](src/app/signup/page.tsx) | 이름·아이디·비밀번호(+선택 전화번호) |
+| PIN으로 로그인 | [/login/pin](src/app/login/pin/page.tsx) | 이미 PIN을 등록한 사용자용 |
+
+### 가입 직후 분기
+
+```text
+카카오 신규 가입 ──────────────┐
+                                 ▼
+                    [/pin/register] "마지막 가입 단계"
+                                 │  PIN이 유일한 로그인 수단이라 건너뛰기 없음
+                                 ▼
+                    [/accounts/connect]
+
+일반 회원가입(아이디+비밀번호) ──┐
+                                 ▼
+                    [/pin/register] "로그인 수단 추가"
+                                 │  아이디·비밀번호가 이미 있어 "나중에 등록하기" 제공
+                                 │  가입 화면에 적은 전화번호는 sessionStorage로 넘어와 자동 입력
+                                 ▼
+                    [/accounts/connect] (건너뛰면 바로 여기로)
+
+기존 사용자 (카카오 재로그인 · 아이디 로그인 · PIN 로그인) ──► [/] 홈
+                                 │  PIN을 아직 등록하지 않았다면
+                                 ▼
+                    [/settings] "로그인 수단 › PIN 등록"에서 언제든 등록
+```
+
+### PIN 등록 — [/pin/register](src/app/pin/register/page.tsx)
+
+- `POST /api/v1/auth/pin/register`. 인증된 세션이면 가입 수단과 관계없이 호출할 수 있다.
+- 백엔드는 자격증명 행이 있어도 `pin_hash`가 비어 있으면(비밀번호만 등록된 상태) 채워
+  넣는다. 실패는 `pin_hash`가 이미 차 있을 때만(`AUTH_4090`) — 이때 화면은 입력란이
+  아니라 안내문으로 초점을 옮기고 PIN 로그인으로 안내한다.
+- 카카오 신규 가입자만 필수 단계다("나중에 등록하기" 없음). 그 외에는 건너뛸 수 있고,
+  가입 직후가 아니면 [/settings](src/app/settings/page.tsx)의 "로그인 수단" 항목이
+  유일한 진입점이다.
+
+### 세션·라우트 보호
+
+- [MockAuthBoundary](src/components/common/MockAuthBoundary.tsx)가 `/pin`, `/accounts`,
+  `/balance`, `/transactions`, `/transfer`를 보호한다. 세션이 없으면
+  `/login?next=<원래 경로>`로 보낸다.
+- [useAuthStore](src/store/useAuthStore.ts)는 refresh token과 세션 메타데이터를
+  `sessionStorage`에 보관하고, 새로고침 시 refresh 토큰으로 세션을 복원한다.
+
 ## 기술 스택
 
 - Next.js App Router, React, strict TypeScript

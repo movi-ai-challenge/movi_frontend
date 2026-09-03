@@ -14,6 +14,7 @@ import {
   isValidPassword,
   normalizeLoginId,
 } from "@/services/credentialValidation";
+import { savePinRegistrationPhoneNumber } from "@/services/pinRegistrationHandoff";
 import { normalizeKoreanMobileNumber } from "@/services/pinValidation";
 import { useAuthStore } from "@/store/useAuthStore";
 import { useBankStore } from "@/store/useBankStore";
@@ -101,11 +102,17 @@ export default function SignUpPage() {
       setUser({ id: session.userId, name: name.trim() });
       setPassword("");
       /*
-       * 가입 직후에는 홈이 아니라 계좌 연결로 보낸다. 방금 만든 계정에는 연결된
-       * 계좌가 없어 홈에서 할 수 있는 일이 "계좌 연결하기" 하나뿐이다. 카카오 신규
-       * 가입자도 PIN 등록을 마치면 같은 화면으로 간다.
+       * 여기서 적어 넣은 번호를 PIN 등록 화면으로 넘긴다. 선택 입력이라 비어 있을 수
+       * 있고, 그때는 PIN 등록 화면이 직접 묻는다.
        */
-      router.replace("/accounts/connect");
+      if (normalizedPhone) savePinRegistrationPhoneNumber(normalizedPhone);
+      /*
+       * 가입 직후에는 계좌 연결이 아니라 PIN 등록으로 보낸다. 가입 수단과 무관하게
+       * PIN을 등록할 수 있어야 하고, PIN이 있어야 다음 접속 때 아이디·비밀번호를
+       * 받아 적지 않고 전화번호와 숫자 여섯 자리로 들어올 수 있다. 아이디·비밀번호가
+       * 이미 있는 사용자라 필수는 아니며, 건너뛰면 계좌 연결로 이어진다.
+       */
+      router.replace("/pin/register");
     } catch (error: unknown) {
       const signUpError = toPinAuthenticationError(error);
       setErrorMessage(signUpError.message);
@@ -138,7 +145,8 @@ export default function SignUpPage() {
         className="mt-4 text-lg leading-8 text-[var(--color-text-muted)]"
         data-secondary-content="true"
       >
-        아이디와 비밀번호로 계정을 만듭니다. 가입이 끝나면 바로 시작할 수 있어요.
+        아이디와 비밀번호로 계정을 만듭니다. 가입이 끝나면 다음 로그인에 쓸 PIN을
+        등록할 수 있어요. 지금 등록하지 않아도 설정에서 언제든 등록할 수 있습니다.
       </p>
 
       <form className="mt-8 flex flex-col gap-6" onSubmit={handleSubmit} noValidate>
