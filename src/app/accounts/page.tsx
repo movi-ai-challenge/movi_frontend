@@ -6,7 +6,7 @@ import { useEffect, useRef, useState } from "react";
 import { AccessibleButton } from "@/components/common/AccessibleButton";
 import { PageBackLink } from "@/components/common/PageBackLink";
 import { AccountApiError } from "@/components/domain/accounts/AccountApiError";
-import { VoiceCommandPanel } from "@/components/domain/voice/VoiceCommandPanel";
+import { RecipientRegisterCard } from "@/components/domain/transfer/RecipientRegisterCard";
 import { validateAccountAlias } from "@/services/accountContract";
 import {
   disconnectAccount,
@@ -233,7 +233,7 @@ export default function ConnectedAccountListPage() {
       </p>
 
       {status === "ready" && accounts.length > 0 ? (
-        <VoiceCommandPanel />
+        <RecipientRegisterCard />
       ) : null}
 
       <div className="mt-8" aria-live="polite" aria-busy={status === "loading"}>

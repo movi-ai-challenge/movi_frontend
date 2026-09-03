@@ -7,9 +7,12 @@ import {
   isTransferReviewResponseData,
   isTransferStatusResponseData,
   mapRecipientListResponse,
+  mapRecipientResponse,
   mapTransferResultResponse,
   mapTransferReviewResponse,
   mapTransferStatusResponse,
+  validateRecipientAccountNumber,
+  validateRecipientName,
 } from "../src/services/transferContract.ts";
 import type { TransferStatusResponseData } from "../src/services/transferContract.ts";
 
@@ -181,4 +184,49 @@ test("근거에 문자열이 아닌 값이 섞이면 거부한다", () => {
   };
 
   assert.equal(isTransferResultResponseData(result), false);
+});
+
+test("상대방 이름은 앞뒤 공백만 털어내고 그대로 쓴다", () => {
+  // 음성으로 부를 말이라 사용자가 적은 형태를 바꾸지 않는다.
+  assert.equal(validateRecipientName("  엄마 "), "엄마");
+  assert.equal(validateRecipientName("김 민수"), "김 민수");
+});
+
+test("빈 이름과 50자를 넘는 이름은 거부한다", () => {
+  assert.equal(validateRecipientName("   "), null);
+  assert.equal(validateRecipientName("가".repeat(51)), null);
+  assert.equal(validateRecipientName("가".repeat(50)), "가".repeat(50));
+});
+
+test("계좌번호에서 하이픈과 공백을 지운다", () => {
+  // 사람이 읽으려고 넣은 구분자다. 서버는 숫자만 본다.
+  assert.equal(validateRecipientAccountNumber("123456-78-901234"), "12345678901234");
+  assert.equal(validateRecipientAccountNumber(" 123 456 789 "), "123456789");
+});
+
+test("여섯 자리보다 짧은 계좌번호는 서버로 보내지 않는다", () => {
+  // 앞자리가 짧으면 어느 계좌인지 특정할 수 없어 서버가 어차피 거절한다.
+  assert.equal(validateRecipientAccountNumber("12345"), null);
+  assert.equal(validateRecipientAccountNumber("123456"), "123456");
+  assert.equal(validateRecipientAccountNumber("숫자없음"), null);
+});
+
+test("등록 응답 한 건을 화면이 쓰는 형태로 바꾼다", () => {
+  const saved = mapRecipientResponse({
+    recipientId: 77,
+    nickname: " 엄마 ",
+    holderName: " 김영희 ",
+    bankCode: " 004 ",
+    maskedAccountNumber: "123-****-5678",
+    transferCount: 0,
+  });
+
+  assert.deepEqual(saved, {
+    id: "77",
+    nickname: "엄마",
+    holderName: "김영희",
+    bankCode: "004",
+    maskedAccountNumber: "123-****-5678",
+    transferCount: 0,
+  });
 });

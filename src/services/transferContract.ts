@@ -155,6 +155,47 @@ export function mapRecipientListResponse(
   }));
 }
 
+export function isRecipientResponseDataExported(
+  value: unknown,
+): value is RecipientResponseData {
+  return isRecipientResponseData(value);
+}
+
+export function mapRecipientResponse(
+  data: RecipientResponseData,
+): RegisteredRecipient {
+  return {
+    id: String(data.recipientId),
+    nickname: data.nickname.trim(),
+    holderName: data.holderName.trim(),
+    bankCode: data.bankCode.trim(),
+    maskedAccountNumber: data.maskedAccountNumber,
+    transferCount: data.transferCount,
+  };
+}
+
+/**
+ * 음성으로 부를 이름.
+ *
+ * <p>화면을 보지 않는 사용자가 실제로 말할 말이므로, 앞뒤 공백만 털어내고 그대로 쓴다.
+ * 비어 있거나 50자를 넘으면 서버까지 보내지 않는다.
+ */
+export function validateRecipientName(value: string): string | null {
+  const name = value.trim();
+  return name.length >= 1 && name.length <= 50 ? name : null;
+}
+
+/**
+ * 계좌번호.
+ *
+ * <p>하이픈과 공백은 사람이 읽기 위한 것이라 지우고 숫자만 남긴다. 6자리보다 짧으면 어느
+ * 계좌인지 특정할 수 없어 서버가 어차피 거절한다.
+ */
+export function validateRecipientAccountNumber(value: string): string | null {
+  const digits = value.replace(/\D/g, "");
+  return digits.length >= 6 && digits.length <= 20 ? digits : null;
+}
+
 export function isTransferReviewResponseData(
   value: unknown,
 ): value is TransferReviewResponseData {
