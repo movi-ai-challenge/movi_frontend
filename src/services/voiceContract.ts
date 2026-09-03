@@ -58,6 +58,8 @@ export interface VoiceCommandResponseData {
   completedAt: string | null;
   history: VoiceHistoryData | null;
   balance: VoiceBalanceData | null;
+  /** 서버가 늘 배열로 내려주지만, 옛 응답과 섞일 수 있어 없을 수도 있게 둔다. */
+  riskReasons?: string[] | null;
 }
 
 const sessionStates = new Set<VoiceSessionState>([
@@ -284,6 +286,8 @@ export function mapVoiceCommandResponse(
 ): VoiceCommandResult {
   return {
     ...data,
+    // 없으면 빈 배열로 둔다. 화면이 length 를 그대로 보므로 null 이면 깨진다.
+    riskReasons: Array.isArray(data.riskReasons) ? data.riskReasons : [],
     voiceSessionId: mapNullableId(data.voiceSessionId),
     fromAccount: data.fromAccount
       ? { ...data.fromAccount, accountId: String(data.fromAccount.accountId) }
