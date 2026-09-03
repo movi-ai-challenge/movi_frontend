@@ -18,6 +18,21 @@ import {
 import type { VoiceCommandResult, VoiceSessionStart } from "@/types";
 
 const VOICE_SESSIONS_PATH = "/api/voice/sessions";
+
+/**
+ * 음성 명령 업로드(/commands) 전용 타임아웃.
+ *
+ * <p>이 요청 하나가 백엔드 안에서 STT+GPT 분석, FDS 평가, 은행 실행을 순서대로
+ * 거친다. 백엔드가 스스로에게 허용한 시간만 더해도 음성 분석 응답 대기 10초 +
+ * FDS 평가 3초 = 13초다. 게다가 음성 분석 실측 소요는 15~20초로 그 예산조차
+ * 넘긴다(movi_ai/src/voice_analysis/api.py 주석).
+ *
+ * <p>기본 타임아웃(10초)을 그대로 쓰면 성공할 요청도 클라이언트가 먼저 포기한다.
+ * axios 가 끊어도 서버는 이미 시작한 처리를 멈추지 않고 끝까지 실행해 송금을
+ * 완료하므로, 사용자는 "통신하지 못했다"는 오류를 보면서 실제로는 송금이
+ * 성공하는 상황을 겪는다. 백엔드의 실제 예산보다 여유 있게 잡는다.
+ */
+const VOICE_COMMAND_TIMEOUT_MS = 30_000;
 export {
   MAX_VOICE_AUDIO_BYTES,
   MAX_VOICE_DURATION_SECONDS,
@@ -86,7 +101,10 @@ export async function sendVoiceCommand(
   const response = await api.post<unknown>(
     `${VOICE_SESSIONS_PATH}/${encodeURIComponent(upload.voiceSessionId)}/commands`,
     formData,
-    { headers: { "Content-Type": "multipart/form-data" } },
+    {
+      headers: { "Content-Type": "multipart/form-data" },
+      timeout: VOICE_COMMAND_TIMEOUT_MS,
+    },
   );
   const parsed = parseApiResponse(response.data, isVoiceCommandResponseData);
   return mapVoiceCommandResponse(parsed.data, parsed.voiceMessage);

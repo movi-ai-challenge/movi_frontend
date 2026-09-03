@@ -1,4 +1,4 @@
-import { api, isMockMode } from "@/services/api";
+import { api, isMockMode, toApiError } from "@/services/api";
 import { readDeviceUuid } from "@/services/deviceIdentity";
 import { ApiResponseContractError, parseApiResponse } from "@/services/apiResponse";
 import {
@@ -166,4 +166,44 @@ export async function getTransferStatus(
   });
   const parsed = parseApiResponse(response.data, isTransferStatusResponseData);
   return mapTransferStatusResponse(parsed.data, parsed.voiceMessage);
+}
+
+/** 아직 커밋되지 않은 송금을 조회했을 때 백엔드가 돌려주는 코드. */
+const TRANSFER_NOT_FOUND_CODE = "TRANSFER_4040";
+
+/**
+ * 송금이 아직 커밋되지 않았을 뿐일 수 있어 몇 번 더 물어본다.
+ *
+ * <p>음성 확인 업로드가 시간 안에 응답을 못 받았을 때 쓴다. 그 시점에 백엔드는 이미
+ * STT+GPT 분석·FDS 평가·은행 실행을 마쳤을 가능성이 크지만, 트랜잭션 커밋과 이
+ * 조회 사이에는 여전히 타이밍 틈이 있다. 실제로 그 틈에 걸려
+ * {@code TRANSFER_4040}(찾을 수 없음)을 한 번 받고 정말 나갔는지 못 나갔는지도
+ * 모른 채 사용자에게 "확인하지 못했다"고 알린 적이 있다(2026-09-03).
+ *
+ * <p>{@code TRANSFER_4040} 만 재시도한다. 그 외 오류(인증 만료 등)는 기다려도
+ * 나아지지 않으므로 곧바로 올린다.
+ */
+const TRANSFER_STATUS_RETRY_DELAYS_MS = [0, 1000, 2000, 3000, 4000];
+
+export async function waitForTransferStatus(
+  idempotencyKey: string,
+): Promise<TransferStatusResult> {
+  for (let attempt = 0; attempt < TRANSFER_STATUS_RETRY_DELAYS_MS.length; attempt += 1) {
+    const delay = TRANSFER_STATUS_RETRY_DELAYS_MS[attempt];
+    if (delay > 0) {
+      await new Promise<void>((resolve) => {
+        window.setTimeout(resolve, delay);
+      });
+    }
+    const isLastAttempt = attempt === TRANSFER_STATUS_RETRY_DELAYS_MS.length - 1;
+    try {
+      return await getTransferStatus(idempotencyKey);
+    } catch (error: unknown) {
+      if (isLastAttempt || toApiError(error).code !== TRANSFER_NOT_FOUND_CODE) {
+        throw error;
+      }
+    }
+  }
+  // TRANSFER_STATUS_RETRY_DELAYS_MS 는 항상 원소가 있어 여기 닿지 않는다.
+  throw new ApiResponseContractError("송금 상태를 확인하지 못했습니다.");
 }
