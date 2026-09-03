@@ -19,7 +19,7 @@ import {
   mapVoiceCommandResponse,
 } from "@/services/voiceContract";
 import { startVoiceSession,
-  getLastVoiceResult,
+  waitForLastVoiceResult,
 } from "@/services/voiceService";
 import { VoiceConfirmation } from "@/components/domain/voice/VoiceConfirmation";
 import { primeSpeech, speak, stopSpeaking } from "@/services/speech";
@@ -367,7 +367,7 @@ function SignedInHome({ displayName }: { displayName: string }) {
           }
 
           void (async () => {
-            const recovered = await getLastVoiceResult(sessionId);
+            const recovered = await waitForLastVoiceResult(sessionId);
             if (!recovered) {
               markProcessing(false);
               announce("잠시 문제가 생겼어요. 마이크를 눌러 다시 말씀해 주세요.");

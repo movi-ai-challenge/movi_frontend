@@ -125,3 +125,28 @@ export async function getLastVoiceResult(
     return null;
   }
 }
+
+/** 답이 아직 만들어지는 중일 수 있어 잠깐 간격을 두고 다시 묻는다. */
+const RESULT_RETRY_DELAYS_MS = [0, 800, 1600, 2500];
+
+/**
+ * 마지막 답을 몇 번 더 물어본다.
+ *
+ * <p>연결이 끊긴 시점과 서버가 답을 저장하는 시점은 1초 안팎으로 어긋날 수 있다. 실제로
+ * 끊긴 직후 곧바로 물었다가 404 를 받고, 그 1초 뒤에 답이 저장된 적이 있다. 한 번 묻고
+ * 포기하면 다 만들어진 답을 눈앞에서 놓친다.
+ */
+export async function waitForLastVoiceResult(
+  voiceSessionId: number | string,
+): Promise<{ result: VoiceCommandResult; voiceMessage: string } | null> {
+  for (const delay of RESULT_RETRY_DELAYS_MS) {
+    if (delay > 0) {
+      await new Promise<void>((resolve) => {
+        window.setTimeout(resolve, delay);
+      });
+    }
+    const recovered = await getLastVoiceResult(voiceSessionId);
+    if (recovered) return recovered;
+  }
+  return null;
+}
