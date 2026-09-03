@@ -253,7 +253,7 @@ export function useConfirmationRecorder({
 
       recorder.start();
       setPhase("recording");
-      setMessage("듣고 있어요. \"네\" 또는 \"아니요\"라고 말씀해 주세요.");
+      setMessage("듣고 있어요. \"네 맞아요\" 또는 \"아니요 취소할게요\"라고 말씀해 주세요.");
       // 확인은 한 마디다. 말이 끝난 뒤 손을 대지 않아도 멈추게 둔다.
       stopTimerRef.current = window.setTimeout(() => {
         if (recorderRef.current?.state === "recording") {
