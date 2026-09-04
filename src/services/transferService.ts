@@ -207,3 +207,21 @@ export async function waitForTransferStatus(
   // TRANSFER_STATUS_RETRY_DELAYS_MS 는 항상 원소가 있어 여기 닿지 않는다.
   throw new ApiResponseContractError("송금 상태를 확인하지 못했습니다.");
 }
+
+export async function recoverDirectTransfer(
+  idempotencyKey: string,
+  riskReasons: string[] = [],
+): Promise<DirectTransferResult> {
+  const status = await waitForTransferStatus(idempotencyKey);
+  return {
+    transferId: status.transferId,
+    idempotencyKey,
+    status: status.status,
+    riskLevel: status.riskLevel,
+    amount: status.amount,
+    recipientName: status.recipientName,
+    completedAt: status.completedAt,
+    voiceMessage: status.voiceMessage,
+    riskReasons,
+  };
+}

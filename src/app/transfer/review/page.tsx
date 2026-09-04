@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import { AccessibleButton } from "@/components/common/AccessibleButton";
 import { PageBackLink } from "@/components/common/PageBackLink";
@@ -10,9 +10,10 @@ import { TransferReviewVoiceGuide } from "@/components/domain/transfer/TransferR
 import { toApiError } from "@/services/api";
 import {
   clearTransferRecoveryKey,
+  readTransferRecoveryKey,
   saveTransferRecoveryKey,
 } from "@/services/transferRecoveryStorage";
-import { executeDirectTransfer } from "@/services/transferService";
+import { executeDirectTransfer, recoverDirectTransfer } from "@/services/transferService";
 import { useBankStore } from "@/store/useBankStore";
 
 const currencyFormatter = new Intl.NumberFormat("ko-KR", {
@@ -31,10 +32,16 @@ export default function TransferReviewPage() {
   const review = useBankStore((state) => state.directTransferReview);
   const setDirectTransferResult = useBankStore((state) => state.setDirectTransferResult);
   const lockTransferRequest = useBankStore((state) => state.lockTransferRequest);
-  const unlockTransferRequest = useBankStore((state) => state.unlockTransferRequest);
+  const isTransferRequestLocked = useBankStore((state) => state.isTransferRequestLocked);
   const [isExecuting, setIsExecuting] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
   const errorRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!review && readTransferRecoveryKey()) {
+      router.replace("/transfer/result");
+    }
+  }, [review, router]);
 
   if (!review) {
     return (
@@ -63,16 +70,38 @@ export default function TransferReviewPage() {
       }
       router.replace("/transfer/result");
     } catch (error: unknown) {
-      setErrorMessage(toApiError(error).message);
+      setErrorMessage(
+        `${toApiError(error).message} 송금 여부가 확정될 때까지 새 송금을 시작하지 마세요.`,
+      );
       setIsExecuting(false);
-      unlockTransferRequest();
+      window.setTimeout(() => errorRef.current?.focus(), 0);
+    }
+  };
+
+  const refreshStartedTransfer = async () => {
+    setIsExecuting(true);
+    setErrorMessage("");
+    try {
+      const result = await recoverDirectTransfer(review.idempotencyKey);
+      setDirectTransferResult(result);
+      if (["COMPLETED", "BLOCKED", "FAILED", "CANCELED"].includes(result.status)) {
+        clearTransferRecoveryKey();
+      }
+      router.replace("/transfer/result");
+    } catch (error: unknown) {
+      setErrorMessage(
+        `${toApiError(error).message} 송금 여부를 확인하지 못했어요. 다시 송금하지 마세요.`,
+      );
+      setIsExecuting(false);
       window.setTimeout(() => errorRef.current?.focus(), 0);
     }
   };
 
   return (
     <main className="mx-auto min-h-[70vh] w-full max-w-xl px-6 py-12">
-      <PageBackLink href="/transfer">송금 정보 수정하기</PageBackLink>
+      {!isTransferRequestLocked ? (
+        <PageBackLink href="/transfer">송금 정보 수정하기</PageBackLink>
+      ) : null}
       <p className="font-bold text-[var(--color-accent)]">최종 확인</p>
       <h1 className="mt-2 text-4xl font-bold tracking-tight">이 내용대로 송금할까요?</h1>
       <p className="mt-4 text-lg leading-8 text-[var(--color-text-muted)]">
@@ -115,12 +144,26 @@ export default function TransferReviewPage() {
         </div>
       ) : null}
 
-      <AccessibleButton className="mt-6 w-full" disabled={isExecuting} onClick={() => void executeTransfer()}>
-        {isExecuting ? "송금과 위험도를 확인하고 있어요" : "확인한 내용대로 실제 송금하기"}
+      <AccessibleButton
+        className="mt-6 w-full"
+        disabled={isExecuting}
+        onClick={() => void (isTransferRequestLocked ? refreshStartedTransfer() : executeTransfer())}
+      >
+        {isExecuting
+          ? "송금 상태를 확인하고 있어요"
+          : isTransferRequestLocked
+            ? "진행 중인 송금 상태 확인하기"
+            : "확인한 내용대로 실제 송금하기"}
       </AccessibleButton>
-      <Link href="/transfer" className="mt-3 inline-flex min-h-11 w-full items-center justify-center rounded-lg border-2 border-[var(--color-border)] bg-[var(--color-surface)] px-6 py-3 font-semibold focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[var(--color-focus)] focus-visible:ring-offset-2">
-        취소하고 정보 수정하기
-      </Link>
+      {!isTransferRequestLocked ? (
+        <Link href="/transfer" className="mt-3 inline-flex min-h-11 w-full items-center justify-center rounded-lg border-2 border-[var(--color-border)] bg-[var(--color-surface)] px-6 py-3 font-semibold focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[var(--color-focus)] focus-visible:ring-offset-2">
+          취소하고 정보 수정하기
+        </Link>
+      ) : (
+        <p className="mt-3 rounded-lg border-2 border-[var(--color-warning)] p-4 font-semibold">
+          실행을 시작한 송금은 취소할 수 없습니다. 결과가 확정될 때까지 상태를 확인해 주세요.
+        </p>
+      )}
     </main>
   );
 }

@@ -185,7 +185,7 @@ export default function SignUpPage() {
             value={phoneNumber}
             invalid={invalidField === "phone"}
             describedBy="signup-phone-help"
-            helpText="선택 사항이에요. 적어 두면 위험한 송금이 감지될 때 보호자에게 문자를 보낼 수 있어요."
+            helpText="본인 확인에 쓰는 번호예요. 보호자 번호는 가입한 뒤 설정에서 따로 등록합니다."
             onChange={setPhoneNumber}
           />
         </div>

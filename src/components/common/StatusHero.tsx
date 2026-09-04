@@ -47,7 +47,7 @@ export function StatusHero({ tone, symbol, title, description, className = "" }:
       </span>
       <div className="flex flex-col gap-2">
         <h1 className={`text-2xl font-extrabold ${preset.text}`}>{title}</h1>
-        <p className="text-[15px] leading-relaxed text-[var(--color-text-muted)]">{description}</p>
+        <p className="text-base leading-relaxed text-[var(--color-text-muted)]">{description}</p>
       </div>
     </div>
   );

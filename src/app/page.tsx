@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
 
 import { Amount } from "@/components/common/Amount";
@@ -14,6 +15,7 @@ import {
   type VoiceStreamSession,
 } from "@/services/voiceStreamService";
 import { selectVoiceStreamErrorMessage } from "@/services/voiceErrorRecovery";
+import { readTransferRecoveryKey } from "@/services/transferRecoveryStorage";
 import {
   isVoiceCommandResponseData,
   mapVoiceCommandResponse,
@@ -157,6 +159,7 @@ function selectVoiceStatusText({
  * 다음에 무엇을 하면 되는지를 말해 준다.
  */
 function SignedInHome({ displayName }: { displayName: string }) {
+  const router = useRouter();
   const session = useAuthStore((state) => state.session);
   const accounts = useBankStore((state) => state.accounts);
   const setAccounts = useBankStore((state) => state.setAccounts);
@@ -195,6 +198,12 @@ function SignedInHome({ displayName }: { displayName: string }) {
     voiceSessionId: number | string;
     confirmationId: string;
   } | null>(null);
+
+  useEffect(() => {
+    if (readTransferRecoveryKey() !== null) {
+      router.replace("/transfer/result");
+    }
+  }, [router]);
   const sessionRef = useRef<VoiceStreamSession | null>(null);
   /*
    * 대화가 이어지는 동안 같은 음성 세션을 쓴다. 재질문마다 새 세션을 만들면
@@ -320,10 +329,22 @@ function SignedInHome({ displayName }: { displayName: string }) {
     onSettled: (result) => {
       setCommandState(result.state);
       setCommandGuide(result.voiceMessage);
-      setTransferResult(result);
       setVoiceError("");
       announce(result.voiceMessage);
+      if (result.state === "AWAITING_CONFIRMATION" && result.confirmationId) {
+        const voiceSessionId = pendingConfirmation?.voiceSessionId
+          ?? voiceSessionIdRef.current;
+        if (voiceSessionId !== null) {
+          setPendingConfirmation({
+            voiceSessionId,
+            confirmationId: result.confirmationId,
+          });
+        }
+        return;
+      }
       setPendingConfirmation(null);
+      if (result.state === "CLARIFYING") return;
+      setTransferResult(result);
       voiceSessionIdRef.current = null;
     },
     onFailed: (failureMessage) => {
@@ -598,6 +619,13 @@ function SignedInHome({ displayName }: { displayName: string }) {
             <VoiceConfirmation
               question={commandGuide}
               recorder={confirmationRecorder}
+              onCanceled={() => {
+                setCommandState("CANCELED");
+                setCommandGuide("송금을 취소했어요.");
+                setPendingConfirmation(null);
+                voiceSessionIdRef.current = null;
+                announce("송금을 취소했어요.");
+              }}
             />
           ) : null}
 

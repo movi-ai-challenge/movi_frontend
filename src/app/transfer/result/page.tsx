@@ -5,14 +5,18 @@ import { useEffect, useState } from "react";
 
 import { AccessibleButton } from "@/components/common/AccessibleButton";
 import { toApiError } from "@/services/api";
-import { clearTransferRecoveryKey } from "@/services/transferRecoveryStorage";
-import { getTransferStatus } from "@/services/transferService";
+import {
+  clearTransferRecoveryKey,
+  readTransferRecoveryKey,
+} from "@/services/transferRecoveryStorage";
+import { getTransferStatus, recoverDirectTransfer } from "@/services/transferService";
 import { getNotifications } from "@/services/notificationService";
 import {
   findNotificationForTransfer,
   type NotificationData,
 } from "@/services/notificationContract";
 import { useBankStore } from "@/store/useBankStore";
+import { speak } from "@/services/speech";
 import type { TransferExecutionStatus, TransferFdsRiskLevel } from "@/types";
 
 const currencyFormatter = new Intl.NumberFormat("ko-KR", {
@@ -78,6 +82,35 @@ export default function TransferResultPage() {
   const setDirectTransferResult = useBankStore((state) => state.setDirectTransferResult);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
+  const [recoveryKey] = useState(() => result ? null : readTransferRecoveryKey());
+  const [recoveryState, setRecoveryState] = useState<"checking" | "none" | "failed" | "done">(
+    result ? "done" : recoveryKey ? "checking" : "none",
+  );
+
+  useEffect(() => {
+    if (result) {
+      return;
+    }
+    if (!recoveryKey) return;
+    let isActive = true;
+    recoverDirectTransfer(recoveryKey)
+      .then((recovered) => {
+        if (!isActive) return;
+        setDirectTransferResult(recovered);
+        if (terminalStatuses.has(recovered.status)) clearTransferRecoveryKey();
+        setRecoveryState("done");
+      })
+      .catch((error: unknown) => {
+        if (!isActive) return;
+        setErrorMessage(
+          `${toApiError(error).message} 송금 여부를 확인하지 못했어요. 다시 송금하지 마세요.`,
+        );
+        setRecoveryState("failed");
+      });
+    return () => {
+      isActive = false;
+    };
+  }, [recoveryKey, result, setDirectTransferResult]);
 
   /*
    * 보호자 알림은 송금과 별도 트랜잭션에서 지연 발송된다. 이체 응답에 담아 오면
@@ -86,6 +119,10 @@ export default function TransferResultPage() {
    * 나가지 않은 알림을 전송됐다고 보여 주면 사용자가 잘못 안심한다.
    */
   const [guardianAlert, setGuardianAlert] = useState<NotificationData | null>(null);
+
+  useEffect(() => {
+    if (result?.voiceMessage) speak(result.voiceMessage);
+  }, [result?.voiceMessage]);
 
   useEffect(() => {
     if (!result?.riskLevel || result.riskLevel === "LOW") return;
@@ -107,6 +144,31 @@ export default function TransferResultPage() {
       isActive = false;
     };
   }, [result?.riskLevel, result?.transferId]);
+
+  if (!result && recoveryState === "checking") {
+    return (
+      <main className="mx-auto min-h-[70vh] w-full max-w-xl px-6 py-12">
+        <h1 className="text-3xl font-bold">진행 중인 송금을 확인하고 있어요.</h1>
+        <p className="mt-4 leading-7 text-[var(--color-text-muted)]" role="status">
+          결과가 확인될 때까지 새 송금을 시작하지 마세요.
+        </p>
+      </main>
+    );
+  }
+
+  if (!result && recoveryState === "failed") {
+    return (
+      <main className="mx-auto min-h-[70vh] w-full max-w-xl px-6 py-12">
+        <h1 className="text-3xl font-bold">송금 결과를 확인하지 못했습니다.</h1>
+        <p className="mt-4 rounded-xl border-2 border-[var(--color-warning)] p-5 font-semibold" role="alert">
+          {errorMessage}
+        </p>
+        <Link href="/transactions" className="mt-6 inline-flex min-h-11 items-center rounded-lg bg-[var(--color-primary)] px-6 py-3 font-semibold text-[var(--color-on-primary)]">
+          거래내역에서 확인하기
+        </Link>
+      </main>
+    );
+  }
 
   if (!result) {
     return (
@@ -187,6 +249,9 @@ export default function TransferResultPage() {
         </h1>
       </div>
       <p className="mt-4 text-lg leading-8" aria-live="polite">{result.voiceMessage}</p>
+      <AccessibleButton className="mt-3" variant="secondary" onClick={() => speak(result.voiceMessage)}>
+        결과 다시 듣기
+      </AccessibleButton>
 
       <section className="mt-8 rounded-xl border-2 border-[var(--color-border)] bg-[var(--color-surface)] p-6" aria-labelledby="transfer-result-title">
         <h2 id="transfer-result-title" className="text-xl font-bold">처리 결과</h2>
@@ -249,9 +314,14 @@ export default function TransferResultPage() {
         </dl>
       </section>
 
-      {result.status === "BLOCKED" || result.status === "FAILED" || result.status === "CANCELED" ? (
+      {result.status === "BLOCKED" || result.status === "CANCELED" ? (
         <p className="mt-5 rounded-xl border-2 border-[var(--color-warning)] bg-[var(--color-surface)] p-5 font-semibold">
           이 송금으로 돈이 나가지 않았습니다.
+        </p>
+      ) : null}
+      {result.status === "FAILED" ? (
+        <p className="mt-5 rounded-xl border-2 border-[var(--color-warning)] bg-[var(--color-surface)] p-5 font-semibold">
+          은행이 송금을 거절해 돈이 나가지 않았습니다.
         </p>
       ) : null}
 

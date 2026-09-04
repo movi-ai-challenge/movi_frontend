@@ -2,6 +2,7 @@
 
 import { AccessibleButton } from "@/components/common/AccessibleButton";
 import type { ConfirmationRecorder } from "@/hooks/useConfirmationRecorder";
+import { speak } from "@/services/speech";
 
 /**
  * 확인 질문과 대답 버튼.
@@ -18,24 +19,53 @@ interface Props {
   /** 백엔드가 만든 확인 질문. 화면과 낭독이 같은 문장을 쓴다. */
   question: string;
   recorder: ConfirmationRecorder;
+  onCanceled: () => void;
 }
 
-export function VoiceConfirmation({ question, recorder }: Props) {
+export function VoiceConfirmation({ question, recorder, onCanceled }: Props) {
   return (
     <div className="mt-4 w-full">
       <p className="text-lg font-bold text-[var(--color-accent)]">{question}</p>
 
-      <AccessibleButton
-        type="button"
-        className="mt-3 w-full"
-        onClick={recorder.toggle}
-        disabled={recorder.isBusy}
-        aria-label={recorder.isRecording ? "대답 끝내기" : "음성으로 대답하기"}
-      >
-        {recorder.isRecording ? "대답 끝내기" : null}
-        {!recorder.isRecording && recorder.isBusy ? "처리 중이에요" : null}
-        {!recorder.isRecording && !recorder.isBusy ? "음성으로 대답하기" : null}
-      </AccessibleButton>
+      <div className="mt-3 grid gap-2 sm:grid-cols-2">
+        <AccessibleButton
+          type="button"
+          variant="secondary"
+          onClick={() => speak(question)}
+          disabled={recorder.isBusy}
+        >
+          확인 내용 다시 듣기
+        </AccessibleButton>
+        <AccessibleButton
+          type="button"
+          variant="secondary"
+          onClick={onCanceled}
+          disabled={recorder.isBusy || recorder.isRecording}
+        >
+          송금 취소
+        </AccessibleButton>
+      </div>
+
+      {recorder.isRecording ? (
+        <div className="mt-3 grid gap-2 sm:grid-cols-2">
+          <AccessibleButton type="button" onClick={recorder.toggle}>
+            대답 끝내기
+          </AccessibleButton>
+          <AccessibleButton type="button" variant="secondary" onClick={recorder.cancel}>
+            녹음 취소
+          </AccessibleButton>
+        </div>
+      ) : (
+        <AccessibleButton
+          type="button"
+          className="mt-3 w-full"
+          onClick={recorder.toggle}
+          disabled={recorder.isBusy}
+          aria-label="음성으로 대답하기"
+        >
+          {recorder.isBusy ? "처리 중이에요" : "음성으로 대답하기"}
+        </AccessibleButton>
+      )}
 
       {recorder.message ? (
         <p aria-live="polite" className="mt-2 text-base text-[var(--color-muted)]">

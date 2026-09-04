@@ -75,9 +75,9 @@ function SettingRow({ label, description, checked, onChange, isLast = false }: S
       }`}
     >
       <span>
-        <span className="block text-[15px] font-bold text-[var(--color-text)]">{label}</span>
+        <span className="block text-base font-bold text-[var(--color-text)]">{label}</span>
         <span
-          className="mt-0.5 block text-[13px] leading-snug text-[var(--color-text-muted)]"
+          className="mt-0.5 block text-sm leading-snug text-[var(--color-text-muted)]"
           data-secondary-content="true"
         >
           {description}
