@@ -68,7 +68,7 @@ export default function SettingsPage() {
           {loadError ? (
             <p
               role="alert"
-              className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] px-4 py-4 text-[15px] text-[var(--color-danger)]"
+              className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] px-4 py-4 text-base text-[var(--color-danger)]"
             >
               {loadError}
             </p>
@@ -79,8 +79,8 @@ export default function SettingsPage() {
                 href="/accounts"
                 label="기본 계좌 설정"
                 value={defaultAccount ? defaultAccount.bankName : "미설정"}
-                isLast
               />
+              <SettingLink href="/settings/guardian" label="내 보호자 연락처" value="등록·조회" isLast />
             </div>
           )}
         </section>
@@ -107,8 +107,8 @@ function SettingLink({
         isLast ? "" : "border-b border-[var(--color-border)]"
       }`}
     >
-      <span className="text-[15px] text-[var(--color-text)]">{label}</span>
-      <span className="text-[13px] text-[var(--color-text-muted)]">
+      <span className="text-base text-[var(--color-text)]">{label}</span>
+      <span className="text-sm text-[var(--color-text-muted)]">
         {value}
         <span aria-hidden="true" className="ml-2">
           ›
