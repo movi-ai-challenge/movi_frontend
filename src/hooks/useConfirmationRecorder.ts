@@ -45,6 +45,8 @@ export interface ConfirmationRecorder {
   isBusy: boolean;
   /** 녹음 중이면 멈추고, 아니면 시작한다. 버튼 하나로 다루기 위한 것. */
   toggle: () => void;
+  /** 녹음 중인 답을 버리고 마이크를 닫는다. */
+  cancel: () => void;
 }
 
 interface Options {
@@ -78,6 +80,8 @@ export function useConfirmationRecorder({
   const streamRef = useRef<MediaStream | null>(null);
   const chunksRef = useRef<Blob[]>([]);
   const stopTimerRef = useRef<number | null>(null);
+  const isMountedRef = useRef(true);
+  const discardRecordingRef = useRef(false);
 
   /*
    * 콜백은 화면에서 인라인으로 넘어와 렌더마다 새 참조가 된다. 그대로 의존성에 두면
@@ -113,8 +117,23 @@ export function useConfirmationRecorder({
     recorderRef.current = null;
   }, []);
 
-  // 화면을 벗어나면 마이크를 반드시 놓는다. 남겨 두면 녹음이 계속된다.
-  useEffect(() => release, [release]);
+  // 화면을 벗어나면 녹음 콜백도 끊고 마이크를 반드시 놓는다.
+  useEffect(() => {
+    isMountedRef.current = true;
+    return () => {
+      isMountedRef.current = false;
+      discardRecordingRef.current = true;
+      const recorder = recorderRef.current;
+      if (recorder !== null) {
+        recorder.ondataavailable = null;
+        recorder.onerror = null;
+        recorder.onstop = null;
+        if (recorder.state === "recording") recorder.stop();
+      }
+      chunksRef.current = [];
+      release();
+    };
+  }, [release]);
 
   const send = useCallback(
     async (audio: Blob) => {
@@ -220,9 +239,14 @@ export function useConfirmationRecorder({
     }
 
     chunksRef.current = [];
+    discardRecordingRef.current = false;
     setMessage("");
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      if (!isMountedRef.current) {
+        stream.getTracks().forEach((track) => track.stop());
+        return;
+      }
       streamRef.current = stream;
       const recorder = new MediaRecorder(stream, { mimeType });
       recorderRef.current = recorder;
@@ -238,6 +262,11 @@ export function useConfirmationRecorder({
         );
       };
       recorder.onstop = () => {
+        if (discardRecordingRef.current || !isMountedRef.current) {
+          chunksRef.current = [];
+          release();
+          return;
+        }
         release();
         const recorded = new Blob(chunksRef.current, {
           type: recorder.mimeType || mimeType,
@@ -282,11 +311,24 @@ export function useConfirmationRecorder({
     void startRecording();
   }, [phase, startRecording]);
 
+  const cancel = useCallback(() => {
+    discardRecordingRef.current = true;
+    chunksRef.current = [];
+    if (recorderRef.current?.state === "recording") {
+      recorderRef.current.stop();
+    } else {
+      release();
+    }
+    setPhase("idle");
+    setMessage("녹음을 취소했어요. 송금은 실행되지 않았습니다.");
+  }, [release]);
+
   return {
     phase,
     message,
     isRecording: phase === "recording",
     isBusy: phase === "sending" || phase === "recovering",
     toggle,
+    cancel,
   };
 }
