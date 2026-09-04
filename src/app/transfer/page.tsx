@@ -6,7 +6,10 @@ import { FormEvent, useEffect, useRef, useState } from "react";
 import { AccessibleButton } from "@/components/common/AccessibleButton";
 import { PageBackLink } from "@/components/common/PageBackLink";
 import { toApiError } from "@/services/api";
+import { getConnectedAccounts } from "@/services/accountService";
+import { bankNameOf } from "@/services/bankDirectory";
 import { getRegisteredRecipients } from "@/services/recipientService";
+import { readTransferRecoveryKey } from "@/services/transferRecoveryStorage";
 import { reviewDirectTransfer } from "@/services/transferService";
 import { useBankStore } from "@/store/useBankStore";
 import type { RegisteredRecipient } from "@/types";
@@ -16,10 +19,13 @@ type RecipientStatus = "loading" | "ready" | "error";
 export default function TransferInputPage() {
   const router = useRouter();
   const defaultAccountId = useBankStore((state) => state.defaultAccountId);
+  const accounts = useBankStore((state) => state.accounts);
+  const setAccounts = useBankStore((state) => state.setAccounts);
   const setDirectTransferReview = useBankStore((state) => state.setDirectTransferReview);
   const clearDirectTransferReview = useBankStore((state) => state.clearDirectTransferReview);
   const clearDirectTransferResult = useBankStore((state) => state.clearDirectTransferResult);
   const [selectedRecipientId, setSelectedRecipientId] = useState<string | null>(null);
+  const [fromAccountId, setFromAccountId] = useState<string | null>(defaultAccountId);
   const [amount, setAmount] = useState("");
   const [errorMessage, setErrorMessage] = useState("");
   const [registeredRecipients, setRegisteredRecipients] = useState<RegisteredRecipient[]>([]);
@@ -45,13 +51,23 @@ export default function TransferInputPage() {
   };
 
   useEffect(() => {
+    if (readTransferRecoveryKey()) {
+      router.replace("/transfer/result");
+      return;
+    }
     clearDirectTransferReview();
     clearDirectTransferResult();
     let isActive = true;
-    void getRegisteredRecipients()
-      .then((recipients) => {
+    void Promise.all([getRegisteredRecipients(), getConnectedAccounts()])
+      .then(([recipients, connectedAccounts]) => {
         if (!isActive) return;
         setRegisteredRecipients(recipients);
+        setAccounts(connectedAccounts);
+        setFromAccountId(
+          connectedAccounts.find((account) => account.isPrimary)?.id
+            ?? connectedAccounts[0]?.id
+            ?? null,
+        );
         setRecipientStatus("ready");
       })
       .catch((error: unknown) => {
@@ -62,7 +78,7 @@ export default function TransferInputPage() {
     return () => {
       isActive = false;
     };
-  }, [clearDirectTransferResult, clearDirectTransferReview]);
+  }, [clearDirectTransferResult, clearDirectTransferReview, router, setAccounts]);
 
   const submitTransferInput = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -82,7 +98,7 @@ export default function TransferInputPage() {
       const review = await reviewDirectTransfer({
         recipientId: selectedRecipientId,
         amount: parsedAmount,
-        fromAccountId: defaultAccountId,
+        fromAccountId: fromAccountId ?? defaultAccountId,
       });
       setDirectTransferReview(review);
       router.push("/transfer/review");
@@ -102,6 +118,25 @@ export default function TransferInputPage() {
       </p>
 
       <form className="mt-8" onSubmit={submitTransferInput} noValidate>
+        <section className="mb-8" aria-labelledby="source-account-title">
+          <h2 id="source-account-title" className="text-xl font-bold">이번 송금의 출금 계좌</h2>
+          <p className="mt-2 text-sm text-[var(--color-text-muted)]">
+            이번 송금에만 적용되며 기본 계좌 설정은 바뀌지 않습니다.
+          </p>
+          <div className="mt-3 grid gap-3">
+            {accounts.map((account) => (
+              <button
+                key={account.id}
+                type="button"
+                aria-pressed={fromAccountId === account.id}
+                onClick={() => setFromAccountId(account.id)}
+                className="min-h-14 rounded-xl border-2 border-[var(--color-border)] bg-[var(--color-surface)] p-4 text-left font-semibold aria-pressed:border-[var(--color-accent)]"
+              >
+                {account.accountAlias || `${account.bankName} 계좌`} · {account.bankName}
+              </button>
+            ))}
+          </div>
+        </section>
         <section aria-labelledby="registered-recipient-title" aria-busy={recipientStatus === "loading"}>
           <h2 id="registered-recipient-title" className="text-xl font-bold">등록된 받는 사람</h2>
           {recipientStatus === "loading" ? (
@@ -139,7 +174,7 @@ export default function TransferInputPage() {
                     <span>
                       <span className="block text-lg font-bold">{recipient.nickname}</span>
                       <span className="mt-1 block text-[var(--color-text-muted)]">
-                        예금주 {recipient.holderName} · 은행 코드 {recipient.bankCode} · {recipient.maskedAccountNumber}
+                        예금주 {recipient.holderName} · {bankNameOf(recipient.bankCode)} · {recipient.maskedAccountNumber}
                       </span>
                     </span>
                     <span className="font-bold text-[var(--color-accent)]">
