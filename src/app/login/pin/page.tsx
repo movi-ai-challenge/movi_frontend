@@ -133,6 +133,7 @@ export default function PinLoginPage() {
           invalid={invalidField === "phone"}
           onChange={(value) => {
             setPhoneNumber(value);
+            setIsLocked(false);
             if (invalidField === "phone") setInvalidField(null);
           }}
         />
@@ -164,7 +165,6 @@ export default function PinLoginPage() {
         <AccessibleButton
           type="submit"
           className="w-full"
-          disabled={isLocked}
           isLoading={isSubmitting}
           loadingLabel="로그인하고 있어요"
         >
@@ -174,8 +174,8 @@ export default function PinLoginPage() {
 
       {isLocked ? (
         <p className="mt-4 leading-7 text-[var(--color-text-muted)]">
-          잠금이 해제된 뒤 다시 시도해 주세요. PIN 재설정은 현재 MVP에서
-          지원하지 않습니다.
+          서버가 안내한 오 분이 지난 뒤 다시 시도해 주세요. 버튼은 사용할 수
+          있으며, 실제 잠금 여부는 서버가 다시 확인합니다.
         </p>
       ) : null}
     </main>
